@@ -1,0 +1,6 @@
+{
+  "malaria_present": true,
+  "cholera_present": false,
+  "stockout": { "antimalarial": true }
+}
+

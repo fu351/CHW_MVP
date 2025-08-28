@@ -1,0 +1,7 @@
+{
+  "id": "chatchw.v1",
+  "date": "2025-01-01",
+  "modules": ["fever", "diarrhea", "malnutrition"],
+  "rapid_workup": true
+}
+
