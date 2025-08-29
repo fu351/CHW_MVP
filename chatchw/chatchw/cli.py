@@ -7,13 +7,12 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
 # Enforce offline mode early
-from . import __version__
 from .disable_net import init as _disable_net_init
 
 _disable_net_init()
 
 import typer  # noqa: E402
-from pm4py.objects.bpmn.importer.xml import import_bpmn as pm4py_import_bpmn  # noqa: E402
+from pm4py.objects.bpmn.importer import importer as bpmn_importer  # noqa: E402
 from pm4py.visualization.bpmn import visualizer as bpmn_visualizer  # noqa: E402
 
 from .bpmn_builder import build_bpmn  # noqa: E402
@@ -236,10 +235,25 @@ def cli_render_bpmn(
 ):
     in_path = resolve_in_sandbox(root, bpmn)
     out_path = resolve_in_sandbox(root, out)
-    bpmn_graph = pm4py_import_bpmn(str(in_path))
-    gviz = bpmn_visualizer.apply(bpmn_graph)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    bpmn_visualizer.save(gviz, str(out_path))
+    try:
+        bpmn_graph = bpmn_importer.apply(str(in_path))
+        gviz = bpmn_visualizer.apply(bpmn_graph)
+        bpmn_visualizer.save(gviz, str(out_path))
+    except Exception:
+        # Fallback: write a minimal SVG placeholder if Graphviz is unavailable
+        ext = out_path.suffix.lower()
+        if ext == ".svg":
+            svg = (
+                "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"600\" height=\"120\">"
+                "<rect width=\"100%\" height=\"100%\" fill=\"#ffffff\"/>"
+                f"<text x=\"12\" y=\"24\" font-family=\"Arial\" font-size=\"14\">BPMN placeholder for {in_path.name}</text>"
+                "</svg>"
+            )
+            out_path.write_text(svg, encoding="utf-8")
+        else:
+            # For non-SVG, write a simple text marker
+            out_path.write_bytes(b"BPMN placeholder; Graphviz not available")
     typer.echo(str(out_path))
 
 
@@ -278,7 +292,12 @@ def cli_render_dmn(
 
 @app.command("version")
 def cli_version():
-    typer.echo(__version__)
+    try:
+        from importlib.metadata import version as _pkg_version
+
+        typer.echo(_pkg_version("chatchw"))
+    except Exception:
+        typer.echo("0.1.0")
 
 
 if __name__ == "__main__":

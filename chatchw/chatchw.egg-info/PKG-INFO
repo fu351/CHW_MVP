@@ -1,3 +1,20 @@
+Metadata-Version: 2.4
+Name: chatchw
+Version: 0.1.0
+Summary: ChatCHW v0.1 - Offline, sandboxed CLI MVP that generates BPMN/DMN and runs deterministic rules.
+Author: ChatCHW Team
+License: MIT
+Requires-Python: <3.12,>=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: typer==0.12.3
+Requires-Dist: pydantic==2.7.1
+Requires-Dist: python-dateutil==2.9.0.post0
+Requires-Dist: rfc3339-validator==0.1.4
+Requires-Dist: pm4py==2.7.11
+Requires-Dist: graphviz==0.20.3
+Requires-Dist: pytest==8.3.2
+Requires-Dist: hypothesis==6.108.5
+
 # ChatCHW v0.1 (Offline, Sandboxed CLI MVP)
 
 ChatCHW is an offline CLI that applies deterministic rules for common community health workflows, generates intermediary BPMN and DMN artifacts, and renders them locally to SVG/PNG. All file I/O is restricted to a sandbox root. Network access is disabled at runtime.
@@ -11,8 +28,14 @@ ChatCHW is an offline CLI that applies deterministic rules for common community 
 ## Install
 
 ```bash
+python -m venv .venv
+# On Linux/macOS
+source .venv/bin/activate
+# On Windows PowerShell
+.venv\Scripts\Activate.ps1
+
+pip install --upgrade pip
 cd chatchw
-pip install -r requirements.txt
 pip install -e .
 ```
 
