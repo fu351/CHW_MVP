@@ -150,23 +150,10 @@ def _infer_variable_types(rulepacks: Dict[str, Iterable]) -> Dict[str, str]:
     for rules in rulepacks.values():
         for r in rules:
             when_conditions = r.when if hasattr(r, 'when') else r.get('when', [])
-            # Walk each condition and record types for referenced variables
             for cond in when_conditions:
-                t = _infer_var_type_from_condition(cond)
-                # Figure out which var name this condition references
-                var_name: Optional[str] = None
-                if isinstance(cond, dict):
-                    if 'obs' in cond:
-                        var_name = cond['obs']
-                    elif 'sym' in cond:
-                        var_name = cond['sym']
-                else:
-                    if hasattr(cond, 'obs') and cond.obs:
-                        var_name = cond.obs
-                    elif hasattr(cond, 'sym') and cond.sym:
-                        var_name = cond.sym
-                if var_name:
-                    if t is None:
+                for var_name in _collect_inputs_for_rule({'when': [cond]}):
+                    if var_name:
+                        t = _infer_var_type_from_condition(cond)
                         # keep existing or leave undecided
                         if var_name not in var_types:
                             var_types[var_name] = 'string'
@@ -187,151 +174,174 @@ def _infer_variable_types(rulepacks: Dict[str, Iterable]) -> Dict[str, str]:
     return var_types
 
 
+def _priority_of(rule_obj) -> int:
+    """Get priority of a rule object."""
+    if hasattr(rule_obj, 'priority'):
+        try:
+            return int(getattr(rule_obj, 'priority') or 0)
+        except Exception:
+            return 0
+    if isinstance(rule_obj, dict):
+        try:
+            return int(rule_obj.get('then', {}).get('priority', rule_obj.get('priority', 0)) or 0)
+        except Exception:
+            return 0
+    return 0
+
+
+def _separate_rules_by_priority(rulepacks: Dict[str, Iterable]) -> Dict[str, List]:
+    """Separate rules into danger signs (priority 100) and clinical assessment (lower priority)."""
+    danger_rules = []
+    clinical_rules = []
+    
+    for rules in rulepacks.values():
+        for rule in rules:
+            priority = _priority_of(rule)
+            if priority >= 100:  # Danger signs
+                danger_rules.append(rule)
+            else:  # Clinical assessment
+                clinical_rules.append(rule)
+    
+    return {
+        'danger_signs': sorted(danger_rules, key=_priority_of, reverse=True),
+        'clinical_assessment': sorted(clinical_rules, key=_priority_of, reverse=True)
+    }
+
+
+def _create_decision_table(parent, decision_id: str, decision_name: str, rules: List, var_types: Dict[str, str]) -> tuple:
+    """Create a single decision table for a group of rules."""
+    dec = ET.SubElement(parent, f"{{{DMN_NS}}}decision", attrib={"id": decision_id, "name": decision_name})
+    table = ET.SubElement(dec, f"{{{DMN_NS}}}decisionTable", attrib={"id": _sid("Table"), "hitPolicy": "FIRST"})
+    
+    # Collect only variables used by these specific rules
+    columns = sorted({v for r in rules for v in _collect_inputs_for_rule(r)})
+    
+    # Create input columns
+    for v in columns:
+        inp = ET.SubElement(table, f"{{{DMN_NS}}}input", attrib={"id": _sid("Input")})
+        inp_expr = ET.SubElement(inp, f"{{{DMN_NS}}}inputExpression", attrib={"id": _sid("Expr"), "typeRef": var_types.get(v, 'string')})
+        ET.SubElement(inp_expr, f"{{{DMN_NS}}}text").text = v
+    
+    # Create output column
+    ET.SubElement(table, f"{{{DMN_NS}}}output", attrib={"id": _sid("Output"), "name": "result", "typeRef": "string"})
+    
+    return dec, table, columns
+
+
+def _get_feel_operator(op: str) -> str:
+    """Convert operation to FEEL operator."""
+    op_map = {"eq": "=", "lt": "<", "le": "<=", "gt": ">", "ge": ">="}
+    return op_map.get(op, "=")
+
+
+def _generate_output_value(then_clause, output_key: str) -> str:
+    """Generate the output value for a rule based on its then clause."""
+    if output_key == "danger_sign":
+        # For danger signs, output true if this rule triggers
+        return "true"
+    
+    # For clinical assessment, extract the proposed triage
+    if hasattr(then_clause, 'propose_triage'):
+        return then_clause.propose_triage or "home"
+    elif isinstance(then_clause, dict):
+        return then_clause.get('propose_triage', 'home')
+    
+    return "home"
+
+
+def _add_rule_to_table(table: ET.Element, rule, columns: List[str], output_key: str):
+    """Add a single rule to a decision table."""
+    rule_id = rule.rule_id if hasattr(rule, 'rule_id') else rule.get('rule_id', 'unknown')
+    when_conditions = rule.when if hasattr(rule, 'when') else rule.get('when', [])
+    then_clause = rule.then if hasattr(rule, 'then') else rule.get('then', {})
+    
+    rule_el = ET.SubElement(table, f"{{{DMN_NS}}}rule", attrib={"id": f"rule_{rule_id}"})
+    
+    # Create condition map for this rule's variables
+    condition_map = {}
+    for cond in when_conditions:
+        if isinstance(cond, dict):
+            if 'obs' in cond:
+                condition_map[cond['obs']] = f"{cond['obs']} {_get_feel_operator(cond['op'])} {cond['value']}"
+            elif 'sym' in cond:
+                eq_val = cond.get('eq', True)
+                val_str = "true" if bool(eq_val) else "false"
+                if isinstance(eq_val, (int, float)):
+                    val_str = str(eq_val)
+                condition_map[cond['sym']] = f"{cond['sym']} = {val_str}"
+    
+    # Generate input entries for all columns in this table
+    for v in columns:
+        ie = ET.SubElement(rule_el, f"{{{DMN_NS}}}inputEntry", attrib={"id": _sid("InEntry")})
+        condition_text = condition_map.get(v, "-")
+        ET.SubElement(ie, f"{{{DMN_NS}}}text").text = condition_text
+    
+    # Generate output entry
+    output_value = _generate_output_value(then_clause, output_key)
+    out_entry = ET.SubElement(rule_el, f"{{{DMN_NS}}}outputEntry", attrib={"id": _sid("OutEntry")})
+    ET.SubElement(out_entry, f"{{{DMN_NS}}}text").text = output_value
+
+
 def generate_dmn(rulepacks: Dict[str, Iterable]) -> str:
+    """Generate hierarchical DMN with separate decision tables for danger signs and clinical assessment."""
     defs = ET.Element(
         f"{{{DMN_NS}}}definitions",
         attrib={
             "id": _sid("Defs"),
-            "name": "ChatCHW",
+            "name": "ChatCHW Clinical Decision Support",
             "namespace": "chatchw",
-            # DMN 1.4 exporter metadata and conformance declaration (informative)
             "exporter": "ChatCHW",
-            "exporterVersion": "0.1.0",
-            "dmnConformanceLevel": "ConformanceLevel-2",
+            "exporterVersion": "2.0.0",
+            "dmnConformanceLevel": "ConformanceLevel-3",
         },
     )
 
-    # Determine input variables and types
+    # Separate rules by priority for hierarchical processing
+    separated_rules = _separate_rules_by_priority(rulepacks)
+    
+    # Determine input variables and types for all rules
     input_vars: set[str] = set()
-    for rules in rulepacks.values():
-        for r in rules:
+    for rule_group in separated_rules.values():
+        for r in rule_group:
             for v in _collect_inputs_for_rule(r):
                 input_vars.add(v)
-    var_types = _infer_variable_types(rulepacks)
+    var_types = _infer_variable_types({"all": [r for group in separated_rules.values() for r in group]})
 
-    # Emit inputData with variable/typeRef
+    # Create input data elements
     for v in sorted(input_vars):
         inp = ET.SubElement(defs, f"{{{DMN_NS}}}inputData", attrib={"id": f"input_{v}", "name": v})
         ET.SubElement(inp, f"{{{DMN_NS}}}variable", attrib={"name": v, "typeRef": var_types.get(v, 'string')})
 
-    for module_name, rules in rulepacks.items():
-        dec = ET.SubElement(defs, f"{{{DMN_NS}}}decision", attrib={"id": f"decision_{module_name}", "name": f"{module_name}_decision"})
-        table = ET.SubElement(dec, f"{{{DMN_NS}}}decisionTable", attrib={"id": _sid("Table"), "hitPolicy": "FIRST"})
-        columns = sorted({v for r in rules for v in _collect_inputs_for_rule(r)})
-        for v in columns:
-            inp = ET.SubElement(table, f"{{{DMN_NS}}}input", attrib={"id": _sid("Input")})
-            inp_expr = ET.SubElement(inp, f"{{{DMN_NS}}}inputExpression", attrib={"id": _sid("Expr"), "typeRef": var_types.get(v, 'string')})
-            ET.SubElement(inp_expr, f"{{{DMN_NS}}}text").text = v
-        ET.SubElement(table, f"{{{DMN_NS}}}output", attrib={"id": _sid("Output"), "name": "effect", "typeRef": "string"})
-
-        # Sort rules by priority (handle both Rule objects and plain dict rules)
-        def _priority_of(rule_obj) -> int:
-            if hasattr(rule_obj, 'priority'):
-                try:
-                    return int(getattr(rule_obj, 'priority') or 0)
-                except Exception:
-                    return 0
-            if isinstance(rule_obj, dict):
-                try:
-                    return int(rule_obj.get('then', {}).get('priority', rule_obj.get('priority', 0)) or 0)
-                except Exception:
-                    return 0
-            return 0
-
-        sorted_rules = sorted(list(rules), key=_priority_of, reverse=True)
+    # Create Danger Signs Decision Table (Priority 100+ rules)
+    if separated_rules['danger_signs']:
+        danger_dec, danger_table, danger_columns = _create_decision_table(
+            defs, "danger_signs_decision", "Danger Signs Assessment", 
+            separated_rules['danger_signs'], var_types
+        )
         
-        for r in sorted_rules:
-            rule_id = r.rule_id if hasattr(r, 'rule_id') else r.get('rule_id', 'unknown')
-            when_conditions = r.when if hasattr(r, 'when') else r.get('when', [])
-            then_clause = r.then if hasattr(r, 'then') else r.get('then', {})
-            
-            rule_el = ET.SubElement(table, f"{{{DMN_NS}}}rule", attrib={"id": f"rule_{rule_id}"})
-            
-            # Create a map of input variables to their conditions
-            condition_map = {}
-            
-            def evaluate_complex_condition_for_variable(var_name, when_conditions):
-                """Evaluate if a variable has specific constraints in complex conditions."""
-                def check_condition_tree(cond):
-                    if isinstance(cond, dict):
-                        if 'all_of' in cond:
-                            # For ALL_OF, we need ALL conditions to be true
-                            var_conditions = []
-                            for sub_cond in cond['all_of']:
-                                var_cond = check_condition_tree(sub_cond)
-                                if var_cond:
-                                    var_conditions.append(var_cond)
-                            return var_conditions[0] if len(var_conditions) == 1 else None
-                        elif 'any_of' in cond:
-                            # For ANY_OF, check if this variable appears in any branch
-                            for sub_cond in cond['any_of']:
-                                var_cond = check_condition_tree(sub_cond)
-                                if var_cond:
-                                    return var_cond
-                            return None
-                        elif 'obs' in cond and cond['obs'] == var_name:
-                            return _feel_for_condition(cond)
-                        elif 'sym' in cond and cond['sym'] == var_name:
-                            return _feel_for_condition(cond)
-                    else:
-                        # Handle Pydantic objects
-                        if hasattr(cond, 'obs') and cond.obs == var_name:
-                            return _feel_for_condition(cond)
-                        elif hasattr(cond, 'sym') and cond.sym == var_name:
-                            return _feel_for_condition(cond)
-                    return None
-                
-                # Check if this variable has any specific conditions
-                for c in when_conditions:
-                    result = check_condition_tree(c)
-                    if result:
-                        return result
-                return "-"  # Default to catch-all only if variable is not constrained
-            
-            # Fill each column appropriately
-            for v in columns:
-                ie = ET.SubElement(rule_el, f"{{{DMN_NS}}}inputEntry", attrib={"id": _sid("InEntry")})
-                condition_text = evaluate_complex_condition_for_variable(v, when_conditions)
-                ET.SubElement(ie, f"{{{DMN_NS}}}text").text = condition_text
-            
-            effect_parts = []
-            # Handle both dict and object then clauses
-            if hasattr(then_clause, 'propose_triage'):
-                if then_clause.propose_triage:
-                    triage_val = then_clause.propose_triage
-                    effect_parts.append(f"triage:{triage_val}")
-                    # Emit BPMN-alignment flags for triage to drive gateway conditions
-                    if str(triage_val).lower() == 'clinic':
-                        effect_parts.append("flag:clinic_referral")
-                    elif str(triage_val).lower() == 'hospital':
-                        effect_parts.append("flag:danger_sign")
-                if then_clause.set_flags:
-                    effect_parts.extend([f"flag:{f}" for f in then_clause.set_flags])
-                if then_clause.reasons:
-                    effect_parts.extend([f"reason:{x}" for x in then_clause.reasons])
-            else:
-                # Handle dict then clause
-                if then_clause.get('propose_triage'):
-                    triage_val = then_clause['propose_triage']
-                    effect_parts.append(f"triage:{triage_val}")
-                    # Emit BPMN-alignment flags for triage to drive gateway conditions
-                    if str(triage_val).lower() == 'clinic':
-                        effect_parts.append("flag:clinic_referral")
-                    elif str(triage_val).lower() == 'hospital':
-                        effect_parts.append("flag:danger_sign")
-                if then_clause.get('set_flags'):
-                    effect_parts.extend([f"flag:{f}" for f in then_clause['set_flags']])
-                if then_clause.get('reasons'):
-                    effect_parts.extend([f"reason:{x}" for x in then_clause['reasons']])
-            
-            out_entry = ET.SubElement(rule_el, f"{{{DMN_NS}}}outputEntry", attrib={"id": _sid("OutEntry")})
-            ET.SubElement(out_entry, f"{{{DMN_NS}}}text").text = ", ".join(effect_parts) if effect_parts else "noop"
-
-        # Note: No default catch-all rules needed for clinical guidelines
-        # Clinical rules are designed to be specific and don't need 100% input space coverage
-
-        for v in columns:
-            ir = ET.SubElement(dec, f"{{{DMN_NS}}}informationRequirement", attrib={"id": _sid("IR")})
+        # Add rules to danger signs table
+        for r in separated_rules['danger_signs']:
+            _add_rule_to_table(danger_table, r, danger_columns, "danger_sign")
+        
+        # Add information requirements
+        for v in danger_columns:
+            ir = ET.SubElement(danger_dec, f"{{{DMN_NS}}}informationRequirement", attrib={"id": _sid("IR")})
+            ET.SubElement(ir, f"{{{DMN_NS}}}requiredInput", attrib={"href": f"#input_{v}"})
+    
+    # Create Clinical Assessment Decision Table (Lower priority rules)
+    if separated_rules['clinical_assessment']:
+        clinical_dec, clinical_table, clinical_columns = _create_decision_table(
+            defs, "clinical_assessment", "Clinical Assessment", 
+            separated_rules['clinical_assessment'], var_types
+        )
+        
+        # Add rules to clinical assessment table
+        for r in separated_rules['clinical_assessment']:
+            _add_rule_to_table(clinical_table, r, clinical_columns, "proposed_triage")
+        
+        # Add information requirements
+        for v in clinical_columns:
+            ir = ET.SubElement(clinical_dec, f"{{{DMN_NS}}}informationRequirement", attrib={"id": _sid("IR")})
             ET.SubElement(ir, f"{{{DMN_NS}}}requiredInput", attrib={"href": f"#input_{v}"})
 
     xml = ET.tostring(defs, encoding="utf-8", xml_declaration=True)
