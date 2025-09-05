@@ -1,4 +1,3 @@
 {"age_months":12,"sex":"f","observations":[{"id":"temp","value":37.9},{"id":"resp_rate","value":22.0},{"id":"muac_mm","value":140.0}],"symptoms":{"feels_very_hot":false,"blood_in_stool":false,"diarrhea_days":1,"convulsion":false,"edema_both_feet":false},"context":{"malaria_present":false,"cholera_present":false}}
 {"age_months":60,"sex":"m","observations":[{"id":"temp","value":38.5},{"id":"resp_rate","value":35.0},{"id":"muac_mm","value":130.0}],"symptoms":{"feels_very_hot":true,"blood_in_stool":true,"diarrhea_days":14,"convulsion":false,"edema_both_feet":false},"context":{"malaria_present":true,"cholera_present":false,"stockout":{"antimalarial":true}}}
 {"age_months":10,"sex":"f","observations":[{"id":"temp","value":36.5},{"id":"resp_rate","value":18.0},{"id":"muac_mm","value":110.0}],"symptoms":{"feels_very_hot":false,"blood_in_stool":false,"diarrhea_days":0,"convulsion":false,"edema_both_feet":false},"context":{"malaria_present":false,"cholera_present":false}}
-

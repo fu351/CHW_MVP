@@ -2,9 +2,9 @@
   "age_months": 24,
   "sex": "m",
   "observations": [
-    { "id": "temp", "value": 38.6, "unit": "C" },
-    { "id": "resp_rate", "value": 28.0, "unit": "bpm" },
-    { "id": "muac_mm", "value": 120.0, "unit": "mm" }
+    { "id": "temp", "value": 38.6 },
+    { "id": "resp_rate", "value": 28.0 },
+    { "id": "muac_mm", "value": 120.0 }
   ],
   "symptoms": {
     "feels_very_hot": true,
@@ -19,4 +19,3 @@
     "stockout": { "antimalarial": true }
   }
 }
-

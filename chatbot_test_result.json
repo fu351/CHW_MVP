@@ -1,0 +1,51 @@
+{
+  "outcome": "Clinic",
+  "reasoning": [
+    "Recommendation: Clinic",
+    "Clinical flag: clinic_referral",
+    "Clinical finding: diarrhea.prolonged.with.blood",
+    "Clinical flag: fever_high",
+    "Clinical finding: fever.high",
+    "Recommendation: Clinic",
+    "Clinical flag: clinic_referral",
+    "Clinical finding: muac.low"
+  ],
+  "collected_data": {
+    "convulsion": true,
+    "temp": 39.0,
+    "muac_mm": 110.0,
+    "blood_in_stool": false,
+    "edema_both_feet": false,
+    "feels_very_hot": true
+  },
+  "flags": {
+    "clinic_referral": true,
+    "fever_high": true
+  },
+  "conversation_history": [
+    {
+      "question": "Has the patient had convulsions or fits?",
+      "answer": "True"
+    },
+    {
+      "question": "What is the patient's temperature in \u00b0C?",
+      "answer": "39.0"
+    },
+    {
+      "question": "What is the MUAC measurement in millimeters?",
+      "answer": "110.0"
+    },
+    {
+      "question": "Is there blood in the stool?",
+      "answer": "False"
+    },
+    {
+      "question": "Does the patient have swelling (edema) in both feet?",
+      "answer": "False"
+    },
+    {
+      "question": "Does the patient feel very hot to touch?",
+      "answer": "True"
+    }
+  ]
+}
