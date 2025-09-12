@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import tempfile
 from typing import Optional
@@ -17,10 +18,22 @@ from .flowchart_generator import FlowchartGenerator
 from .pdf_parser import CHWRuleExtractor
 from .rules_loader import load_rules_dir
 from .chatbot_engine import ChatbotEngine
+from .dynamic_chatbot_engine import DynamicChatbotEngine
 from .validator import check_bpmn_soundness, check_dmn_tables, check_alignment
 import csv
 
 app = typer.Typer(add_completion=False, no_args_is_help=True)
+
+def load_dotenv():
+    """Load environment variables from .env.local file."""
+    env_file = Path(".env.local")
+    if env_file.exists():
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ[key] = value
 
 
 @app.command("init")
@@ -484,7 +497,7 @@ def cli_text_workflow(
 @app.command("pdf-openai-workflow") 
 def cli_pdf_openai_workflow(
     pdf: str = typer.Option(..., "--pdf", help="Path to WHO CHW PDF document"),
-    openai_key: str = typer.Option(..., "--openai-key", help="OpenAI API key for intelligent extraction"),
+    openai_key: Optional[str] = typer.Option(None, "--openai-key", help="OpenAI API key (uses OPENAI_API_KEY env var if not provided)"),
     module: str = typer.Option("openai_extracted", "--module", help="Module name for extracted rules"),
     out_dir: str = typer.Option("pdf_openai_workflow_output", "--out-dir", help="Output directory for all generated files"),
     system_prompt_file: Optional[str] = typer.Option(None, "--system-prompt", help="Path to a custom OpenAI system prompt file"),
@@ -513,7 +526,14 @@ def cli_pdf_openai_workflow(
                 typer.echo(f"📝 Loaded custom system prompt from: {system_prompt_file}")
             except Exception as e:
                 typer.echo(f"⚠️  Failed to read system prompt file: {e}")
-        extractor = OpenAIRuleExtractor(openai_key, system_prompt=custom_prompt)
+        # Handle OpenAI API key - use provided key or fall back to environment variable
+        import os
+        api_key = openai_key or os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            typer.echo("❌ OpenAI API key required. Provide via --openai-key or set OPENAI_API_KEY environment variable.", err=True)
+            raise typer.Exit(code=1)
+            
+        extractor = OpenAIRuleExtractor(api_key, system_prompt=custom_prompt)
         generator = FlowchartGenerator()
         
         # Extract rules using OpenAI
@@ -627,6 +647,291 @@ def cli_pdf_openai_workflow(
         raise typer.Exit(code=1)
 
 
+@app.command("generate-intelligent-dmn")
+def cli_generate_intelligent_dmn(
+    rules_file: str = typer.Option(..., "--rules", help="Path to extracted rules JSON file"),
+    openai_key: Optional[str] = typer.Option(None, "--openai-key", help="OpenAI API key (uses OPENAI_API_KEY env var if not provided)"),
+    output_file: str = typer.Option("intelligent_decision_logic.dmn", "--output", help="Output DMN file path"),
+    module: str = typer.Option("WHO_CHW", "--module", help="Module name for the DMN"),
+):
+    """Generate an intelligent, clean DMN from extracted rules using OpenAI."""
+    try:
+        from .openai_extractor import OpenAIRuleExtractor
+        import json
+        
+        # Load environment variables first
+        load_dotenv()
+        
+        # Handle OpenAI API key
+        if openai_key:
+            os.environ["OPENAI_API_KEY"] = openai_key
+        elif not os.getenv("OPENAI_API_KEY"):
+            typer.echo("❌ OpenAI API key required. Provide via --openai-key or set OPENAI_API_KEY environment variable.", err=True)
+            raise typer.Exit(code=1)
+        
+        # Load extracted rules
+        typer.echo(f"📋 Loading rules from: {rules_file}")
+        with open(rules_file, 'r', encoding='utf-8') as f:
+            rules = json.load(f)
+        
+        typer.echo(f"📊 Loaded {len(rules)} clinical rules")
+        
+        # Initialize OpenAI extractor
+        extractor = OpenAIRuleExtractor()
+        
+        # Generate intelligent DMN
+        typer.echo("🤖 Generating intelligent DMN with OpenAI...")
+        dmn_xml = extractor.generate_intelligent_dmn(rules, module)
+        
+        # Save DMN
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write(dmn_xml)
+        
+        typer.echo(f"✅ Generated intelligent DMN → {output_file}")
+        typer.echo("🎯 This DMN eliminates rule overlaps and provides clean clinical decision paths")
+        
+    except ImportError:
+        typer.echo("❌ OpenAI dependency not available. Install with: pip install openai", err=True)
+        raise typer.Exit(code=1)
+    except Exception as e:
+        typer.echo(f"❌ Intelligent DMN generation failed: {e}", err=True)
+        raise typer.Exit(code=1)
+
+
+@app.command("generate-related-bpmn-dmn")
+def cli_generate_related_bpmn_dmn(
+    rules_file: str = typer.Option(..., "--rules", help="Path to extracted rules JSON file"),
+    openai_key: Optional[str] = typer.Option(None, "--openai-key", help="OpenAI API key (uses OPENAI_API_KEY env var if not provided)"),
+    output_dir: str = typer.Option("related_artifacts", "--output-dir", help="Output directory for BPMN and DMN files"),
+    module: str = typer.Option("WHO_CHW", "--module", help="Module name for the artifacts"),
+):
+    """Generate both BPMN and DMN together so OpenAI can relate them intelligently."""
+    try:
+        from .openai_extractor import OpenAIRuleExtractor
+        import json
+        import os
+        from pathlib import Path
+        
+        # Handle OpenAI API key
+        if openai_key:
+            os.environ["OPENAI_API_KEY"] = openai_key
+        elif not os.getenv("OPENAI_API_KEY"):
+            typer.echo("❌ OpenAI API key required. Provide via --openai-key or set OPENAI_API_KEY environment variable.", err=True)
+            raise typer.Exit(code=1)
+        
+        # Load extracted rules
+        typer.echo(f"📋 Loading rules from: {rules_file}")
+        with open(rules_file, 'r', encoding='utf-8') as f:
+            rules = json.load(f)
+        
+        typer.echo(f"📊 Loaded {len(rules)} clinical rules")
+        
+        # Initialize OpenAI extractor
+        extractor = OpenAIRuleExtractor()
+        
+        # Generate related BPMN+DMN
+        typer.echo("🤖 Generating related BPMN+DMN with OpenAI...")
+        artifacts = extractor.generate_related_bpmn_dmn(rules, module)
+        
+        # Create output directory
+        output_path = Path(output_dir)
+        output_path.mkdir(exist_ok=True)
+        
+        # Save BPMN
+        bpmn_file = output_path / f"{module.lower()}_related_workflow.bpmn"
+        with open(bpmn_file, 'w', encoding='utf-8') as f:
+            f.write(artifacts["bpmn_xml"])
+        
+        # Save DMN
+        dmn_file = output_path / f"{module.lower()}_related_decisions.dmn"
+        with open(dmn_file, 'w', encoding='utf-8') as f:
+            f.write(artifacts["dmn_xml"])
+        
+        # Save raw response for debugging
+        raw_file = output_path / f"{module.lower()}_related_response.txt"
+        with open(raw_file, 'w', encoding='utf-8') as f:
+            f.write(artifacts["raw_response"])
+        
+        typer.echo(f"✅ Generated related BPMN+DMN → {output_dir}")
+        typer.echo(f"   📄 BPMN: {bpmn_file}")
+        typer.echo(f"   📄 DMN: {dmn_file}")
+        typer.echo("🎯 These artifacts are intelligently related and work together seamlessly")
+        
+    except ImportError:
+        typer.echo("❌ OpenAI dependency not available. Install with: pip install openai", err=True)
+        raise typer.Exit(code=1)
+    except Exception as e:
+        typer.echo(f"❌ Related BPMN+DMN generation failed: {e}", err=True)
+        raise typer.Exit(code=1)
+
+
+@app.command("extract-pdf-refined")
+def cli_extract_pdf_refined(
+    pdf: str = typer.Option(..., "--pdf", help="Path to WHO CHW PDF document"),
+    output_file: str = typer.Option("refined_extracted_rules.json", "--output", help="Output JSON file for extracted rules"),
+    module: str = typer.Option("refined_extracted", "--module", help="Module name for extracted rules"),
+):
+    """Extract clinical rules using the refined, generalized OpenAI extractor."""
+    try:
+        from .openai_extractor_refined import OpenAIRuleExtractor
+        
+        # Load environment variables first
+        load_dotenv()
+        
+        # Check for API key
+        if not os.getenv("OPENAI_API_KEY"):
+            typer.echo("❌ OpenAI API key required. Set OPENAI_API_KEY environment variable.", err=True)
+            raise typer.Exit(code=1)
+        
+        # Initialize refined extractor
+        extractor = OpenAIRuleExtractor()
+        
+        # Extract rules using refined method
+        print(f"🔍 Extracting rules from PDF using refined extractor: {pdf}")
+        extracted_data = extractor.extract_rules_from_pdf(pdf, module_name=module)
+        
+        # Save results
+        with open(output_file, 'w') as f:
+            json.dump(extracted_data, f, indent=2)
+        
+        print(f"✅ Refined extraction completed!")
+        print(f"📊 Extracted {len(extracted_data.get('variables', []))} variables")
+        print(f"📊 Extracted {len(extracted_data.get('rules', []))} rules")
+        print(f"💾 Results saved to: {output_file}")
+        
+    except Exception as e:
+        typer.echo(f"❌ Refined extraction failed: {e}", err=True)
+        raise typer.Exit(code=1)
+
+@app.command("generate-refined-bpmn-dmn")
+def cli_generate_refined_bpmn_dmn(
+    rules_file: str = typer.Option(..., "--rules", help="Path to refined extracted rules JSON file"),
+    output_dir: str = typer.Option("refined_artifacts", "--output-dir", help="Output directory for BPMN and DMN files"),
+    module: str = typer.Option("WHO_CHW_Refined", "--module", help="Module name for the artifacts"),
+):
+    """Generate BPMN and DMN using the refined extractor with standardized prompts."""
+    try:
+        from .openai_extractor_refined import OpenAIRuleExtractor
+        from pathlib import Path
+        import json
+        
+        # Load environment variables first
+        load_dotenv()
+        
+        # Check for API key
+        if not os.getenv("OPENAI_API_KEY"):
+            typer.echo("❌ OpenAI API key required. Set OPENAI_API_KEY environment variable.", err=True)
+            raise typer.Exit(code=1)
+        
+        # Load refined rules data
+        with open(rules_file) as f:
+            rules_data = json.load(f)
+        
+        print(f"📋 Loading refined rules from: {rules_file}")
+        if isinstance(rules_data, dict) and 'variables' in rules_data and 'rules' in rules_data:
+            print(f"📊 Found {len(rules_data['variables'])} variables and {len(rules_data['rules'])} rules")
+        else:
+            typer.echo("❌ Invalid rules file format. Expected refined extractor output with 'variables' and 'rules' keys.", err=True)
+            raise typer.Exit(code=1)
+        
+        # Initialize refined extractor
+        extractor = OpenAIRuleExtractor()
+        
+        # Generate BPMN and DMN
+        print(f"🤖 Generating BPMN and DMN with standardized prompts...")
+        result = extractor.generate_bpmn_dmn_from_rules(rules_data, module_name=module)
+        
+        # Create output directory
+        output_path = Path(output_dir)
+        output_path.mkdir(exist_ok=True)
+        
+        # Save BPMN
+        bpmn_file = output_path / f"{module.lower()}_workflow.bpmn"
+        with open(bpmn_file, 'w') as f:
+            f.write(result['bpmn_xml'])
+        
+        # Save DMN
+        dmn_file = output_path / f"{module.lower()}_decision_logic.dmn"
+        with open(dmn_file, 'w') as f:
+            f.write(result['dmn_xml'])
+        
+        # Save raw response for debugging
+        raw_file = output_path / f"{module.lower()}_raw_response.txt"
+        with open(raw_file, 'w') as f:
+            f.write(result['raw_response'])
+        
+        print(f"✅ Refined BPMN and DMN generation completed!")
+        print(f"📄 BPMN saved to: {bpmn_file}")
+        print(f"📄 DMN saved to: {dmn_file}")
+        print(f"📄 Raw response saved to: {raw_file}")
+        print(f"🎯 Artifacts follow standardized clinical interview policy with diarrhea-first flow")
+        
+    except Exception as e:
+        typer.echo(f"❌ Refined BPMN/DMN generation failed: {e}", err=True)
+        raise typer.Exit(code=1)
+
+@app.command("generate-sequential-bpmn-dmn")
+def cli_generate_sequential_bpmn_dmn(
+    rules_file: str = typer.Option(..., "--rules", help="Path to extracted rules JSON file"),
+    openai_key: Optional[str] = typer.Option(None, "--openai-key", help="OpenAI API key (uses OPENAI_API_KEY env var if not provided)"),
+    output_dir: str = typer.Option("sequential_artifacts", "--output-dir", help="Output directory for BPMN and DMN files"),
+    module: str = typer.Option("WHO_CHW", "--module", help="Module name for the artifacts"),
+):
+    """Generate BPMN first, then DMN with BPMN context for intelligent flow logic."""
+    try:
+        from .openai_extractor import OpenAIRuleExtractor
+        import json
+        import os
+        from pathlib import Path
+        
+        # Handle OpenAI API key
+        if openai_key:
+            os.environ["OPENAI_API_KEY"] = openai_key
+        elif not os.getenv("OPENAI_API_KEY"):
+            typer.echo("❌ OpenAI API key required. Provide via --openai-key or set OPENAI_API_KEY environment variable.", err=True)
+            raise typer.Exit(code=1)
+        
+        # Load extracted rules
+        typer.echo(f"📋 Loading rules from: {rules_file}")
+        with open(rules_file, 'r', encoding='utf-8') as f:
+            rules = json.load(f)
+        
+        typer.echo(f"📊 Loaded {len(rules)} clinical rules")
+        
+        # Initialize OpenAI extractor
+        extractor = OpenAIRuleExtractor()
+        
+        # Generate sequential BPMN→DMN
+        typer.echo("🤖 Generating sequential BPMN→DMN with OpenAI...")
+        artifacts = extractor.generate_sequential_bpmn_dmn(rules, module)
+        
+        # Create output directory
+        output_path = Path(output_dir)
+        output_path.mkdir(exist_ok=True)
+        
+        # Save BPMN
+        bpmn_file = output_path / f"{module.lower()}_sequential_workflow.bpmn"
+        with open(bpmn_file, 'w', encoding='utf-8') as f:
+            f.write(artifacts["bpmn_xml"])
+        
+        # Save DMN
+        dmn_file = output_path / f"{module.lower()}_sequential_decisions.dmn"
+        with open(dmn_file, 'w', encoding='utf-8') as f:
+            f.write(artifacts["dmn_xml"])
+        
+        typer.echo(f"✅ Generated sequential BPMN→DMN → {output_dir}")
+        typer.echo(f"   📄 BPMN: {bpmn_file}")
+        typer.echo(f"   📄 DMN: {dmn_file}")
+        typer.echo("🎯 DMN was generated with BPMN context for intelligent integration")
+        
+    except ImportError:
+        typer.echo("❌ OpenAI dependency not available. Install with: pip install openai", err=True)
+        raise typer.Exit(code=1)
+    except Exception as e:
+        typer.echo(f"❌ Sequential BPMN→DMN generation failed: {e}", err=True)
+        raise typer.Exit(code=1)
+
+
 @app.command("version")
 def cli_version():
     try:
@@ -711,34 +1016,192 @@ def cli_chat(
         typer.echo("🎯 CONSULTATION RESULTS")
         typer.echo("="*60)
         
+        # Clinical Summary
+        if recommendation.get('clinical_summary'):
+            typer.echo(f"\n📊 {recommendation['clinical_summary']}")
+        
+        # Primary Recommendation
         if recommendation['outcome']:
             outcome_emoji = {"Hospital": "🏥", "Clinic": "🏪", "Home": "🏠"}
             emoji = outcome_emoji.get(recommendation['outcome'], "📍")
-            typer.echo(f"{emoji} RECOMMENDATION: {recommendation['outcome'].upper()}")
+            typer.echo(f"\n{emoji} PRIMARY RECOMMENDATION: {recommendation['outcome'].upper()}")
         
-        if recommendation['reasoning']:
+        # Detailed Clinical Reasoning
+        if recommendation.get('clinical_reasoning'):
+            typer.echo("\n🧠 CLINICAL REASONING:")
+            for reason in recommendation['clinical_reasoning']:
+                typer.echo(f"   • {reason}")
+        
+        # Original reasoning for backward compatibility
+        if recommendation.get('reasoning') and not recommendation.get('clinical_reasoning'):
             typer.echo("\n📋 Clinical Findings:")
             for reason in recommendation['reasoning']:
                 typer.echo(f"   • {reason}")
         
+        # Active Flags
         if recommendation['flags']:
-            typer.echo("\n🚨 Active Flags:")
-            for flag, status in recommendation['flags'].items():
-                if status:
+            active_flags = [flag for flag, status in recommendation['flags'].items() if status]
+            if active_flags:
+                typer.echo("\n🚨 Active Clinical Flags:")
+                for flag in active_flags:
                     typer.echo(f"   • {flag}")
+        
+        # Specific Next Steps
+        if recommendation.get('next_steps'):
+            typer.echo("\n📋 NEXT STEPS:")
+            for step in recommendation['next_steps']:
+                typer.echo(f"   {step}")
         
         # Save session if requested
         if save_session:
             session_file = f"chatbot_session_{session_id}.json"
             with open(session_file, 'w') as f:
                 json.dump(recommendation, f, indent=2)
-            typer.echo(f"\n💾 Session saved to: {session_file}")
+        typer.echo(f"\n💾 Session saved to: {session_file}")
+
+        typer.echo("\n" + "="*60)
+        
+    except Exception as e:
+        typer.echo(f"❌ Error starting chatbot: {e}", err=True)
+        raise typer.Exit(code=1)
+
+@app.command("chat-dynamic")
+def cli_chat_dynamic(
+    bpmn: str = typer.Option(..., "--bpmn", help="Path to BPMN workflow file"),
+    dmn: str = typer.Option(..., "--dmn", help="Path to DMN decision logic file"),
+    session: str = typer.Option("dynamic_session.json", "--session", help="Session file name to save results"),
+):
+    """Start a dynamic BPMN-driven medical consultation chatbot with enhanced reasoning."""
+    try:
+        typer.echo(f"🤖 Loading dynamic chatbot with BPMN: {bpmn} and DMN: {dmn}")
+        typer.echo()
+        
+        # Initialize dynamic engine
+        engine = DynamicChatbotEngine(bpmn, dmn)
+        state = engine.start_conversation()
+        
+        typer.echo("="*60)
+        typer.echo("🏥 DYNAMIC MEDICAL CONSULTATION CHATBOT")
+        typer.echo("="*60)
+        typer.echo("Welcome! I'll guide you through a clinical assessment following WHO guidelines.")
+        typer.echo("Type 'quit' at any time to exit.")
+        typer.echo()
+        
+        # Main conversation loop
+        while not engine.is_conversation_complete(state):
+            # Get current task questions
+            task_questions = engine.get_current_task_questions(state)
+            
+            if task_questions:
+                typer.echo(f"📋 {task_questions.task_name}")
+                typer.echo("-" * 40)
+                
+                # Ask each question for this task
+                for question in task_questions.questions:
+                    variable = question['variable']
+                    
+                    # Skip if already collected
+                    if variable in state.collected_data:
+                        continue
+                    
+                    # Ask the question
+                    while True:
+                        typer.echo(f"❓ {question['text']}")
+                        if question.get('help'):
+                            typer.echo(f"   💡 {question['help']}")
+                        
+                        if question['type'] == 'boolean':
+                            typer.echo("   (Answer: yes/no or y/n)")
+                        elif question['type'] == 'numeric':
+                            typer.echo("   (Enter a number)")
+                        
+                        try:
+                            answer = typer.prompt("👤 Your answer")
+                            
+                            if answer.lower() in ['quit', 'exit', 'q']:
+                                typer.echo("\n👋 Goodbye!")
+                                return
+                            
+                            # Validate and convert input
+                            if question['type'] == 'boolean':
+                                if answer.lower() in ['yes', 'y', '1', 'true']:
+                                    value = True
+                                elif answer.lower() in ['no', 'n', '0', 'false']:
+                                    value = False
+                                else:
+                                    typer.echo("❌ Please answer yes/no (y/n)")
+                                    continue
+                            elif question['type'] == 'numeric':
+                                try:
+                                    value = float(answer)
+                                except ValueError:
+                                    typer.echo("❌ Please enter a valid number")
+                                    continue
+                            else:
+                                value = answer
+                            
+                            # Process the input
+                            engine.process_user_input(state, variable, value)
+                            break
+                            
+                        except (KeyboardInterrupt, EOFError):
+                            typer.echo("\n👋 Goodbye!")
+                            return
+                
+                typer.echo()  # Add spacing between tasks
+            
+            # Advance workflow
+            if not engine.advance_workflow(state):
+                break
+        
+        # Show final recommendation with enhanced reasoning
+        recommendation = engine.get_final_recommendation(state)
+        
+        typer.echo("\n" + "="*60)
+        typer.echo("🎯 CONSULTATION RESULTS")
+        typer.echo("="*60)
+        
+        # Clinical Summary
+        if recommendation.get('clinical_summary'):
+            typer.echo(f"\n📊 {recommendation['clinical_summary']}")
+        
+        # Primary Recommendation
+        if recommendation['outcome']:
+            outcome_emoji = {"Hospital": "🏥", "Clinic": "🏪", "Home": "🏠"}
+            emoji = outcome_emoji.get(recommendation['outcome'], "📍")
+            typer.echo(f"\n{emoji} PRIMARY RECOMMENDATION: {recommendation['outcome'].upper()}")
+        
+        # Detailed Clinical Reasoning
+        if recommendation.get('clinical_reasoning'):
+            typer.echo("\n🧠 CLINICAL REASONING:")
+            for reason in recommendation['clinical_reasoning']:
+                typer.echo(f"   • {reason}")
+        
+        # Active Flags
+        if recommendation['flags']:
+            active_flags = [flag for flag, status in recommendation['flags'].items() if status]
+            if active_flags:
+                typer.echo("\n🚨 Active Clinical Flags:")
+                for flag in active_flags:
+                    typer.echo(f"   • {flag}")
+        
+        # Specific Next Steps
+        if recommendation.get('next_steps'):
+            typer.echo("\n📋 NEXT STEPS:")
+            for step in recommendation['next_steps']:
+                typer.echo(f"   {step}")
+        
+        # Save session
+        session_file = f"dynamic_{session}"
+        with open(session_file, 'w') as f:
+            json.dump(recommendation, f, indent=2)
+        typer.echo(f"\n💾 Session saved to: {session_file}")
         
         typer.echo("\n" + "="*60)
         
     except Exception as e:
-        typer.echo(f"❌ Error starting chatbot: {e}")
-        raise typer.Exit(1)
+        typer.echo(f"❌ Dynamic chatbot error: {e}", err=True)
+        raise typer.Exit(code=1)
 
 
 @app.command("chat-batch")
@@ -794,6 +1257,70 @@ def cli_chat_batch(
         raise typer.Exit(1)
 
 
+@app.command("generate-modular-bpmn-dmn")
+def cli_generate_modular_bpmn_dmn(
+    rules_file: str = typer.Option(..., "--rules", help="Path to refined extracted rules JSON file"),
+    output_dir: str = typer.Option("modular_artifacts", "--output-dir", help="Output directory for modular DMN/BPMN/JSON files"),
+    module: str = typer.Option("WHO_CHW_Modular", "--module", help="Module name for artifacts"),
+    who_pdf: str = typer.Option(None, "--who-pdf", help="Optional WHO CHW PDF path for refs"),
+):
+    """Generate modular DMN package (DMN + CANONICAL_MAP + QA_REPORT + ASK_PLAN) and BPMN from refined rules."""
+    try:
+        from .openai_extractor_refined import OpenAIRuleExtractor
+        from pathlib import Path
+        import json
+        import os
+
+        # Load env
+        load_dotenv()
+        if not os.getenv("OPENAI_API_KEY"):
+            typer.echo("❌ OpenAI API key required. Set OPENAI_API_KEY.", err=True)
+            raise typer.Exit(code=1)
+
+        # Load rules
+        rules_data = json.loads(Path(rules_file).read_text(encoding="utf-8"))
+        if not isinstance(rules_data, dict) or "rules" not in rules_data:
+            typer.echo("❌ Invalid rules file format.", err=True)
+            raise typer.Exit(code=1)
+
+        # Optional WHO text
+        who_text = None
+        if who_pdf:
+            try:
+                extractor_tmp = OpenAIRuleExtractor()
+                who_text = extractor_tmp.extract_text_from_pdf(who_pdf)
+            except Exception as e:
+                typer.echo(f"⚠️ Failed to read WHO PDF: {e}")
+
+        extractor = OpenAIRuleExtractor()
+        typer.echo("🤖 Generating modular DMN package…")
+        pkg = extractor.generate_modular_dmn_package(rules_data, module_name=module, who_pdf_text=who_text)
+
+        # Save outputs
+        out_dir = Path(output_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        dmn_file = out_dir / f"{module.lower()}_modular.dmn"
+        (out_dir / f"{module.lower()}_canonical_map.json").write_text(json.dumps(pkg["canonical_map"], indent=2), encoding="utf-8")
+        (out_dir / f"{module.lower()}_qa_report.json").write_text(json.dumps(pkg["qa_report"], indent=2), encoding="utf-8")
+        (out_dir / f"{module.lower()}_ask_plan.json").write_text(json.dumps(pkg["ask_plan"], indent=2), encoding="utf-8")
+        dmn_file.write_text(pkg["dmn_xml"], encoding="utf-8")
+
+        typer.echo(f"📄 Modular DMN saved to: {dmn_file}")
+        typer.echo("🧭 CANONICAL_MAP / QA_REPORT / ASK_PLAN saved alongside DMN")
+
+        typer.echo("🛠️ Generating BPMN from modular package…")
+        bpmn_xml = extractor.generate_bpmn_from_modular(pkg["dmn_xml"], pkg["canonical_map"], pkg["ask_plan"])
+        bpmn_file = out_dir / f"{module.lower()}_workflow.bpmn"
+        bpmn_file.write_text(bpmn_xml, encoding="utf-8")
+        typer.echo(f"📄 BPMN saved to: {bpmn_file}")
+        (out_dir / f"{module.lower()}_raw.txt").write_text(pkg["raw"], encoding="utf-8")
+        typer.echo("✅ Modular generation complete")
+
+    except Exception as e:
+        typer.echo(f"❌ Modular generation failed: {e}", err=True)
+        raise typer.Exit(code=1)
+
+
 @app.command("chat-validate")
 def cli_chat_validate(
     bpmn: str = typer.Option(..., "--bpmn", help="Path to BPMN file to validate"),
@@ -831,6 +1358,51 @@ def cli_chat_validate(
     except Exception as e:
         typer.echo(f"❌ Validation failed: {e}")
         raise typer.Exit(1)
+
+
+@app.command("guarded-workflow")
+def cli_guarded_workflow(
+    pdf: str = typer.Option(..., "--pdf", help="WHO CHW PDF path"),
+    outdir: str = typer.Option("guarded_artifacts", "--outdir", help="Output directory"),
+    module: str = typer.Option("WHO_CHW_Guarded", "--module", help="Module name"),
+):
+    """Run the guarded 5-step LLM-only pipeline: per-section extraction → merge → modular DMN+ASK → BPMN → coverage audit."""
+    try:
+        from .openai_extractor_guarded import OpenAIGuardedExtractor
+        from pathlib import Path
+        import json
+        load_dotenv()
+
+        out_path = Path(outdir)
+        out_path.mkdir(parents=True, exist_ok=True)
+
+        extractor = OpenAIGuardedExtractor()
+        typer.echo("🔎 Step 1: Per-section extraction…")
+        sec_objs = extractor.extract_rules_per_section(pdf)
+        (out_path / f"{module.lower()}_sections.json").write_text(json.dumps(sec_objs, indent=2), encoding="utf-8")
+
+        typer.echo("🧩 Step 2: Merge + canonicalize…")
+        merged = extractor.merge_sections(sec_objs)
+        (out_path / f"{module.lower()}_merged_ir.json").write_text(json.dumps(merged, indent=2), encoding="utf-8")
+
+        typer.echo("🧠 Step 3: DMN + ASK_PLAN…")
+        dmn_xml, ask_plan = extractor.generate_dmn_and_ask_plan(merged)
+        (out_path / f"{module.lower()}_dmn.dmn").write_text(dmn_xml, encoding="utf-8")
+        (out_path / f"{module.lower()}_ask_plan.json").write_text(json.dumps(ask_plan, indent=2), encoding="utf-8")
+
+        typer.echo("🛠️ Step 4: BPMN…")
+        bpmn_xml = extractor.generate_bpmn(dmn_xml, ask_plan)
+        (out_path / f"{module.lower()}_workflow.bpmn").write_text(bpmn_xml, encoding="utf-8")
+
+        typer.echo("✅ Step 5: Coverage audit…")
+        audit = extractor.audit_coverage(merged, dmn_xml)
+        (out_path / f"{module.lower()}_coverage.json").write_text(json.dumps(audit, indent=2), encoding="utf-8")
+
+        typer.echo(f"✅ Guarded pipeline complete → {out_path}")
+
+    except Exception as e:
+        typer.echo(f"❌ Guarded workflow failed: {e}", err=True)
+        raise typer.Exit(code=1)
 
 
 @app.command("validate-artifacts")

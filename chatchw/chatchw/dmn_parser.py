@@ -58,7 +58,7 @@ class DMNParser:
     """Parses DMN XML files to extract decision logic"""
     
     def __init__(self):
-        # Prefer DMN 1.4 namespace, fall back handled dynamically when parsing
+        # Default to DMN 1.4; will auto-detect from document root when parsing
         self.namespaces = {
             'dmn': 'https://www.omg.org/spec/DMN/20191111/MODEL/'
         }
@@ -67,6 +67,12 @@ class DMNParser:
         """Parse a DMN file and return decision logic structure"""
         tree = ET.parse(dmn_path)
         root = tree.getroot()
+        # Auto-detect namespace from root tag if possible
+        tag = root.tag
+        if '}' in tag:
+            ns_uri = tag.split('}', 1)[0].lstrip('{')
+            if 'DMN' in ns_uri or 'dmn' in ns_uri or '2015' in ns_uri or '2018' in ns_uri or '2019' in ns_uri:
+                self.namespaces['dmn'] = ns_uri
         
         # Parse input data elements
         input_data = self._parse_input_data(root)
