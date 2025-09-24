@@ -1089,14 +1089,17 @@ def cli_chat_dynamic(
         
         # Main conversation loop
         while not engine.is_conversation_complete(state):
-            # Get current task questions
-            task_questions = engine.get_current_task_questions(state)
-            
-            if task_questions:
+            # Within a user task, keep fetching questions again to allow gated follow-ups
+            asked_any_in_task = False
+            while True:
+                task_questions = engine.get_current_task_questions(state)
+                if not task_questions or not task_questions.questions:
+                    break
+                
                 typer.echo(f"📋 {task_questions.task_name}")
                 typer.echo("-" * 40)
                 
-                # Ask each question for this task
+                asked_this_round = False
                 for question in task_questions.questions:
                     variable = question['variable']
                     
@@ -1142,13 +1145,19 @@ def cli_chat_dynamic(
                             
                             # Process the input
                             engine.process_user_input(state, variable, value)
+                            asked_this_round = True
+                            asked_any_in_task = True
                             break
                             
                         except (KeyboardInterrupt, EOFError):
                             typer.echo("\n👋 Goodbye!")
                             return
                 
-                typer.echo()  # Add spacing between tasks
+                typer.echo()  # spacing
+                
+                # If no new answers were asked this round, stop looping to avoid repeats
+                if not asked_this_round:
+                    break
             
             # Advance workflow
             if not engine.advance_workflow(state):

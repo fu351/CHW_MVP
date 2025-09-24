@@ -81,16 +81,25 @@ class OpenAIGuardedExtractor:
             "- canonical_map filled for all variables\n- qa.unmapped_vars\n- qa.dedup_dropped\n- qa.overlap_fixed\nRULES\n- Rewrite all rules to canonical names\n- If two rules conflict on the same condition set tighten bounds or split any_of so both can exist without overlap\n- Keep every literal threshold\nINPUT\n<PASTE ALL SECTION JSONs>"
         )
 
-        # Step 3 prompt (DMN + ASK_PLAN)
+        # Step 3 prompt (DMN + ASK_PLAN) - enforced aggregator inputs and per-sign rows
         self.dmn_system = (
             "Convert RULES_JSON into modular DMN 1.4 using the DMN 1.4 MODEL namespace (2019-11-11). Return exactly two fenced blocks:\n"
             "1) ```xml <dmn:definitions>…```  2) ```json ASK_PLAN```\n\n"
-            "DMN\n- Root tag MUST be <dmn:definitions xmlns:dmn=\"https://www.omg.org/spec/DMN/20191111/MODEL/\"> (no other DMN namespaces).\n"
+            "DMN REQUIREMENTS\n"
+            "- Root tag MUST be <dmn:definitions xmlns:dmn=\"https://www.omg.org/spec/DMN/20191111/MODEL/\">. No other DMN namespaces.\n"
             "- Decisions: decide_danger_signs, decide_diarrhea, decide_fever_malaria, decide_respiratory, decide_nutrition, aggregate_final\n"
-            "- Each module: <dmn:decisionTable hitPolicy=\"FIRST\">\n  Inputs: only relevant canonical variables\n  Outputs: columns triage:string, danger_sign:boolean, clinic_referral:boolean, reason:string, ref:string\n  Rows: highest severity first. Use FEEL literals and comparators only. Escape &lt; &gt;\n  Invariants: hospital → danger_sign=true, clinic → clinic_referral=true\n"
-            "- aggregate_final precedence:\n  if any module.danger_sign=true → triage:hospital\n  else if any module.clinic_referral=true → triage:clinic\n  else → triage:home\n  Carry reason/ref from the highest priority firing module\n"
-            "- Add <dmn:inputData> for every used canonical variable with correct typeRef.\n- Add <dmn:informationRequirement> from aggregate_final to every module decision.\n- No string contains(). No effect blobs. No non-DMN elements.\n"
-            "ASK_PLAN\n[ {\"module\":\"diarrhea\",\"ask\":[\"diarrhea\"],\"followups_if\":{\"diarrhea==true\":[\"blood_in_stool\",\"diarrhea_duration_days\"]}},\n  {\"module\":\"fever_malaria\",\"ask\":[\"fever\"],\"followups_if\":{\"fever==true\":[\"temperature_c\",\"fever_duration_days\",\"malaria_area\"]}},\n  {\"module\":\"respiratory\",\"ask\":[\"cough\"],\"followups_if\":{\"cough==true\":[\"resp_rate\",\"cough_duration_days\",\"chest_indrawing\"]}},\n  {\"module\":\"nutrition\",\"ask\":[\"muac_mm\",\"edema_both_feet\"]},\n  {\"module\":\"danger_signs\",\"ask\":[\"convulsions\",\"unconscious\",\"unable_to_drink\",\"vomiting_everything\",\"chest_indrawing\",\"edema_both_feet\"]}]\nINPUT\nRULES_JSON: <PASTE MERGED IR FROM STEP 2>"
+            "- Each module decision uses <dmn:decisionTable hitPolicy=\"FIRST\">\n  Inputs: only relevant canonical variables\n  Outputs: triage:string, danger_sign:boolean, clinic_referral:boolean, reason:string, ref:string\n  Rows: use FEEL literals/comparators only; escape &lt; and &gt; in <dmn:text>.\n  Invariants: hospital → danger_sign=true; clinic → clinic_referral=true. No effect strings.\n"
+            "- decide_danger_signs MUST have one row per sign (no row requiring multiple signs):\n  convulsions==true → triage:\"hospital\", danger_sign:true, reason:\"convulsions\", ref:\"pXX\"\n  unconscious==true → triage:\"hospital\", danger_sign:true, reason:\"unconscious\"\n  unable_to_drink==true → triage:\"hospital\", danger_sign:true, reason:\"unable_to_drink\"\n  vomiting_everything==true → triage:\"hospital\", danger_sign:true, reason:\"vomiting_everything\"\n  chest_indrawing==true → triage:\"hospital\", danger_sign:true, reason:\"severe_respiratory_distress\"\n  muac_mm < 115 → triage:\"clinic\", clinic_referral:true, reason:\"severe_acute_malnutrition\"\n  edema_both_feet==true → triage:\"clinic\", clinic_referral:true, reason:\"bilateral_pitting_edema\"\n"
+            "- decide_diarrhea:\n  blood_in_stool==true → clinic_referral:true, triage:\"clinic\", reason:\"dysentery\"\n  diarrhea_duration_days >= 14 → clinic_referral:true, triage:\"clinic\", reason:\"persistent_diarrhea\"\n"
+            "- decide_fever_malaria:\n  malaria_area==true AND fever==true AND fever_duration_days in [3..6] → clinic_referral:true\n  fever==true AND temperature_c >= 39 → clinic_referral:true\n  fever==true AND fever_duration_days >= 7 → clinic_referral:true\n"
+            "- decide_respiratory (age thresholds, do not duplicate chest_indrawing clinic):\n  age_months < 12 AND resp_rate >= 50 → clinic_referral:true, reason:\"fast_breathing_infant\"\n  age_months >= 12 AND resp_rate >= 40 → clinic_referral:true, reason:\"fast_breathing_child\"\n"
+            "- decide_nutrition: MUAC 115–124 → clinic_referral:true; >=125 → home\n"
+            "- aggregate_final MUST HAVE INPUT COLUMNS referencing module outputs:\n  Inputs: decide_danger_signs.danger_sign (boolean), decide_diarrhea.clinic_referral, decide_fever_malaria.clinic_referral, decide_respiratory.clinic_referral, decide_nutrition.clinic_referral\n  Rules (FIRST):\n   Row1: danger_sign == true → triage:\"hospital\", reason:\"danger_sign\", ref:\"aggregator\"\n   Row2: any clinic_referral input == true → triage:\"clinic\", reason:\"needs_clinic_referral\", ref:\"aggregator\"\n   Row3: otherwise → triage:\"home\", reason:\"home_care\", ref:\"aggregator\"\n  The aggregator does NOT compute per-module reasons; engine will surface top module reason/ref.\n"
+            "- Add <dmn:informationRequirement> from aggregate_final to each module decision.\n"
+            "- Ensure <dmn:inputData> exists for every canonical variable (boolean|number|string).\n"
+            "- No contains() or non-DMN elements.\n\n"
+            "ASK_PLAN (use canonical names; parent-first with gated follow-ups):\n"
+            "[ {\"module\":\"diarrhea\",\"ask\":[\"diarrhea\"],\"followups_if\":{\"diarrhea==true\":[\"blood_in_stool\",\"diarrhea_duration_days\"]}},\n  {\"module\":\"fever_malaria\",\"ask\":[\"fever\"],\"followups_if\":{\"fever==true\":[\"temperature_c\",\"fever_duration_days\",\"malaria_area\"]}},\n  {\"module\":\"respiratory\",\"ask\":[\"cough\"],\"followups_if\":{\"cough==true\":[\"resp_rate\",\"cough_duration_days\",\"chest_indrawing\"]}},\n  {\"module\":\"nutrition\",\"ask\":[\"muac_mm\",\"edema_both_feet\"]},\n  {\"module\":\"danger_signs\",\"ask\":[\"convulsions\",\"unconscious\",\"unable_to_drink\",\"vomiting_everything\",\"chest_indrawing\",\"edema_both_feet\"]}]\n"
         )
 
         # Step 4 prompt (BPMN)
@@ -281,9 +290,62 @@ class OpenAIGuardedExtractor:
     def generate_dmn_and_ask_plan(self, merged_ir: Dict[str, Any]) -> Tuple[str, Any]:
         user = "RULES_JSON:\n" + json.dumps(merged_ir, ensure_ascii=False)
         text = self._chat_text(self.dmn_system, user, max_tokens=12000)
+        # Save raw for troubleshooting
+        try:
+            Path("dmn_ask_debug_last.txt").write_text(text, encoding="utf-8")
+        except Exception:
+            pass
         blocks = _extract_fenced_blocks(text)
         dmn_xml: Optional[str] = None
         ask_plan: Optional[Any] = None
+        
+        def _parse_json_loose(s: str) -> Optional[Any]:
+            import re
+            raw = _strip_code_fences(s).strip()
+            # quick strict parse
+            try:
+                return json.loads(raw)
+            except Exception:
+                pass
+            # strip // comments and /* */
+            lines: List[str] = []
+            in_block = False
+            for ln in raw.splitlines():
+                t = ln
+                if in_block:
+                    if "*/" in t:
+                        t = t.split("*/", 1)[1]
+                        in_block = False
+                    else:
+                        continue
+                if "/*" in t:
+                    t = t.split("/*", 1)[0]
+                    in_block = True
+                idx = t.find('//')
+                if idx != -1:
+                    t = t[:idx]
+                lines.append(t)
+            cleaned = "\n".join(lines)
+            cleaned = re.sub(r",\s*(\]|\})", r"\1", cleaned)
+            try:
+                return json.loads(cleaned)
+            except Exception:
+                # attempt to find array or object
+                lb, rb = cleaned.find('['), cleaned.rfind(']')
+                if lb != -1 and rb != -1 and rb > lb:
+                    cand = cleaned[lb:rb+1]
+                    try:
+                        return json.loads(cand)
+                    except Exception:
+                        pass
+                lb, rb = cleaned.find('{'), cleaned.rfind('}')
+                if lb != -1 and rb != -1 and rb > lb:
+                    cand = cleaned[lb:rb+1]
+                    try:
+                        return json.loads(cand)
+                    except Exception:
+                        pass
+            return None
         # First pass: use fenced blocks
         for lang, body in blocks:
             b = body.strip()
@@ -291,12 +353,9 @@ class OpenAIGuardedExtractor:
                 dmn_xml = b
                 continue
             if ask_plan is None:
-                try:
-                    parsed = json.loads(_strip_code_fences(b))
-                    if isinstance(parsed, list) or isinstance(parsed, dict):
-                        ask_plan = parsed
-                except Exception:
-                    pass
+                parsed = _parse_json_loose(b)
+                if isinstance(parsed, (list, dict)):
+                    ask_plan = parsed
         # Fallbacks
         if dmn_xml is None:
             s = text
@@ -306,16 +365,43 @@ class OpenAIGuardedExtractor:
                 end += len("</dmn:definitions>")
                 dmn_xml = s[start:end].strip()
         if ask_plan is None:
-            # Try to locate first plausible JSON array in whole text
-            s = text
-            lb = s.find('[')
-            rb = s.rfind(']')
-            if lb != -1 and rb != -1 and rb > lb:
-                candidate = s[lb:rb+1]
-                try:
-                    ask_plan = json.loads(_strip_code_fences(candidate))
-                except Exception:
-                    pass
+            # Try to locate first plausible JSON array/object in whole text
+            parsed = _parse_json_loose(text)
+            if isinstance(parsed, (list, dict)):
+                ask_plan = parsed
+        # Normalize ASK_PLAN if dict-wrapped
+        if isinstance(ask_plan, dict):
+            # Common shapes: {"ASK_PLAN": [...]} or {"questions": [...]}
+            if isinstance(ask_plan.get("ASK_PLAN"), list):
+                ask_plan = ask_plan["ASK_PLAN"]
+            elif isinstance(ask_plan.get("ask_plan"), list):
+                ask_plan = ask_plan["ask_plan"]
+            elif isinstance(ask_plan.get("questions"), list):
+                ask_plan = {"questions": ask_plan["questions"]}
+        # Minimal sanitizer to fix malformed <dmn:text> closures inside entries
+        def _sanitize_dmn(xml: str) -> str:
+            import re
+            s = xml
+            # Ensure every <dmn:outputEntry><dmn:text>… has a closing </dmn:text>
+            s = re.sub(r"(<dmn:outputEntry>\s*<dmn:text>)([^<]*?)(</dmn:outputEntry>)",
+                       r"\1\2</dmn:text>\3", s, flags=re.DOTALL)
+            # Ensure empty output entries have explicit empty string
+            s = s.replace("<dmn:outputEntry><dmn:text></dmn:text></dmn:outputEntry>",
+                          "<dmn:outputEntry><dmn:text>\"\"</dmn:text></dmn:outputEntry>")
+            s = s.replace("<dmn:outputEntry><dmn:text></dmn:outputEntry>",
+                          "<dmn:outputEntry><dmn:text>\"\"</dmn:text></dmn:outputEntry>")
+            # Do the same for inputEntry
+            s = re.sub(r"(<dmn:inputEntry>\s*<dmn:text>)([^<]*?)(</dmn:inputEntry>)",
+                       r"\1\2</dmn:text>\3", s, flags=re.DOTALL)
+            s = s.replace("<dmn:inputEntry><dmn:text></dmn:text></dmn:inputEntry>",
+                          "<dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>")
+            s = s.replace("<dmn:inputEntry><dmn:text></dmn:inputEntry>",
+                          "<dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>")
+            return s
+
+        if dmn_xml:
+            dmn_xml = _sanitize_dmn(dmn_xml)
+
         if not dmn_xml or ask_plan is None:
             # Save debug
             try:

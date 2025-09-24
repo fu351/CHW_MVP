@@ -46,6 +46,30 @@ class DynamicChatbotEngine:
         self.process = self._parse_bpmn_structure(bpmn_file)
         self.start_node = self._find_start_event()
         
+        # Parse DMN logic once and keep it
+        try:
+            self.dmn_logic = self.dmn_parser.parse_dmn_file(self.dmn_file)
+        except Exception as e:
+            print(f"Warning: Failed to parse DMN file: {e}")
+            self.dmn_logic = None
+
+        # Try to load ASK_PLAN next to DMN
+        self.ask_plan = None
+        try:
+            import json, os
+            dmn_dir = os.path.dirname(self.dmn_file)
+            candidates = [
+                os.path.join(dmn_dir, 'ask_plan.json'),
+                os.path.join(dmn_dir, 'who_chw_guarded5_ask_plan.json'),
+            ]
+            for path in candidates:
+                if os.path.exists(path):
+                    with open(path, 'r', encoding='utf-8') as f:
+                        self.ask_plan = json.load(f)
+                        break
+        except Exception:
+            self.ask_plan = None
+
         # Create question mappings from DMN variables
         self.variable_questions = self._create_variable_questions()
         
@@ -144,6 +168,11 @@ class DynamicChatbotEngine:
             },
             
             # Symptoms
+            'diarrhea': {
+                'text': '💧 Does the child have diarrhea (loose, watery stools)?',
+                'type': 'boolean',
+                'help': '3 or more loose stools in 24 hours'
+            },
             'diarrhoea': {
                 'text': '💧 Does the child have diarrhea (loose, watery stools)?',
                 'type': 'boolean',
@@ -264,7 +293,7 @@ class DynamicChatbotEngine:
             
             task_name_lower = node_name.lower()
             
-            if 'diarrhea' in task_name_lower:
+            if 'diarrhea' in task_name_lower or 'diarrhoea' in task_name_lower:
                 if 'details' in task_name_lower:
                     # Ask details only if diarrhea is present (prefer canonical 'diarrhea')
                     has_diarrhea = state.collected_data.get('diarrhea')
@@ -278,7 +307,7 @@ class DynamicChatbotEngine:
                 else:
                     # Initial diarrhea question - ask only the canonical variable
                     vars_to_ask = []
-                    if 'diarrhea' not in state.collected_data:
+                    if 'diarrhea' not in state.collected_data and 'diarrhoea' not in state.collected_data:
                         vars_to_ask.append('diarrhea')
             elif 'fever' in task_name_lower or 'malaria' in task_name_lower:
                 vars_to_ask = []
@@ -309,6 +338,15 @@ class DynamicChatbotEngine:
             else:
                 # Check for danger signs by default
                 vars_to_ask = ['convulsions', 'unconscious', 'unable_to_drink', 'vomiting_everything']
+
+            # If ASK_PLAN is available, intersect vars_to_ask with currently relevant module plan to avoid mismatches
+            if self.ask_plan:
+                plan_vars = set()
+                for item in self.ask_plan:
+                    plan_vars.update(item.get('ask') or [])
+                    for arr in (item.get('followups_if') or {}).values():
+                        plan_vars.update(arr or [])
+                vars_to_ask = [v for v in vars_to_ask if v in plan_vars]
             
             # Generate questions for relevant variables
             for var_name in vars_to_ask:
@@ -375,15 +413,36 @@ class DynamicChatbotEngine:
             state.completed_tasks.add(state.current_node_id)
             
         elif node_type == 'businessRuleTask':
-            # Execute DMN decision
+            # Execute DMN decision using parsed DMN tables
             decision_ref = current_node.get('decisionRef')
             if decision_ref:
                 try:
-                    result = decide(self.dmn_file, state.collected_data)
+                    # Evaluate per-module decisions opportunistically to short-circuit danger signs
+                    if self.ask_plan:
+                        module_order = [m.get('module') for m in self.ask_plan if isinstance(m, dict)]
+                    else:
+                        module_order = ['danger_signs', 'diarrhea', 'fever_malaria', 'respiratory', 'nutrition']
+                    # Evaluate modules
+                    for mod in module_order:
+                        mod_id = f"decide_{mod}"
+                        mod_out = self._evaluate_specific_decision(mod_id, state.collected_data)
+                        if mod_out:
+                            self._process_dmn_result(state, [mod_out])
+                            if bool(mod_out.get('danger_sign')):
+                                break
+                    # Finally evaluate aggregator
+                    result = self._evaluate_dmn(state.collected_data)
                     self._process_dmn_result(state, result)
                 except Exception as e:
                     state.reasoning.append(f"Decision evaluation failed: {e}")
         
+        # Evaluate DMN before routing, so flags/triage are current for gateway conditions
+        try:
+            result = self._evaluate_dmn(state.collected_data)
+            self._process_dmn_result(state, result)
+        except Exception:
+            pass
+
         # Find next node
         next_node_id = self._find_next_node(state)
         if next_node_id:
@@ -437,9 +496,9 @@ class DynamicChatbotEngine:
         if not condition:
             return True
         text = condition.strip()
-        # Normalize case and whitespace around operators
+        # Support boolean comparisons and string comparisons: triage == 'hospital'|hospital
         # Accept bare flag names as truthy check
-        m = re.fullmatch(r"([A-Za-z0-9_]+)\s*(==\s*(true|false))?", text, flags=re.IGNORECASE)
+        m = re.fullmatch(r"([A-Za-z0-9_]+)\s*==\s*'?(true|false|hospital|clinic|home)'?", text, flags=re.IGNORECASE)
         if not m:
             # Try simple bare identifier (no operator)
             ident = text.strip()
@@ -449,18 +508,19 @@ class DynamicChatbotEngine:
                 val = state.process_variables.get(key)
             return bool(val)
         ident = m.group(1)
-        op = m.group(2)
+        expected_raw = m.group(2)
         key = ident.lower()
         # Resolve current value from flags first, then process vars
         cur = state.flags.get(key)
         if cur is None:
             cur = state.process_variables.get(key)
-        cur_bool = bool(cur)
-        if not op:
-            return cur_bool
-        expected_raw = m.group(3)
+        # If expected is triage string
+        if str(expected_raw).lower() in ['hospital', 'clinic', 'home']:
+            cur_str = str(cur).lower() if cur is not None else ''
+            return cur_str == str(expected_raw).lower()
+        # Else treat as boolean
         expected = True if str(expected_raw).lower() == 'true' else False
-        return cur_bool is expected
+        return bool(cur) is expected
     
     def _process_dmn_result(self, state: WorkflowState, dmn_result: List[Dict[str, Any]]) -> None:
         """Process DMN decision result and extract flags."""
@@ -476,6 +536,15 @@ class DynamicChatbotEngine:
             triage_norm = str(triage_val).strip().lower()
             state.process_variables['triage'] = triage_norm
             state.reasoning.append(f"Triage recommendation: {triage_norm}")
+            # Map triage levels to flags for gateway compatibility
+            if triage_norm == 'hospital':
+                state.flags['danger_sign'] = True
+                state.process_variables['danger_sign'] = True
+                state.flags['clinic_referral'] = True
+                state.process_variables['clinic_referral'] = True
+            elif triage_norm == 'clinic':
+                state.flags['clinic_referral'] = True
+                state.process_variables['clinic_referral'] = True
         # boolean flags
         for flag_key in ['danger_sign', 'clinic_referral']:
             if flag_key in result:
@@ -516,6 +585,80 @@ class DynamicChatbotEngine:
                 elif low.startswith('reason:'):
                     reason = _normalize_token(part.split(':', 1)[1]).replace('_', ' ')
                     state.reasoning.append(f"Clinical reason: {reason}")
+
+    def _evaluate_dmn(self, inputs: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Evaluate the parsed DMN using current inputs and return typed outputs.
+        Returns a list with a single result dict when a rule matches; otherwise empty list.
+        """
+        if not self.dmn_logic or not self.dmn_logic.decisions:
+            return []
+        # Prefer an aggregate/final decision table if present
+        selected_table = None
+        for table in self.dmn_logic.decisions.values():
+            name_l = (table.name or '').strip().lower()
+            if name_l in ['aggregate_final', 'aggregate', 'final', 'overall_recommendation']:
+                selected_table = table
+                break
+        if selected_table is None:
+            # Fallback: just use the first decision table
+            selected_table = list(self.dmn_logic.decisions.values())[0]
+
+        # Find matching rules
+        matches = self.dmn_parser.find_matching_rules(selected_table, inputs)
+        if not matches:
+            return []
+
+        # Respect hit policy: FIRST or UNIQUE -> take first
+        match = matches[0]
+
+        # Build output dict from output entries
+        out: Dict[str, Any] = {}
+        for out_id, val in match.output_entries.items():
+            col = selected_table.output_columns.get(out_id)
+            key = (col.name or col.label or '').strip()
+            key = key.lower().replace(' ', '_') if key else f'out_{out_id.lower()}'
+            parsed_val = self._parse_dmn_output_value(val)
+            out[key] = parsed_val
+        return [out]
+
+    def _evaluate_specific_decision(self, decision_id: str, inputs: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        if not self.dmn_logic:
+            return None
+        table = None
+        for did, t in self.dmn_logic.decisions.items():
+            if (t.name or '').strip().lower() == decision_id.strip().lower() or did.strip().lower() == decision_id.strip().lower():
+                table = t
+                break
+        if table is None:
+            return None
+        matches = self.dmn_parser.find_matching_rules(table, inputs)
+        if not matches:
+            return None
+        m = matches[0]
+        out: Dict[str, Any] = {}
+        for out_id, val in m.output_entries.items():
+            col = table.output_columns.get(out_id)
+            key = (col.name or col.label or '').strip()
+            key = key.lower().replace(' ', '_') if key else f'out_{out_id.lower()}'
+            parsed_val = self._parse_dmn_output_value(val)
+            out[key] = parsed_val
+        return out
+
+    @staticmethod
+    def _parse_dmn_output_value(val: Any) -> Any:
+        """Parse a DMN output entry textual value into Python types.
+        Handles booleans and quoted strings.
+        """
+        if val is None:
+            return None
+        s = str(val).strip()
+        sl = s.lower()
+        if sl in ['true', 'false']:
+            return sl == 'true'
+        # Strip quotes if present
+        if (s.startswith('"') and s.endswith('"')) or (s.startswith("'") and s.endswith("'")):
+            return s[1:-1]
+        return s
     
     def get_final_recommendation(self, state: WorkflowState) -> Dict[str, Any]:
         """Get final recommendation with enhanced reasoning."""
