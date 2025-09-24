@@ -2,13 +2,19 @@
   {
     "rule_id": "FEV-99",
     "when": [
-      { "sym": "convulsion", "eq": true }
+      {
+        "sym": "convulsion",
+        "eq": true
+      }
     ],
     "then": {
-      "set_flags": ["danger.sign"],
+      "set_flags": [
+        "danger.sign"
+      ],
       "propose_triage": "hospital",
-      "reasons": ["convulsion.danger.sign"],
-      "actions": [{"id": "urgent.referral", "if_available": true}],
+      "reasons": [
+        "convulsion.danger.sign"
+      ],
       "guideline_ref": "WHO-IMCI-2014-FEV-99",
       "priority": 100
     }
@@ -17,24 +23,44 @@
     "rule_id": "FEV-05",
     "when": [
       {
-        "any_of": [
-          { "obs": "temp", "op": "ge", "value": 38.5 },
-          {
-            "all_of": [
-              { "sym": "feels_very_hot", "eq": true },
-              { "obs": "temp", "op": "gt", "value": 37.0 }
-            ]
-          }
-        ]
+        "obs": "temp",
+        "op": "ge",
+        "value": 38.5
       }
     ],
     "then": {
-      "set_flags": ["fever.high"],
-      "reasons": ["fever.high"],
-      "actions": [{"id": "paracetamol", "if_available": true}],
+      "set_flags": [
+        "fever.high"
+      ],
+      "reasons": [
+        "fever.high"
+      ],
       "guideline_ref": "WHO-IMCI-2014-FEV-05",
-      "priority": 10
+      "priority": 20
+    }
+  },
+  {
+    "rule_id": "FEV-06",
+    "when": [
+      {
+        "sym": "feels_very_hot",
+        "eq": true
+      },
+      {
+        "obs": "temp",
+        "op": "gt",
+        "value": 37.5
+      }
+    ],
+    "then": {
+      "set_flags": [
+        "fever.high"
+      ],
+      "reasons": [
+        "fever.high.subjective"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-FEV-06",
+      "priority": 15
     }
   }
 ]
-

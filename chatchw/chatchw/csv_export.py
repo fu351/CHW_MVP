@@ -68,4 +68,3 @@ def to_csv(records: Iterable[Dict[str, Any]], out_path: str) -> None:
         w.writeheader()
         for rec in records:
             w.writerow(_row(rec))
-

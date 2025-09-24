@@ -3,11 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Dict, Iterable, List, Mapping, Tuple
 
-from rfc3339_validator import validate_rfc3339
-
-from .resolver import resolve_triage
 from .schema import (
-    Action,
     AllOfCondition,
     AnyOfCondition,
     Decision,
@@ -15,24 +11,16 @@ from .schema import (
     ObservationCondition,
     Rule,
     SymCondition,
-    TriageLevel,
     TraceEntry,
 )
 
 
-def _timestamp_rfc3339() -> str:
-    ts = datetime.now(timezone.utc).isoformat()
-    if "." in ts:
-        ts = ts.split(".")[0] + "+00:00"
-    assert validate_rfc3339(ts)
-    return ts
+def _ts() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 def _obs_map(enc: EncounterInput) -> Dict[str, float]:
-    m: Dict[str, float] = {}
-    for o in enc.observations:
-        m[o.id] = o.value
-    return m
+    return {o.id: o.value for o in enc.observations}
 
 
 def _compare(op: str, left: float, right: float) -> bool:
@@ -52,9 +40,7 @@ def _compare(op: str, left: float, right: float) -> bool:
 def eval_condition(cond, enc: EncounterInput, flags: Mapping[str, bool]) -> bool:
     if isinstance(cond, ObservationCondition):
         v = _obs_map(enc).get(cond.obs)
-        if v is None:
-            return False
-        return _compare(cond.op, v, float(cond.value))
+        return v is not None and _compare(cond.op, v, float(cond.value))
     if isinstance(cond, SymCondition):
         sv = getattr(enc.symptoms, cond.sym)
         return sv == cond.eq
@@ -65,11 +51,10 @@ def eval_condition(cond, enc: EncounterInput, flags: Mapping[str, bool]) -> bool
     raise TypeError("unknown condition type")
 
 
-def run_rules(rules: Iterable[Rule], enc: EncounterInput) -> Tuple[Dict[str, bool], List[str], List[Action], List[TriageLevel], List[TraceEntry]]:
+def run_rules(rules: Iterable[Rule], enc: EncounterInput) -> Tuple[Dict[str, bool], List[str], List[str], List[TraceEntry]]:
     flags: Dict[str, bool] = {}
     reasons: List[str] = []
-    actions: List[Action] = []
-    proposed: List[TriageLevel] = []
+    proposed: List[str] = []
     trace: List[TraceEntry] = []
 
     ordered = sorted(list(rules), key=lambda r: r.priority, reverse=True)
@@ -82,40 +67,36 @@ def run_rules(rules: Iterable[Rule], enc: EncounterInput) -> Tuple[Dict[str, boo
                 for reason in r.then.reasons:
                     if reason not in reasons:
                         reasons.append(reason)
-            if r.then.actions:
-                for act in r.then.actions:
-                    actions.append(act)
             if r.then.propose_triage:
                 proposed.append(r.then.propose_triage)
-            trace.append(
-                TraceEntry(
-                    rule_id=r.rule_id,
-                    guideline_ref=r.then.guideline_ref,
-                    timestamp=_timestamp_rfc3339(),
-                )
-            )
-    return flags, reasons, actions, proposed, trace
+            trace.append(TraceEntry(rule_id=r.rule_id, guideline_ref=r.then.guideline_ref, timestamp=_ts()))
+    return flags, reasons, proposed, trace
 
 
 def decide(enc: EncounterInput, rulepacks: Mapping[str, Iterable[Rule]]) -> Decision:
     all_flags: Dict[str, bool] = {}
     all_reasons: List[str] = []
-    all_actions: List[Action] = []
-    proposed: List[TriageLevel] = []
+    proposed: List[str] = []
     trace: List[TraceEntry] = []
 
     for _module, rules in rulepacks.items():
-        flags, reasons, actions, prop, tr = run_rules(rules, enc)
+        flags, reasons, prop, tr = run_rules(rules, enc)
         for k, v in flags.items():
             if v:
                 all_flags[k] = True
         for r in reasons:
             if r not in all_reasons:
                 all_reasons.append(r)
-        all_actions.extend(actions)
         proposed.extend(prop)
         trace.extend(tr)
 
-    triage = resolve_triage(all_flags, proposed, enc.context)
-    return Decision(triage=triage, actions=all_actions, reasons=all_reasons, trace=trace)
+    if all_flags.get("danger.sign", False):
+        triage = "hospital"
+    elif "hospital" in set(proposed):
+        triage = "hospital"
+    elif "clinic" in set(proposed):
+        triage = "clinic"
+    else:
+        triage = "home"
 
+    return Decision(triage=triage, reasons=all_reasons, trace=trace)

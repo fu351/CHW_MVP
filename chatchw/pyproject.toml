@@ -5,20 +5,22 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "chatchw"
 version = "0.1.0"
-description = "ChatCHW v0.1 - Offline, sandboxed CLI MVP that generates BPMN/DMN and runs deterministic rules."
+description = "ChatCHW v0.1 - Offline CLI MVP that generates BPMN/DMN and runs deterministic rules."
 readme = "README.md"
-requires-python = ">=3.11,<3.12"
+requires-python = ">=3.11"
 authors = [{ name = "ChatCHW Team" }]
 license = { text = "MIT" }
 dependencies = [
-  "typer==0.12.3",
-  "pydantic==2.7.1",
-  "python-dateutil==2.9.0.post0",
-  "rfc3339-validator==0.1.4",
-  "pm4py==2.7.11",
-  "graphviz==0.20.3",
-  "pytest==8.3.2",
-  "hypothesis==6.108.5"
+  "typer>=0.9.0",
+  "pydantic>=2.0.0",
+  "pm4py>=2.7.0",
+  "graphviz>=0.20.0",
+  "pytest>=7.0.0",
+  "pypdf>=3.0.0",
+  "regex>=2023.0.0",
+  "matplotlib>=3.0.0",
+  "networkx>=2.0.0",
+  "openai>=1.0.0"
 ]
 
 [project.scripts]
@@ -31,4 +33,3 @@ include = ["chatchw*"]
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]
-

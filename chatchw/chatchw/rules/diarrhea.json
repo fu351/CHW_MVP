@@ -2,33 +2,41 @@
   {
     "rule_id": "DIA-10",
     "when": [
-      { "sym": "blood_in_stool", "eq": true }
+      {
+        "sym": "blood_in_stool",
+        "eq": true
+      }
     ],
     "then": {
-      "set_flags": ["dysentery"],
-      "reasons": ["dysentery.suspected"],
-      "actions": [{"id": "antibiotic", "if_available": true}],
+      "set_flags": [
+        "dysentery"
+      ],
+      "reasons": [
+        "dysentery.suspected"
+      ],
       "guideline_ref": "WHO-IMCI-2014-DIA-10",
-      "priority": 20
+      "priority": 30
     }
   },
   {
-    "rule_id": "DIA-20",
+    "rule_id": "DIA-15",
     "when": [
       {
-        "all_of": [
-          { "sym": "blood_in_stool", "eq": true },
-          { "sym": "diarrhea_days", "eq": 14 }
-        ]
+        "obs": "diarrhea_days",
+        "op": "gt",
+        "value": 3
       }
     ],
     "then": {
       "propose_triage": "clinic",
-      "reasons": ["diarrhea.prolonged.with.blood"],
-      "actions": [{"id": "stool.exam", "if_available": true}],
-      "guideline_ref": "WHO-IMCI-2014-DIA-20",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "prolonged.diarrhea"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-DIA-15",
       "priority": 15
     }
   }
 ]
-

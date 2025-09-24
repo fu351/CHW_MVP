@@ -2,12 +2,22 @@
   {
     "rule_id": "MAL-99",
     "when": [
-      { "sym": "edema_both_feet", "eq": true }
+      {
+        "sym": "edema_both_feet",
+        "eq": true
+      }
     ],
     "then": {
       "propose_triage": "hospital",
-      "reasons": ["edema.both.feet"],
-      "actions": [{"id": "urgent.referral", "if_available": true}],
+      "reasons": [
+        "edema.both.feet"
+      ],
+      "actions": [
+        {
+          "id": "urgent.referral",
+          "if_available": true
+        }
+      ],
       "guideline_ref": "WHO-IMCI-2014-MAL-99",
       "priority": 100
     }
@@ -15,15 +25,25 @@
   {
     "rule_id": "MAL-10",
     "when": [
-      { "obs": "muac_mm", "op": "lt", "value": 115.0 }
+      {
+        "obs": "muac_mm",
+        "op": "lt",
+        "value": 115.0
+      }
     ],
     "then": {
       "propose_triage": "clinic",
-      "reasons": ["muac.low"],
-      "actions": [{"id": "nutrition.program", "if_available": true}],
+      "reasons": [
+        "muac.low"
+      ],
+      "actions": [
+        {
+          "id": "nutrition.program",
+          "if_available": true
+        }
+      ],
       "guideline_ref": "WHO-IMCI-2014-MAL-10",
-      "priority": 10
+      "priority": 15
     }
   }
 ]
-
