@@ -368,3 +368,57 @@ chatchw/
 ---
 
 **Note**: This notebook will be updated with each significant change or user prompt. All major decisions, architectural changes, and test results are documented here for full traceability.
+
+---
+
+## Recent Updates (Sep 12, 2025)
+
+- Guarded 5-step extractor stabilized
+  - Step 3 tolerant parser for DMN + ASK_PLAN with raw capture (`dmn_ask_debug_last.txt`) and XML sanitizer for `<dmn:text>` closures
+  - Enforced modular DMN with typed outputs and explicit aggregator inputs; FIRST hit policy across modules
+  - ASK_PLAN aligned to canonical names with gated follow-ups
+- Refined extractor
+  - Batched LLM merges with strict JSON and fail-fast; deterministic coalesce; ASK_PLAN vs DMN validator
+  - BPMN generator updated to route by triage equality (aggregator)
+- Dynamic chatbot engine
+  - Loads ASK_PLAN and gates follow-ups; evaluates per-module decisions and short-circuits on danger_signs, then uses `aggregate_final`
+  - Reads typed DMN outputs (`triage`, `danger_sign`, `clinic_referral`, `reason`, `ref`); no effect-string parsing
+- Artifacts v6 (guarded)
+  - Directory: `guarded_artifacts_6/`
+  - Files: `who_chw_sections.json`, `who_chw_merged_ir.json`, `who_chw_dmn.dmn`, `who_chw_ask_plan.json`, `who_chw_workflow.bpmn`
+  - Behavior verified:
+    - MUAC 124 → Clinic
+    - Bloody diarrhea → Clinic
+    - High fever or prolonged fever → Clinic
+    - Danger signs (e.g., convulsions) → Hospital (module-level; add BPMN task for questions in future)
+- Validation note
+  - Structural checks pass. Alignment check warns that BPMN expects `danger_sign`/`clinic_referral` flags while the validator currently detects flags only via legacy effect-strings. Runtime logic is correct; validator will be updated to read boolean output columns.
+
+### Commands (dir 6)
+
+```powershell
+# Run guarded pipeline to dir 6
+python -m chatchw.cli guarded-workflow --pdf "WHO CHW guide 2012.pdf" --module WHO_CHW --outdir guarded_artifacts_6
+
+# Validate artifacts
+python -m chatchw.cli validate-artifacts --bpmn .\guarded_artifacts_6\who_chw_workflow.bpmn --dmn .\guarded_artifacts_6\who_chw_dmn.dmn
+
+# Chat with dynamic engine
+python -m chatchw.cli chat-dynamic --bpmn .\guarded_artifacts_6\who_chw_workflow.bpmn --dmn .\guarded_artifacts_6\who_chw_dmn.dmn --session dynamic_session_guarded6.json
+```
+
+---
+
+## Documentation Update (Sep 24, 2025)
+
+- README updated with a complete end-to-end pipeline section for Windows PowerShell:
+  - One-command pipeline via `pdf-workflow`, followed by `validate-artifacts` and `chat-dynamic`
+  - Manual step-by-step path: `extract-pdf` → `generate-bpmn`/`generate-dmn` → `validate-artifacts` → `chat-dynamic`
+  - Added optional steps for `convert-to-json` and `generate-flowchart`
+  - Clarified installing the editable package to enable the `chatchw` console command
+
+- README updated with macOS onboarding and setup:
+  - Homebrew-based install for Python 3.11 and Graphviz, optional Node/validators
+  - venv creation and package install (`pip install -e .`) with CLI verification
+  - End-to-end macOS pipeline: `pdf-workflow` → `validate-artifacts` → `chat-dynamic`
+  - Manual macOS path mirroring Windows steps; troubleshooting tips for Apple Silicon

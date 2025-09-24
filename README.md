@@ -2,7 +2,7 @@
 
 [![Standards](https://img.shields.io/badge/BPMN-2.0-blue)](https://www.omg.org/spec/BPMN/)
 [![Standards](https://img.shields.io/badge/DMN-1.3-green)](https://www.omg.org/spec/DMN/)
-[![Python](https://img.shields.io/badge/Python-3.8%2B-brightgreen)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-brightgreen)](https://python.org)
 
 ChatCHW is a **plug-and-play** clinical decision support system that transforms WHO community health guidelines into interactive chatbot workflows. It generates standards-compliant BPMN and DMN artifacts for seamless integration with external systems.
 
@@ -51,6 +51,109 @@ pip install -e .
 ```bash
 npm install -g bpmnlint dmnlint
 ```
+
+## 🍎 **macOS Onboarding & Setup**
+
+Follow these steps on macOS (zsh/bash). Commands assume you are in the repository root.
+
+### 1) Prerequisites
+
+```bash
+# Install Homebrew (if you don't have it)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Ensure brew is set up (Apple Silicon)
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# Python 3.11 and Graphviz
+brew install python@3.11 graphviz
+
+# (Optional) Node.js for validators
+brew install node
+npm install -g bpmnlint dmnlint
+```
+
+Verify Graphviz:
+
+```bash
+dot -V
+```
+
+### 2) Create a virtual environment
+
+```bash
+# From repo root
+python3.11 -m venv .venv
+source .venv/bin/activate
+python --version   # should show 3.11.x
+```
+
+### 3) Install ChatCHW (editable)
+
+```bash
+cd chatchw
+pip install -e .
+cd ..
+
+# Confirm CLI is registered
+chatchw version || python -m chatchw.chatchw.cli version
+```
+
+### 4) Run the end-to-end pipeline on macOS
+
+Option A (one command, recommended):
+
+```bash
+chatchw pdf-workflow --pdf "./WHO CHW guide 2012.pdf" --module WHO_CHW --out-dir ./chw_workflow_output
+
+chatchw validate-artifacts \
+  --bpmn ./chw_workflow_output/02_process_models/chw_workflow_process.bpmn \
+  --dmn  ./chw_workflow_output/02_process_models/chw_decision_logic.dmn
+
+chatchw chat-dynamic \
+  --bpmn ./chw_workflow_output/02_process_models/chw_workflow_process.bpmn \
+  --dmn  ./chw_workflow_output/02_process_models/chw_decision_logic.dmn \
+  --session dynamic_session.json
+```
+
+If the `chatchw` command isn’t found, prefix with Python:
+
+```bash
+python -m chatchw.chatchw.cli pdf-workflow --pdf "./WHO CHW guide 2012.pdf" --module WHO_CHW --out-dir ./chw_workflow_output
+python -m chatchw.chatchw.cli validate-artifacts --bpmn ./chw_workflow_output/02_process_models/chw_workflow_process.bpmn --dmn ./chw_workflow_output/02_process_models/chw_decision_logic.dmn
+python -m chatchw.chatchw.cli chat-dynamic --bpmn ./chw_workflow_output/02_process_models/chw_workflow_process.bpmn --dmn ./chw_workflow_output/02_process_models/chw_decision_logic.dmn --session dynamic_session.json
+```
+
+Option B (manual control):
+
+```bash
+# 1) Extract rules from PDF to JSON
+mkdir -p ./rules
+chatchw extract-pdf --pdf "./WHO CHW guide 2012.pdf" --module WHO_CHW --out ./rules/who_chw.json
+
+# 2) Generate BPMN and DMN
+mkdir -p ./outputs
+chatchw generate-bpmn --rules ./rules --out ./outputs/who_chw_workflow.bpmn --format xml --check
+chatchw generate-dmn  --rules ./rules --out ./outputs/who_chw_decisions.dmn   --format xml --check
+
+# 3) Validate artifacts
+chatchw validate-artifacts --bpmn ./outputs/who_chw_workflow.bpmn --dmn ./outputs/who_chw_decisions.dmn
+
+# 4) Run the chatbot (dynamic engine)
+chatchw chat-dynamic --bpmn ./outputs/who_chw_workflow.bpmn --dmn ./outputs/who_chw_decisions.dmn --session dynamic_session.json
+
+# (Optional) Generate readable JSON and flowcharts
+chatchw convert-to-json    --input ./outputs/who_chw_workflow.bpmn  --output ./outputs/bpmn_readable.json --type bpmn
+chatchw convert-to-json    --input ./outputs/who_chw_decisions.dmn  --output ./outputs/dmn_readable.json  --type dmn
+chatchw generate-flowchart --input ./outputs/who_chw_workflow.bpmn  --output ./outputs/bpmn_flow.png      --type bpmn
+chatchw generate-flowchart --input ./outputs/who_chw_decisions.dmn  --output ./outputs/dmn_flow.png       --type dmn
+```
+
+Tips:
+- On Apple Silicon, ensure Homebrew is under `/opt/homebrew` and your shell is initialized with `brew shellenv` as above.
+- If Graphviz isn’t found, re-run `brew install graphviz` and restart your shell.
+- For advanced AI-assisted extraction and modular artifacts, see `guarded-workflow` and `generate-modular-bpmn-dmn` in the CLI.
 
 ## 🎯 **Quick Start**
 
@@ -105,6 +208,65 @@ python -m chatchw.chatchw.cli validate-artifacts \
   --bpmn outputs/workflow.bpmn \
   --dmn outputs/decisions.dmn
 ```
+
+## 🧭 **End-to-End Pipeline (PDF → Rules → BPMN/DMN → Chatbot)**
+
+Below are two ways to run the full pipeline on Windows PowerShell.
+
+### Option A: One-command pipeline (recommended)
+
+```powershell
+# From repo root, ensure package is installed (creates the `chatchw` command)
+cd .\chatchw
+pip install -e .
+cd ..
+
+# Run complete PDF → BPMN/DMN → JSON → Flowcharts pipeline
+chatchw pdf-workflow --pdf ".\WHO CHW guide 2012.pdf" --module WHO_CHW --out-dir ".\chw_workflow_output"
+
+# Validate the generated artifacts
+chatchw validate-artifacts --bpmn ".\chw_workflow_output\02_process_models\chw_workflow_process.bpmn" --dmn ".\chw_workflow_output\02_process_models\chw_decision_logic.dmn"
+
+# Start the interactive chatbot (dynamic engine)
+chatchw chat-dynamic --bpmn ".\chw_workflow_output\02_process_models\chw_workflow_process.bpmn" --dmn ".\chw_workflow_output\02_process_models\chw_decision_logic.dmn" --session "dynamic_session.json"
+```
+
+If the `chatchw` command is not available, replace it with `python -m chatchw.chatchw.cli` in the commands above.
+
+### Option B: Manual steps (more control)
+
+```powershell
+# 0) Install editable package once (from repo root)
+cd .\chatchw
+pip install -e .
+cd ..
+
+# 1) Extract JSON rules from the WHO PDF
+New-Item -ItemType Directory -Force .\rules | Out-Null
+chatchw extract-pdf --pdf ".\WHO CHW guide 2012.pdf" --module WHO_CHW --out ".\rules\who_chw.json"
+
+# 2) Generate BPMN and DMN from the extracted rules
+New-Item -ItemType Directory -Force .\outputs | Out-Null
+chatchw generate-bpmn --rules ".\rules" --out ".\outputs\who_chw_workflow.bpmn" --format xml --check
+chatchw generate-dmn  --rules ".\rules" --out ".\outputs\who_chw_decisions.dmn"   --format xml --check
+
+# 3) Validate BPMN/DMN alignment (optional but recommended)
+chatchw validate-artifacts --bpmn ".\outputs\who_chw_workflow.bpmn" --dmn ".\outputs\who_chw_decisions.dmn"
+
+# 4) Run the chatbot (dynamic engine)
+chatchw chat-dynamic --bpmn ".\outputs\who_chw_workflow.bpmn" --dmn ".\outputs\who_chw_decisions.dmn" --session "dynamic_session.json"
+
+# (Optional) Generate readable JSON and flowcharts
+chatchw convert-to-json      --input ".\outputs\who_chw_workflow.bpmn"  --output ".\outputs\bpmn_readable.json" --type bpmn
+chatchw convert-to-json      --input ".\outputs\who_chw_decisions.dmn" --output ".\outputs\dmn_readable.json"  --type dmn
+chatchw generate-flowchart   --input ".\outputs\who_chw_workflow.bpmn"  --output ".\outputs\bpmn_flow.png"     --type bpmn
+chatchw generate-flowchart   --input ".\outputs\who_chw_decisions.dmn" --output ".\outputs\dmn_flow.png"      --type dmn
+```
+
+### Notes
+- The dynamic chatbot engine (`chat-dynamic`) provides the most complete consultation flow and reasoning output.
+- Use `chat-validate` to quickly sanity-check a pair of BPMN/DMN files for chatbot compatibility.
+- For an AI-assisted extraction and modular artifacts, see the advanced `guarded-workflow` and `generate-modular-bpmn-dmn` commands in the CLI.
 
 ## 📋 **Clinical Rule Format**
 
