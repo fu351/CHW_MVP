@@ -1,0 +1,15 @@
+[
+  {
+    "rule_id": "WHO_CHW-01",
+    "when": [
+      {
+        "sym": "convulsion",
+        "eq": true
+      }
+    ],
+    "then": {
+      "guideline_ref": "WHO-IMCI-2014-WHO_CHW-01",
+      "priority": 10
+    }
+  }
+]

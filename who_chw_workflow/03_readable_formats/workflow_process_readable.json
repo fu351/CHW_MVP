@@ -1,0 +1,139 @@
+{
+  "type": "BPMN",
+  "processes": [
+    {
+      "id": "Process_2585af12",
+      "name": "",
+      "isExecutable": "true",
+      "elements": [
+        {
+          "type": "startEvent",
+          "id": "Start_b6e38d53",
+          "name": "Start Assessment"
+        },
+        {
+          "type": "userTask",
+          "id": "UserTask_74f0e542",
+          "name": "Collect Patient Information"
+        },
+        {
+          "type": "sequenceFlow",
+          "id": "Flow_fcee8daf",
+          "name": "begin_assessment",
+          "sourceRef": "Start_b6e38d53",
+          "targetRef": "UserTask_74f0e542"
+        },
+        {
+          "type": "businessRuleTask",
+          "id": "BusinessRuleTask_25b1818c",
+          "name": "Assess Danger Signs"
+        },
+        {
+          "type": "sequenceFlow",
+          "id": "Flow_7ad53792",
+          "name": "check_danger_signs",
+          "sourceRef": "UserTask_74f0e542",
+          "targetRef": "BusinessRuleTask_25b1818c"
+        },
+        {
+          "type": "exclusiveGateway",
+          "id": "Gateway_0f1d834c",
+          "name": "Danger Signs Present?"
+        },
+        {
+          "type": "sequenceFlow",
+          "id": "Flow_cbb4a8af",
+          "name": "danger_assessment_complete",
+          "sourceRef": "BusinessRuleTask_25b1818c",
+          "targetRef": "Gateway_0f1d834c"
+        },
+        {
+          "type": "userTask",
+          "id": "UserTask_d6c2f0d6",
+          "name": "Collect Specific Symptoms"
+        },
+        {
+          "type": "sequenceFlow",
+          "id": "Flow_2ad66e3b",
+          "name": "no_immediate_danger",
+          "sourceRef": "Gateway_0f1d834c",
+          "targetRef": "UserTask_d6c2f0d6"
+        },
+        {
+          "type": "businessRuleTask",
+          "id": "BusinessRuleTask_4a0640f3",
+          "name": "Apply Clinical Rules"
+        },
+        {
+          "type": "sequenceFlow",
+          "id": "Flow_20e4cc21",
+          "name": "assess_symptoms",
+          "sourceRef": "UserTask_d6c2f0d6",
+          "targetRef": "BusinessRuleTask_4a0640f3"
+        },
+        {
+          "type": "exclusiveGateway",
+          "id": "Gateway_4d135d62",
+          "name": "Triage Decision"
+        },
+        {
+          "type": "sequenceFlow",
+          "id": "Flow_cd019bc7",
+          "name": "make_triage_decision",
+          "sourceRef": "BusinessRuleTask_4a0640f3",
+          "targetRef": "Gateway_4d135d62"
+        },
+        {
+          "type": "endEvent",
+          "id": "End_fd385e64",
+          "name": "🏥 Hospital Referral"
+        },
+        {
+          "type": "endEvent",
+          "id": "End_fad2719f",
+          "name": "🏪 Clinic Referral"
+        },
+        {
+          "type": "endEvent",
+          "id": "End_783102ce",
+          "name": "🏠 Home Care"
+        },
+        {
+          "type": "sequenceFlow",
+          "id": "Flow_50bf84f9",
+          "name": "immediate_hospital_referral",
+          "sourceRef": "Gateway_0f1d834c",
+          "targetRef": "End_fd385e64"
+        },
+        {
+          "type": "sequenceFlow",
+          "id": "Flow_4e949ef1",
+          "name": "to_hospital",
+          "sourceRef": "Gateway_4d135d62",
+          "targetRef": "End_fd385e64"
+        },
+        {
+          "type": "sequenceFlow",
+          "id": "Flow_6dc0abd6",
+          "name": "to_clinic",
+          "sourceRef": "Gateway_4d135d62",
+          "targetRef": "End_fad2719f"
+        },
+        {
+          "type": "sequenceFlow",
+          "id": "Flow_270c400b",
+          "name": "to_home",
+          "sourceRef": "Gateway_4d135d62",
+          "targetRef": "End_783102ce"
+        },
+        {
+          "type": "sequenceFlow",
+          "id": "Flow_5f8aff33",
+          "name": "continue_assessment",
+          "sourceRef": "Gateway_0f1d834c",
+          "targetRef": "UserTask_d6c2f0d6"
+        }
+      ]
+    }
+  ]
+}

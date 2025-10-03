@@ -1,0 +1,38 @@
+{
+  "type": "DMN",
+  "inputData": [
+    {
+      "id": "input_convulsion",
+      "name": "convulsion",
+      "variable": "convulsion",
+      "typeRef": "string"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "clinical_assessment",
+      "name": "Clinical Assessment",
+      "requirements": [
+        "input_convulsion"
+      ],
+      "hitPolicy": "FIRST",
+      "inputs": [
+        "convulsion"
+      ],
+      "outputs": [
+        "result"
+      ],
+      "rules": [
+        {
+          "id": "rule_WHO_CHW-01",
+          "inputs": [
+            "convulsion = True"
+          ],
+          "outputs": [
+            "home"
+          ]
+        }
+      ]
+    }
+  ]
+}

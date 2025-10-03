@@ -1,0 +1,48 @@
+{
+  "outcome": "Hospital",
+  "reasoning": [],
+  "clinical_reasoning": [
+    "\u26a0\ufe0f DANGER SIGNS IDENTIFIED: convulsions present, unconscious or unresponsive, unable to drink or feed, severe chest indrawing, vomiting everything",
+    "These are serious warning signs requiring immediate medical attention"
+  ],
+  "clinical_summary": "Clinical presentation: child presenting with neurological emergency, respiratory distress",
+  "next_steps": [
+    "\ud83d\udea8 URGENT: Transport to hospital immediately",
+    "\u23f0 Do not delay - accompany the child to ensure immediate medical attention",
+    "\ud83d\udccb Bring this assessment summary and any medications the child is taking",
+    "\ud83e\ude7a Emergency priority: inform hospital staff of danger signs identified",
+    "\u26a1 If convulsions recur: protect from injury, do not restrain, clear airway",
+    "\ud83d\ude34 Monitor breathing, maintain clear airway, recovery position if possible",
+    "\ud83d\udca8 Keep child upright, do not lay flat, monitor breathing continuously"
+  ],
+  "collected_data": {
+    "convulsion": true,
+    "unconscious": true,
+    "vomits_everything": true,
+    "cannot_drink_or_feed": true,
+    "chest_indrawing": true
+  },
+  "flags": {},
+  "conversation_history": [
+    {
+      "question": "\ud83d\udea8 Has the child had convulsions (fits) recently?",
+      "answer": "True"
+    },
+    {
+      "question": "\ud83d\udea8 Is the child unconscious or unresponsive?",
+      "answer": "True"
+    },
+    {
+      "question": "\ud83d\udea8 Does the child vomit everything they eat or drink?",
+      "answer": "True"
+    },
+    {
+      "question": "\ud83d\udea8 Is the child unable to drink or breastfeed?",
+      "answer": "True"
+    },
+    {
+      "question": "\ud83d\udea8 Does the child have severe chest indrawing (pulling in below the ribs)?",
+      "answer": "True"
+    }
+  ]
+}
