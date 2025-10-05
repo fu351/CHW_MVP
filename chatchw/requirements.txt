@@ -1,9 +1,0 @@
-typer==0.12.3
-pydantic==2.7.1
-python-dateutil==2.9.0.post0
-rfc3339-validator==0.1.4
-pm4py==2.7.11
-graphviz==0.20.3
-pytest==8.3.2
-hypothesis==6.108.5
-

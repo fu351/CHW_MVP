@@ -14,8 +14,6 @@ TriageLevel = Literal["hospital", "clinic", "home"]
 class Observation(BaseModel):
     id: ObservationId
     value: float
-    unit: Optional[str] = None
-    source: Optional[str] = None
 
     model_config = {"extra": "forbid"}
 
@@ -57,13 +55,7 @@ class ObservationCondition(BaseModel):
 
 
 class SymCondition(BaseModel):
-    sym: Literal[
-        "feels_very_hot",
-        "blood_in_stool",
-        "diarrhea_days",
-        "convulsion",
-        "edema_both_feet",
-    ]
+    sym: str  # Dynamic - accepts any symptom variable
     eq: bool | int | float
 
     model_config = {"extra": "forbid"}
@@ -136,29 +128,14 @@ class Rule(BaseModel):
 class TraceEntry(BaseModel):
     rule_id: str
     guideline_ref: str
-    timestamp: str  # RFC3339
+    timestamp: str
 
     model_config = {"extra": "forbid"}
 
 
 class Decision(BaseModel):
     triage: TriageLevel
-    actions: List[Action] = Field(default_factory=list)
     reasons: List[str] = Field(default_factory=list)
     trace: List[TraceEntry] = Field(default_factory=list)
 
     model_config = {"extra": "forbid"}
-
-
-class RulepackMeta(BaseModel):
-    id: str
-    date: str
-    modules: List[str]
-    rapid_workup: bool
-
-    model_config = {"extra": "forbid"}
-
-
-def symptoms_field_names() -> List[str]:
-    return list(Symptoms.model_fields.keys())
-

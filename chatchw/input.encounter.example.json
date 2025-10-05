@@ -1,0 +1,32 @@
+{
+  "age_months": 24,
+  "sex": "m",
+  "observations": [
+    {
+      "id": "temp",
+      "value": 38.6
+    },
+    {
+      "id": "resp_rate",
+      "value": 28.0
+    },
+    {
+      "id": "muac_mm",
+      "value": 120.0
+    }
+  ],
+  "symptoms": {
+    "feels_very_hot": true,
+    "blood_in_stool": false,
+    "diarrhea_days": 2,
+    "convulsion": false,
+    "edema_both_feet": false
+  },
+  "context": {
+    "malaria_present": true,
+    "cholera_present": false,
+    "stockout": {
+      "antimalarial": true
+    }
+  }
+}

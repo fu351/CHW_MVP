@@ -1,0 +1,4653 @@
+[
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "sym": "cough",
+        "eq": true
+      },
+      {
+        "obs": "cough_duration_days",
+        "op": "ge",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "cough_duration_exceeds_limit"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "sym": "diarrhea",
+        "eq": true
+      },
+      {
+        "obs": "diarrhea_duration_days",
+        "op": "ge",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "diarrhea_duration_exceeds_limit"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "sym": "blood_in_stool",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "presence_of_blood_in_stool"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "obs": "fever_duration_days",
+        "op": "ge",
+        "value": 7
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "fever_duration_exceeds_limit"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-05",
+    "when": [
+      {
+        "sym": "convulsion",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "presence_of_convulsion"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-05",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-06",
+    "when": [
+      {
+        "sym": "not_able_to_drink_or_eat",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "unable_to_drink_or_eat"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-06",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-07",
+    "when": [
+      {
+        "sym": "vomits_everything",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "vomiting_all"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-07",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-08",
+    "when": [
+      {
+        "sym": "chest_indrawing",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "chest_indrawing_present"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-08",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-09",
+    "when": [
+      {
+        "sym": "unusually_sleepy_or_unconscious",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "unusual_sleepiness_or_unconsciousness"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-09",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-11",
+    "when": [
+      {
+        "sym": "swelling_of_both_feet",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "swelling_of_both_feet"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-11",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-12",
+    "when": [
+      {
+        "obs": "diarrhea_duration_days",
+        "op": "lt",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "diarrhea_duration_under_limit"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-12",
+      "priority": 50
+    }
+  },
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "sym": "blood_in_stool",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "blood_in_stool"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "obs": "fever_days",
+        "op": "lt",
+        "value": 7
+      },
+      {
+        "sym": "in_malaria_area",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "fever_less_than_7_days_in_malaria_area"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "obs": "resp_rate",
+        "op": "gt",
+        "value": 60
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "fast_breathing"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "obs": "muac_mm",
+        "op": "lt",
+        "value": 115
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "yellow_on_muac_strap"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-05",
+    "when": [
+      {
+        "sym": "feels_very_hot",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "feels_very_hot"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-05",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-06",
+    "when": [
+      {
+        "sym": "convulsion",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "convulsion"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-06",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-07",
+    "when": [
+      {
+        "sym": "edema_both_feet",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "edema_both_feet"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-07",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-08",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 3
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "diarrhea_more_than_3_days"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-08",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-09",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "ge",
+        "value": 38.5
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "high_fever"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-09",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-10",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "lt",
+        "value": 38.5
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "fever_controlled"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-10",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "lt",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "diarrhea_less_than_14_days"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "obs": "fever_days",
+        "op": "lt",
+        "value": 7
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "fever_less_than_7_days"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "obs": "cough",
+        "op": "eq",
+        "value": true
+      },
+      {
+        "obs": "resp_rate",
+        "op": "ge",
+        "value": 50
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fast_breathing_sign_of_pneumonia"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "obs": "cough",
+        "op": "ge",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "cough_for_14_days_or_more"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-05",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "diarrhea_for_14_days_or_more"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-05",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-06",
+    "when": [
+      {
+        "obs": "blood_in_stool",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "diarrhea_with_blood_in_stool"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-06",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-07",
+    "when": [
+      {
+        "obs": "fever_days",
+        "op": "ge",
+        "value": 7
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fever_for_7_days_or_more"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-07",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-08",
+    "when": [
+      {
+        "obs": "convulsion",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "convulsion_detected"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-08",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-09",
+    "when": [
+      {
+        "obs": "not_able_to_drink_or_feed",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "unable_to_drink_or_feed"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-09",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-10",
+    "when": [
+      {
+        "obs": "vomiting_everything",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "vomiting_everything"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-10",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-11",
+    "when": [
+      {
+        "obs": "unusually_sleepy_or_unconscious",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "unusually_sleepy_or_unconscious"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-11",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-12",
+    "when": [
+      {
+        "obs": "muac_mm",
+        "op": "lt",
+        "value": 115
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "malnutrition_red_result"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-12",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-13",
+    "when": [
+      {
+        "sym": "edema_both_feet",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "swelling_of_both_feet"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-13",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "obs": "fever",
+        "op": "eq",
+        "value": 1
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fever_present"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "obs": "convulsions",
+        "op": "eq",
+        "value": 1
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "convulsions_present"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "obs": "difficulty_drinking",
+        "op": "eq",
+        "value": 1
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "difficulty_drinking"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "obs": "vomiting",
+        "op": "eq",
+        "value": 1
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "vomiting_present"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-05",
+    "when": [
+      {
+        "obs": "diarrhea",
+        "op": "eq",
+        "value": 1
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "diarrhea_present"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-05",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-06",
+    "when": [
+      {
+        "obs": "blood_in_stool",
+        "op": "eq",
+        "value": 1
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "blood_in_stool"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-06",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-07",
+    "when": [
+      {
+        "obs": "chest_indrawing",
+        "op": "eq",
+        "value": 1
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "chest_indrawing"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-07",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-08",
+    "when": [
+      {
+        "obs": "fast_breathing",
+        "op": "eq",
+        "value": 1
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fast_breathing"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-08",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-09",
+    "when": [
+      {
+        "obs": "unusually_sleepy",
+        "op": "eq",
+        "value": 1
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "unusually_sleepy"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-09",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "sym": "chest_indrawing",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "severe_pneumonia"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "obs": "breath_rate",
+        "op": "ge",
+        "value": 50
+      },
+      {
+        "obs": "age_months",
+        "op": "le",
+        "value": 12
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fast_breathing_under_12_months"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "obs": "breath_rate",
+        "op": "ge",
+        "value": 40
+      },
+      {
+        "obs": "age_months",
+        "op": "gt",
+        "value": 12
+      },
+      {
+        "obs": "age_months",
+        "op": "le",
+        "value": 60
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fast_breathing_12_to_60_months"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "sym": "unusually_sleepy",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "unusually_sleepy_or_unconscious"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-05",
+    "when": [
+      {
+        "sym": "unconscious",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "unconscious"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-05",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-06",
+    "when": [
+      {
+        "obs": "breath_rate",
+        "op": "lt",
+        "value": 50
+      },
+      {
+        "obs": "breath_rate",
+        "op": "lt",
+        "value": 40
+      },
+      {
+        "sym": "chest_indrawing",
+        "eq": false
+      },
+      {
+        "sym": "unusually_sleepy",
+        "eq": false
+      },
+      {
+        "sym": "unconscious",
+        "eq": false
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "no_severe_signs"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-06",
+      "priority": 10
+    }
+  },
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "obs": "muac_mm",
+        "op": "lt",
+        "value": 115
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "severe_malnutrition_muac"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 1
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "sym": "swelling_both_feet",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "severe_malnutrition_oedema"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 1
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "obs": "cough_duration_days",
+        "op": "ge",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "cough_for_14_days"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 1
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "obs": "diarrhea_duration_days",
+        "op": "ge",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "diarrhea_for_14_days"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 1
+    }
+  },
+  {
+    "rule_id": "MOD-05",
+    "when": [
+      {
+        "sym": "blood_in_stool",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "blood_in_stool"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-05",
+      "priority": 1
+    }
+  },
+  {
+    "rule_id": "MOD-06",
+    "when": [
+      {
+        "obs": "fever_duration_days",
+        "op": "ge",
+        "value": 7
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fever_for_7_days"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-06",
+      "priority": 1
+    }
+  },
+  {
+    "rule_id": "MOD-07",
+    "when": [
+      {
+        "sym": "convulsions",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "convulsions"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-07",
+      "priority": 1
+    }
+  },
+  {
+    "rule_id": "MOD-08",
+    "when": [
+      {
+        "sym": "not_able_to_drink_or_eat",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "not_able_to_drink_or_eat"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-08",
+      "priority": 1
+    }
+  },
+  {
+    "rule_id": "MOD-09",
+    "when": [
+      {
+        "sym": "vomits_everything",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "vomits_everything"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-09",
+      "priority": 1
+    }
+  },
+  {
+    "rule_id": "MOD-10",
+    "when": [
+      {
+        "sym": "chest_indrawing",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "chest_indrawing"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-10",
+      "priority": 1
+    }
+  },
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "sym": "unusually_sleepy",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "unusually_sleepy"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 1
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "sym": "unconscious",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "unconscious"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 1
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "obs": "muac_red",
+        "op": "eq",
+        "value": 1
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "muac_red"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 1
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "sym": "swelling_both_feet",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "swelling_both_feet"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 1
+    }
+  },
+  {
+    "rule_id": "MOD-05",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "lt",
+        "value": 14
+      },
+      {
+        "sym": "blood_in_stool",
+        "eq": false
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "diarrhea_less_than_14_days_no_blood"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-05",
+      "priority": 2
+    }
+  },
+  {
+    "rule_id": "MOD-06",
+    "when": [
+      {
+        "obs": "fever_days",
+        "op": "lt",
+        "value": 7
+      },
+      {
+        "sym": "in_malaria_area",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "fever_less_than_7_days_in_malaria_area"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-06",
+      "priority": 2
+    }
+  },
+  {
+    "rule_id": "MOD-07",
+    "when": [
+      {
+        "obs": "fast_breathing",
+        "op": "ge",
+        "value": 50
+      },
+      {
+        "sym": "chest_indrawing",
+        "eq": false
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "fast_breathing_no_chest_indrawing"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-07",
+      "priority": 2
+    }
+  },
+  {
+    "rule_id": "MOD-11",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "diarrhea_ge_14_days"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-11",
+      "priority": 1
+    }
+  },
+  {
+    "rule_id": "MOD-12",
+    "when": [
+      {
+        "obs": "fever_days",
+        "op": "ge",
+        "value": 7
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fever_ge_7_days"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-12",
+      "priority": 1
+    }
+  },
+  {
+    "rule_id": "MOD-13",
+    "when": [
+      {
+        "obs": "muac_yellow",
+        "op": "eq",
+        "value": 1
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "muac_yellow"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-13",
+      "priority": 2
+    }
+  },
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "sym": "cough",
+        "eq": true
+      },
+      {
+        "obs": "breaths_per_minute",
+        "op": "ge",
+        "value": 50
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fast_breathing"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "sym": "unusually_sleepy_or_unconscious",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "unusually_sleepy_or_unconscious"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "obs": "muac_color",
+        "op": "eq",
+        "value": "red"
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "red_on_muac_strap"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "sym": "swelling_of_both_feet",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "swelling_of_both_feet"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-05",
+    "when": [
+      {
+        "sym": "vomits_everything",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "vomits_everything"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-05",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-06",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "diarrhea_for_14_days_or_more"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-06",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-07",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "lt",
+        "value": 14
+      },
+      {
+        "sym": "blood_in_stool",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "diarrhea_with_blood_in_stool"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-07",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-08",
+    "when": [
+      {
+        "obs": "fever_days",
+        "op": "ge",
+        "value": 7
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fever_for_7_days_or_more"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-08",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-09",
+    "when": [
+      {
+        "sym": "convulsions",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "convulsions"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-09",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-10",
+    "when": [
+      {
+        "sym": "not_able_to_drink_or_feed",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "not_able_to_drink_or_feed"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-10",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-11",
+    "when": [
+      {
+        "obs": "cough_days",
+        "op": "ge",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [],
+      "reasons": [
+        "cough_for_14_days_or_more"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-11",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-12",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [],
+      "reasons": [
+        "diarrhea_for_14_days_or_more"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-12",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-13",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "lt",
+        "value": 14
+      },
+      {
+        "sym": "blood_in_stool",
+        "eq": false
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [],
+      "reasons": [
+        "diarrhea_less_than_14_days_no_blood"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-13",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-14",
+    "when": [
+      {
+        "sym": "fever_days",
+        "op": "lt",
+        "value": 7,
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [],
+      "reasons": [
+        "fever_less_than_7_days_in_malaria_area"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-14",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-15",
+    "when": [
+      {
+        "obs": "breaths_per_minute",
+        "op": "ge",
+        "value": 50
+      },
+      {
+        "obs": "age_months",
+        "op": "le",
+        "value": 12
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [],
+      "reasons": [
+        "fast_breathing_age_2_to_12_months"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-15",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-16",
+    "when": [
+      {
+        "obs": "breaths_per_minute",
+        "op": "ge",
+        "value": 40
+      },
+      {
+        "obs": "age_months",
+        "op": "gt",
+        "value": 12
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [],
+      "reasons": [
+        "fast_breathing_age_12_months_to_5_years"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-16",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-17",
+    "when": [
+      {
+        "obs": "muac_color",
+        "op": "eq",
+        "value": "yellow"
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [],
+      "reasons": [
+        "yellow_on_muac_strap"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-17",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-18",
+    "when": [
+      {
+        "obs": "danger_signs_present",
+        "op": "eq",
+        "value": false
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "no_danger_signs"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-18",
+      "priority": 70
+    }
+  },
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "lt",
+        "value": 14
+      },
+      {
+        "sym": "blood_in_stool",
+        "eq": false
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "diarrhea_no_blood"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "obs": "fever_days",
+        "op": "lt",
+        "value": 7
+      },
+      {
+        "sym": "malaria_area",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "fever_less_than_7_days"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "obs": "resp_rate",
+        "op": "ge",
+        "value": 50
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "fast_breathing"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "obs": "fever_days",
+        "op": "lt",
+        "value": 7
+      },
+      {
+        "sym": "malaria_area",
+        "eq": true
+      },
+      {
+        "all_of": [
+          {
+            "obs": "rdt_result",
+            "op": "eq",
+            "value": "positive"
+          }
+        ]
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "malaria_positive"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-05",
+    "when": [
+      {
+        "obs": "resp_rate",
+        "op": "ge",
+        "value": 50
+      },
+      {
+        "sym": "cough",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "cough_with_fast_breathing"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-05",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-06",
+    "when": [
+      {
+        "sym": "cannot_drink_or_feed",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "cannot_drink_or_feed"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-06",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-07",
+    "when": [
+      {
+        "sym": "becomes_sicker",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "becomes_sicker"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-07",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-08",
+    "when": [
+      {
+        "sym": "blood_in_stool",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "blood_in_stool"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-08",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "le",
+        "value": 14
+      },
+      {
+        "sym": "blood_in_stool",
+        "eq": false
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "diarrhea_less_than_14_days_no_blood"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "ge",
+        "value": 38
+      },
+      {
+        "sym": "fever",
+        "eq": true
+      },
+      {
+        "obs": "muac_mm",
+        "op": "lt",
+        "value": 125
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "fever_high_muac_low"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "ge",
+        "value": 38
+      },
+      {
+        "sym": "fever",
+        "eq": true
+      },
+      {
+        "obs": "muac_mm",
+        "op": "ge",
+        "value": 125
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "fever_high_muac_normal"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "lt",
+        "value": 38
+      },
+      {
+        "sym": "diarrhea_days",
+        "op": "ge",
+        "value": 3,
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "diarrhea_3_days_no_fever"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 70
+    }
+  },
+  {
+    "rule_id": "MOD-05",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "ge",
+        "value": 38
+      },
+      {
+        "sym": "cough",
+        "eq": true
+      },
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 3
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "fever_with_cough_and_diarrhea"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-05",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-06",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "ge",
+        "value": 38
+      },
+      {
+        "sym": "cough",
+        "eq": true
+      },
+      {
+        "obs": "diarrhea_days",
+        "op": "lt",
+        "value": 3
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "fever_with_cough_less_than_3_days"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-06",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-07",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "lt",
+        "value": 38
+      },
+      {
+        "sym": "cough",
+        "eq": true
+      },
+      {
+        "obs": "diarrhea_days",
+        "op": "lt",
+        "value": 3
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "cough_less_than_3_days_no_fever"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-07",
+      "priority": 60
+    }
+  },
+  {
+    "rule_id": "MOD-08",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "ge",
+        "value": 38
+      },
+      {
+        "sym": "vomiting",
+        "eq": true
+      },
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 3
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "fever_with_vomiting_and_diarrhea"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-08",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-09",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "lt",
+        "value": 38
+      },
+      {
+        "sym": "vomiting",
+        "eq": true
+      },
+      {
+        "obs": "diarrhea_days",
+        "op": "lt",
+        "value": 3
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "vomiting_less_than_3_days_no_fever"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-09",
+      "priority": 50
+    }
+  },
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "lt",
+        "value": 14
+      },
+      {
+        "sym": "blood_in_stool",
+        "eq": false
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "diarrhea_no_blood"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "lt",
+        "value": 14
+      },
+      {
+        "sym": "blood_in_stool",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "diarrhea_with_blood"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "ge",
+        "value": 38.5
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "fever_high"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "lt",
+        "value": 38.5
+      },
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 3
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "diarrhea_duration"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 70
+    }
+  },
+  {
+    "rule_id": "MOD-05",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "ge",
+        "value": 38.5
+      },
+      {
+        "obs": "diarrhea_days",
+        "op": "lt",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fever_with_diarrhea"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-05",
+      "priority": 95
+    }
+  },
+  {
+    "rule_id": "MOD-06",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "ge",
+        "value": 38.5
+      },
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fever_duration"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-06",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-07",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "lt",
+        "value": 38.5
+      },
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 10
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "diarrhea_long_duration"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-07",
+      "priority": 85
+    }
+  },
+  {
+    "rule_id": "MOD-08",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "lt",
+        "value": 38.5
+      },
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 5
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "diarrhea_moderate_duration"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-08",
+      "priority": 60
+    }
+  },
+  {
+    "rule_id": "MOD-09",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "ge",
+        "value": 38.5
+      },
+      {
+        "obs": "diarrhea_days",
+        "op": "lt",
+        "value": 3
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "fever_short_duration"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-09",
+      "priority": 50
+    }
+  },
+  {
+    "rule_id": "MOD-10",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "ge",
+        "value": 38.5
+      },
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 3
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fever_with_diarrhea"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-10",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-11",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "ge",
+        "value": 38.5
+      },
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fever_long_duration"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-11",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-12",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "lt",
+        "value": 38.5
+      },
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 7
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "diarrhea_long_duration"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-12",
+      "priority": 85
+    }
+  },
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "obs": "fever",
+        "op": "eq",
+        "value": 1
+      },
+      {
+        "obs": "malaria_area",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "fever_in_malaria_area"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "obs": "rdt_result",
+        "op": "eq",
+        "value": "positive"
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "rdt_positive"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "obs": "rdt_result",
+        "op": "eq",
+        "value": "negative"
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "rdt_negative"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 70
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "obs": "rdt_result",
+        "op": "eq",
+        "value": "invalid"
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "rdt_invalid"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 85
+    }
+  },
+  {
+    "rule_id": "MOD-05",
+    "when": [
+      {
+        "obs": "age",
+        "op": "ge",
+        "value": 2
+      },
+      {
+        "obs": "age",
+        "op": "lt",
+        "value": 3
+      },
+      {
+        "obs": "rdt_result",
+        "op": "eq",
+        "value": "positive"
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "treatment_for_age_2_to_3"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-05",
+      "priority": 75
+    }
+  },
+  {
+    "rule_id": "MOD-06",
+    "when": [
+      {
+        "obs": "age",
+        "op": "ge",
+        "value": 3
+      },
+      {
+        "obs": "age",
+        "op": "lt",
+        "value": 5
+      },
+      {
+        "obs": "rdt_result",
+        "op": "eq",
+        "value": "positive"
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "treatment_for_age_3_to_5"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-06",
+      "priority": 75
+    }
+  },
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "obs": "fever_days",
+        "op": "lt",
+        "value": 7
+      },
+      {
+        "sym": "RDT_result",
+        "eq": false
+      },
+      {
+        "sym": "lives_in_malaria_area",
+        "eq": false
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "follow_up_visit_in_3_days"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "obs": "fever_days",
+        "op": "lt",
+        "value": 7
+      },
+      {
+        "sym": "RDT_result",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "treat_with_antimalarial"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "sym": "cough",
+        "eq": true
+      },
+      {
+        "sym": "fast_breathing",
+        "eq": true
+      },
+      {
+        "sym": "danger_sign",
+        "eq": false
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "treat_with_amoxicillin"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 85
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "sym": "cough",
+        "eq": true
+      },
+      {
+        "sym": "fast_breathing",
+        "eq": true
+      },
+      {
+        "sym": "danger_sign",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "immediate_referral_needed"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-05",
+    "when": [
+      {
+        "obs": "child_age_months",
+        "op": "ge",
+        "value": 2
+      },
+      {
+        "obs": "child_age_months",
+        "op": "lt",
+        "value": 12
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "give_1_tablet_amoxicillin_twice_daily_for_5_days"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-05",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-06",
+    "when": [
+      {
+        "obs": "child_age_months",
+        "op": "ge",
+        "value": 12
+      },
+      {
+        "obs": "child_age_months",
+        "op": "lt",
+        "value": 60
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "give_2_tablets_amoxicillin_twice_daily_for_5_days"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-06",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-07",
+    "when": [
+      {
+        "sym": "cannot_drink_or_feed",
+        "eq": true
+      },
+      {
+        "sym": "becomes_sicker",
+        "eq": true
+      },
+      {
+        "sym": "blood_in_stool",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "immediate_referral_needed"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-07",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "obs": "cannot_drink_feed",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "cannot_drink_feed"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "obs": "becomes_sicker",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "becomes_sicker"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "obs": "blood_in_stool",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "blood_in_stool"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "obs": "feels_very_hot",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "feels_very_hot"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-05",
+    "when": [
+      {
+        "obs": "difficulty_breathing",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "difficulty_breathing"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-05",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-06",
+    "when": [
+      {
+        "obs": "weakness_sleepiness",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "weakness_sleepiness"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-06",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-07",
+    "when": [
+      {
+        "obs": "not_getting_better",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "not_getting_better"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-07",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-08",
+    "when": [
+      {
+        "obs": "vaccines_up_to_date",
+        "op": "eq",
+        "value": false
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "vaccines_up_to_date"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-08",
+      "priority": 70
+    }
+  },
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "sym": "danger_sign",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "child_has_danger_sign"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "obs": "child_condition",
+        "op": "eq",
+        "value": "not_better"
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "child_not_better"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 99
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "obs": "child_condition",
+        "op": "eq",
+        "value": "better"
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "child_better"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 98
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "ge",
+        "value": 38
+      },
+      {
+        "sym": "convulsion",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fever_with_convulsion"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 97
+    }
+  },
+  {
+    "rule_id": "MOD-05",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "ge",
+        "value": 38
+      },
+      {
+        "sym": "unusually_sleepy",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fever_with_sleepiness"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-05",
+      "priority": 96
+    }
+  },
+  {
+    "rule_id": "MOD-06",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "ge",
+        "value": 38
+      },
+      {
+        "sym": "not_able_to_drink",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fever_with_drinking_issue"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-06",
+      "priority": 95
+    }
+  },
+  {
+    "rule_id": "MOD-07",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "diarrhea_for_14_days"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-07",
+      "priority": 94
+    }
+  },
+  {
+    "rule_id": "MOD-08",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 3
+      },
+      {
+        "sym": "blood_in_stool",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "diarrhea_with_blood"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-08",
+      "priority": 93
+    }
+  },
+  {
+    "rule_id": "MOD-09",
+    "when": [
+      {
+        "obs": "fast_breathing",
+        "op": "ge",
+        "value": 50
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fast_breathing"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-09",
+      "priority": 92
+    }
+  },
+  {
+    "rule_id": "MOD-11",
+    "when": [
+      {
+        "obs": "muac_color",
+        "op": "eq",
+        "value": "red"
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "muac_red"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-11",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-15",
+    "when": [
+      {
+        "obs": "fever_days",
+        "op": "lt",
+        "value": 7
+      },
+      {
+        "obs": "malaria_test",
+        "op": "eq",
+        "value": "positive"
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "malaria_positive"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-15",
+      "priority": 86
+    }
+  },
+  {
+    "rule_id": "MOD-16",
+    "when": [
+      {
+        "obs": "fever_days",
+        "op": "lt",
+        "value": 7
+      },
+      {
+        "obs": "malaria_test",
+        "op": "eq",
+        "value": "negative"
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "malaria_negative"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-16",
+      "priority": 85
+    }
+  },
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "obs": "danger_sign",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "urgent_referral"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 1
+      },
+      {
+        "obs": "can_drink",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "diarrhea_treatment"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "obs": "fever",
+        "op": "eq",
+        "value": true
+      },
+      {
+        "sym": "convulsions",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "fever_with_convulsions"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "obs": "fever",
+        "op": "eq",
+        "value": true
+      },
+      {
+        "sym": "unusually_sleepy",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "fever_with_sleepiness"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-05",
+    "when": [
+      {
+        "obs": "fever",
+        "op": "eq",
+        "value": true
+      },
+      {
+        "sym": "not_able_to_drink",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "fever_with_drinking_issue"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-05",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-06",
+    "when": [
+      {
+        "obs": "fever",
+        "op": "eq",
+        "value": true
+      },
+      {
+        "sym": "vomiting_everything",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "fever_with_vomiting"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-06",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-07",
+    "when": [
+      {
+        "obs": "chest_indrawing",
+        "op": "eq",
+        "value": true
+      },
+      {
+        "obs": "can_drink",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "chest_indrawing"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-07",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-08",
+    "when": [
+      {
+        "obs": "fast_breathing",
+        "op": "eq",
+        "value": true
+      },
+      {
+        "obs": "can_drink",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "fast_breathing"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-08",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-09",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 6
+      },
+      {
+        "obs": "muac_red",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "severe_diarrhea"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-09",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "sym": "chest_indrawing",
+        "eq": true
+      },
+      {
+        "sym": "fast_breathing",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "chest_indrawing_or_fast_breathing"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "obs": "fever_days",
+        "op": "ge",
+        "value": 3
+      },
+      {
+        "obs": "cough_days",
+        "op": "ge",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "fever_for_3_days_and_cough_for_14_days"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 3
+      },
+      {
+        "sym": "blood_in_stool",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "diarrhea_with_blood_in_stool"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "obs": "muac_mm",
+        "op": "lt",
+        "value": 125
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "muac_below_threshold"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-07",
+    "when": [
+      {
+        "obs": "fever_days",
+        "op": "ge",
+        "value": 7
+      },
+      {
+        "obs": "diarrhea_days",
+        "op": "lt",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "fever_for_7_days"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-07",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "obs": "danger_sign",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "refer_urgently"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "obs": "danger_sign",
+        "op": "eq",
+        "value": false
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "treat_at_home"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 99
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "sym": "fever",
+        "eq": true
+      },
+      {
+        "sym": "convulsion",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fever_with_convulsion"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 95
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "sym": "difficulty_drinking",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "difficulty_drinking"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 94
+    }
+  },
+  {
+    "rule_id": "MOD-05",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "ge",
+        "value": 38.0
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "high_fever"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-05",
+      "priority": 93
+    }
+  },
+  {
+    "rule_id": "MOD-06",
+    "when": [
+      {
+        "obs": "muac_mm",
+        "op": "eq",
+        "value": "red"
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "malnutrition"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-06",
+      "priority": 92
+    }
+  },
+  {
+    "rule_id": "MOD-07",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "prolonged_diarrhea"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-07",
+      "priority": 91
+    }
+  },
+  {
+    "rule_id": "MOD-08",
+    "when": [
+      {
+        "obs": "cough_days",
+        "op": "ge",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "prolonged_cough"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-08",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-09",
+    "when": [
+      {
+        "sym": "blood_in_stool",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "blood_in_stool"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-09",
+      "priority": 89
+    }
+  },
+  {
+    "rule_id": "MOD-10",
+    "when": [
+      {
+        "sym": "unusually_sleepy",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "unusually_sleepy"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-10",
+      "priority": 88
+    }
+  },
+  {
+    "rule_id": "MOD-11",
+    "when": [
+      {
+        "sym": "swelling_both_feet",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "swelling_of_both_feet"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-11",
+      "priority": 87
+    }
+  },
+  {
+    "rule_id": "MOD-12",
+    "when": [
+      {
+        "obs": "resp_rate",
+        "op": "ge",
+        "value": 50
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fast_breathing"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-12",
+      "priority": 86
+    }
+  },
+  {
+    "rule_id": "MOD-13",
+    "when": [
+      {
+        "obs": "resp_rate",
+        "op": "ge",
+        "value": 40
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fast_breathing"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-13",
+      "priority": 85
+    }
+  },
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "obs": "breath_rate",
+        "op": "ge",
+        "value": 40
+      },
+      {
+        "sym": "cough",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fast_breathing"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 14
+      },
+      {
+        "sym": "blood_in_stool",
+        "eq": false
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "diarrhea_less_than_14_days_no_blood"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 14
+      },
+      {
+        "sym": "blood_in_stool",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "diarrhea_with_blood"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "obs": "fever_days",
+        "op": "ge",
+        "value": 7
+      },
+      {
+        "sym": "unusually_sleepy",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fever_for_more_than_7_days"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-05",
+    "when": [
+      {
+        "obs": "fever_days",
+        "op": "lt",
+        "value": 7
+      },
+      {
+        "sym": "in_malaria_area",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "fever_less_than_7_days_in_malaria_area"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-05",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-06",
+    "when": [
+      {
+        "obs": "chest_indrawing",
+        "op": "eq",
+        "value": true
+      },
+      {
+        "obs": "breath_rate",
+        "op": "ge",
+        "value": 40
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "chest_indrawing_and_fast_breathing"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-06",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-07",
+    "when": [
+      {
+        "obs": "muac_color",
+        "op": "eq",
+        "value": "red"
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "muac_red"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-07",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-08",
+    "when": [
+      {
+        "obs": "swelling_both_feet",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "swelling_of_both_feet"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-08",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-09",
+    "when": [
+      {
+        "obs": "vomiting",
+        "op": "eq",
+        "value": true
+      },
+      {
+        "sym": "not_able_to_drink",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "vomiting_and_not_able_to_drink"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-09",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-10",
+    "when": [
+      {
+        "obs": "fast_breathing",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "fast_breathing"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-10",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "ge",
+        "value": 37.5
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fever_high"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "sym": "convulsion",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "convulsion_present"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "sym": "unusually_sleepy",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "unusually_sleepy"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "sym": "not_able_to_drink",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "unable_to_drink"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-05",
+    "when": [
+      {
+        "sym": "vomits_everything",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "vomiting_everything"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-05",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-06",
+    "when": [
+      {
+        "obs": "diarrhea_days",
+        "op": "ge",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "diarrhea_14_days"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-06",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-07",
+    "when": [
+      {
+        "obs": "cough_days",
+        "op": "ge",
+        "value": 14
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "cough_14_days"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-07",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-08",
+    "when": [
+      {
+        "obs": "fast_breathing",
+        "op": "ge",
+        "value": 50
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "fast_breathing"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-08",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-10",
+    "when": [
+      {
+        "obs": "muac_color",
+        "op": "eq",
+        "value": "red"
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger.sign"
+      ],
+      "reasons": [
+        "muac_red"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-10",
+      "priority": 100
+    }
+  },
+  {
+    "rule_id": "MOD-12",
+    "when": [
+      {
+        "all_of": [
+          {
+            "obs": "temp",
+            "op": "lt",
+            "value": 37.5
+          },
+          {
+            "obs": "diarrhea_days",
+            "op": "lt",
+            "value": 14
+          },
+          {
+            "sym": "blood_in_stool",
+            "eq": false
+          }
+        ]
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "diarrhea_less_than_14_days_no_blood"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-12",
+      "priority": 50
+    }
+  },
+  {
+    "rule_id": "MOD-13",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "lt",
+        "value": 37.5
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "no_danger_sign"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-13",
+      "priority": 50
+    }
+  },
+  {
+    "rule_id": "MOD-01",
+    "when": [
+      {
+        "sym": "fever",
+        "eq": true
+      },
+      {
+        "all_of": [
+          {
+            "obs": "days_with_fever",
+            "op": "lt",
+            "value": 7
+          },
+          {
+            "obs": "in_malaria_area",
+            "op": "eq",
+            "value": true
+          }
+        ]
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "fever_in_malaria_area"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-01",
+      "priority": 90
+    }
+  },
+  {
+    "rule_id": "MOD-02",
+    "when": [
+      {
+        "obs": "rdt_result",
+        "op": "eq",
+        "value": "positive"
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [],
+      "reasons": [
+        "malaria_positive"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-02",
+      "priority": 85
+    }
+  },
+  {
+    "rule_id": "MOD-03",
+    "when": [
+      {
+        "obs": "rdt_result",
+        "op": "eq",
+        "value": "negative"
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "malaria_negative"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-03",
+      "priority": 80
+    }
+  },
+  {
+    "rule_id": "MOD-04",
+    "when": [
+      {
+        "obs": "fast_breathing",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "fast_breathing"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-04",
+      "priority": 85
+    }
+  },
+  {
+    "rule_id": "MOD-05",
+    "when": [
+      {
+        "obs": "yellow_on_muac",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "clinic",
+      "set_flags": [
+        "clinic_referral"
+      ],
+      "reasons": [
+        "yellow_on_muac"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-05",
+      "priority": 85
+    }
+  },
+  {
+    "rule_id": "MOD-06",
+    "when": [
+      {
+        "sym": "cannot_drink_or_feed",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "cannot_drink_or_feed"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-06",
+      "priority": 95
+    }
+  },
+  {
+    "rule_id": "MOD-07",
+    "when": [
+      {
+        "sym": "becomes_sicker",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "becomes_sicker"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-07",
+      "priority": 95
+    }
+  },
+  {
+    "rule_id": "MOD-08",
+    "when": [
+      {
+        "sym": "blood_in_stool",
+        "eq": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [
+        "danger_sign"
+      ],
+      "reasons": [
+        "blood_in_stool"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-08",
+      "priority": 95
+    }
+  },
+  {
+    "rule_id": "MOD-09",
+    "when": [
+      {
+        "obs": "follow_up_needed",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "set_flags": [],
+      "reasons": [
+        "follow_up_needed"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-09",
+      "priority": 70
+    }
+  },
+  {
+    "rule_id": "MOD-10",
+    "when": [
+      {
+        "obs": "other_problem",
+        "op": "eq",
+        "value": true
+      }
+    ],
+    "then": {
+      "propose_triage": "hospital",
+      "set_flags": [],
+      "reasons": [
+        "other_problem"
+      ],
+      "guideline_ref": "WHO-IMCI-2014-MOD-10",
+      "priority": 90
+    }
+  }
+]

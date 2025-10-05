@@ -1,0 +1,42 @@
+[
+  {
+    "rule_id": "NOR-01",
+    "when": [
+      {
+        "obs": "temp",
+        "op": "lt",
+        "value": 38.0
+      },
+      {
+        "sym": "convulsion",
+        "eq": false
+      },
+      {
+        "sym": "blood_in_stool",
+        "eq": false
+      },
+      {
+        "sym": "edema_both_feet",
+        "eq": false
+      },
+      {
+        "obs": "muac_mm",
+        "op": "ge",
+        "value": 115.0
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "reasons": [
+        "normal.assessment"
+      ],
+      "actions": [
+        {
+          "id": "home.care.advice"
+        }
+      ],
+      "guideline_ref": "WHO-IMCI-2014-NOR-01",
+      "priority": 1
+    }
+  }
+]

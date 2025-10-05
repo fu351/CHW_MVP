@@ -1,0 +1,3998 @@
+{
+  "variables": [
+    {
+      "name": "diarrhoea",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "diarrhea",
+        "diarrhoea",
+        "loose_stools"
+      ],
+      "prompt": "Does the child have diarrhoea (3 or more loose stools in 24 hours)?",
+      "refs": [
+        "p105",
+        "p108",
+        "p122",
+        "p21",
+        "p5"
+      ]
+    },
+    {
+      "name": "blood_in_stool",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "blood_in_stool",
+        "no_blood_in_stool"
+      ],
+      "prompt": "Is there blood in the stool?",
+      "refs": [
+        "p122",
+        "p125",
+        "p17",
+        "p21",
+        "p39",
+        "p41",
+        "p48",
+        "p5",
+        "p50",
+        "p60",
+        "p69",
+        "p73",
+        "p9"
+      ]
+    },
+    {
+      "name": "fever",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "fever",
+        "fever_reported_or_now",
+        "hot_with_fever"
+      ],
+      "prompt": "Does the child have fever now or in the last 3 days?",
+      "refs": [
+        "p105",
+        "p108",
+        "p113",
+        "p122",
+        "p138",
+        "p21",
+        "p5",
+        "p54"
+      ]
+    },
+    {
+      "name": "convulsions",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "convulsions",
+        "fits",
+        "seizures",
+        "spasms"
+      ],
+      "prompt": "Has the child had convulsions?",
+      "refs": [
+        "p105",
+        "p109",
+        "p122",
+        "p125",
+        "p134",
+        "p18",
+        "p21",
+        "p39",
+        "p41",
+        "p5",
+        "p50"
+      ]
+    },
+    {
+      "name": "difficult_drinking_or_feeding",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [],
+      "prompt": "Is the child having difficulty drinking or feeding?",
+      "refs": [
+        "p5"
+      ]
+    },
+    {
+      "name": "vomiting",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "vomiting",
+        "vomits"
+      ],
+      "prompt": "Is the child vomiting?",
+      "refs": [
+        "p21",
+        "p5",
+        "p64"
+      ]
+    },
+    {
+      "name": "chest_indrawing",
+      "type": "boolean",
+      "unit": null,
+      "allowed": [
+        true,
+        false
+      ],
+      "synonyms": [
+        "chest_indrawing",
+        "identify_chest_indrawing",
+        "retractions"
+      ],
+      "prompt": "Is there chest indrawing?",
+      "refs": [
+        "p105",
+        "p108",
+        "p113",
+        "p120",
+        "p122",
+        "p125",
+        "p136",
+        "p138",
+        "p24",
+        "p25",
+        "p27",
+        "p43",
+        "p5",
+        "p50"
+      ]
+    },
+    {
+      "name": "fast_breathing",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "cough_with_fast_breathing",
+        "fast_breathing",
+        "identify_fast_breathing",
+        "rapid_breathing",
+        "tachypnea"
+      ],
+      "prompt": "Is the child breathing fast?",
+      "refs": [
+        "p103",
+        "p105",
+        "p108",
+        "p113",
+        "p120",
+        "p122",
+        "p136",
+        "p138",
+        "p24",
+        "p26",
+        "p45",
+        "p5",
+        "p54",
+        "p60",
+        "p89"
+      ]
+    },
+    {
+      "name": "unusually_sleepy_or_unconscious",
+      "type": "boolean",
+      "unit": null,
+      "allowed": [
+        true,
+        false
+      ],
+      "synonyms": [
+        "identify_an_unusually_sleepy_or_unconscious_child",
+        "lethargic",
+        "unconscious",
+        "unusually_sleepy",
+        "unusually_sleepy_or_unconscious"
+      ],
+      "prompt": "Is the child unusually sleepy or unconscious?",
+      "refs": [
+        "p105",
+        "p109",
+        "p120",
+        "p122",
+        "p125",
+        "p134",
+        "p24",
+        "p30",
+        "p32",
+        "p33",
+        "p43",
+        "p5",
+        "p50"
+      ]
+    },
+    {
+      "name": "red_on_muac_strap",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "red_on_muac_strap"
+      ],
+      "prompt": "Is the MUAC strap red?",
+      "refs": [
+        "p33"
+      ]
+    },
+    {
+      "name": "swelling_of_both_feet",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "edema",
+        "oedema",
+        "swelling",
+        "swelling_of_both_feet"
+      ],
+      "prompt": "Is there swelling of both feet?",
+      "refs": [
+        "p120",
+        "p122",
+        "p125",
+        "p136",
+        "p14",
+        "p36",
+        "p38",
+        "p43",
+        "p50"
+      ]
+    },
+    {
+      "name": "cough_duration",
+      "type": "number",
+      "unit": "days",
+      "allowed": null,
+      "synonyms": [
+        "cough",
+        "cough_for_14_days_or_more"
+      ],
+      "prompt": "How many days has the child been coughing?",
+      "refs": [
+        "p17",
+        "p38"
+      ]
+    },
+    {
+      "name": "diarrhoea_duration",
+      "type": "number",
+      "unit": "days",
+      "allowed": null,
+      "synonyms": [
+        "diarrhoea",
+        "diarrhoea_for_14_days_or_more",
+        "duration_of_diarrhoea"
+      ],
+      "prompt": "How many days has the child had diarrhoea?",
+      "refs": [
+        "p16",
+        "p17",
+        "p39"
+      ]
+    },
+    {
+      "name": "fever_duration",
+      "type": "number",
+      "unit": "days",
+      "allowed": null,
+      "synonyms": [
+        "duration_of_fever",
+        "fever",
+        "fever_for_last_7_days_or_more"
+      ],
+      "prompt": "How many days has the child had a fever?",
+      "refs": [
+        "p16",
+        "p17",
+        "p39"
+      ]
+    },
+    {
+      "name": "not_able_to_drink_or_eat",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "not_able_to_drink_or_eat_anything"
+      ],
+      "prompt": "Is the child not able to drink or eat anything?",
+      "refs": [
+        "p39",
+        "p41"
+      ]
+    },
+    {
+      "name": "vomits_everything",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "vomiting",
+        "vomiting_everything",
+        "vomits_everything"
+      ],
+      "prompt": "Does the child vomit everything?",
+      "refs": [
+        "p105",
+        "p109",
+        "p122",
+        "p125",
+        "p134",
+        "p18",
+        "p21",
+        "p39",
+        "p41",
+        "p48",
+        "p50"
+      ]
+    },
+    {
+      "name": "danger_sign_present",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "any_danger_sign",
+        "danger_sign",
+        "develops_a_danger_sign"
+      ],
+      "prompt": "Is there a danger sign present?",
+      "refs": [
+        "p101",
+        "p104",
+        "p120",
+        "p121",
+        "p125",
+        "p69",
+        "p95"
+      ]
+    },
+    {
+      "name": "child_can_drink",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "can_drink"
+      ],
+      "prompt": "Can the child drink?",
+      "refs": [
+        "p112"
+      ]
+    },
+    {
+      "name": "child_is_hot_with_fever",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "hot_with_fever"
+      ],
+      "prompt": "Is the child hot with fever?",
+      "refs": [
+        "p113"
+      ]
+    },
+    {
+      "name": "child_becomes_sicker",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "becomes_sicker"
+      ],
+      "prompt": "Has the child become sicker?",
+      "refs": [
+        "p9"
+      ]
+    },
+    {
+      "name": "age_in_months",
+      "type": "number",
+      "unit": "months",
+      "allowed": null,
+      "synonyms": [
+        "age"
+      ],
+      "prompt": "Enter the child's age in months.",
+      "refs": [
+        "p14",
+        "p29"
+      ]
+    },
+    {
+      "name": "has_diarrhoea",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "diarrhoea"
+      ],
+      "prompt": "Does the child have diarrhoea?",
+      "refs": [
+        "p16"
+      ]
+    },
+    {
+      "name": "has_fever",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "fever"
+      ],
+      "prompt": "Does the child have a fever?",
+      "refs": [
+        "p16"
+      ]
+    },
+    {
+      "name": "malaria_area",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "area_with_malaria",
+        "in_a_malaria_area",
+        "malaria_area"
+      ],
+      "prompt": "Is the child in a malaria area?",
+      "refs": [
+        "p138",
+        "p16",
+        "p45",
+        "p60",
+        "p76"
+      ]
+    },
+    {
+      "name": "difficulty_drinking_or_feeding",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "difficult_drinking_or_feeding",
+        "difficulty_drinking_or_feeding"
+      ],
+      "prompt": "Is the child having difficulty drinking or feeding?",
+      "refs": [
+        "p125",
+        "p18",
+        "p21",
+        "p48",
+        "p50"
+      ]
+    },
+    {
+      "name": "muac_red",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "red_on_muac_strap",
+        "red_result_using_the_muac_strap"
+      ],
+      "prompt": "Does the child have a red result using the MUAC strap?",
+      "refs": [
+        "p14",
+        "p43"
+      ]
+    },
+    {
+      "name": "cough",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "cough"
+      ],
+      "prompt": "Does the child have a cough?",
+      "refs": [
+        "p21"
+      ]
+    },
+    {
+      "name": "cough_duration_days",
+      "type": "number",
+      "unit": "days",
+      "allowed": null,
+      "synonyms": [
+        "cough_duration",
+        "cough_for_14_days_or_more",
+        "cough_for_how_long"
+      ],
+      "prompt": "If cough is present, for how long?",
+      "refs": [
+        "p120",
+        "p125",
+        "p21",
+        "p41",
+        "p50"
+      ]
+    },
+    {
+      "name": "diarrhoea_duration_days",
+      "type": "number",
+      "unit": "days",
+      "allowed": null,
+      "synonyms": [
+        "diarrhoea_duration",
+        "diarrhoea_for_14_days_or_more",
+        "diarrhoea_for_how_long",
+        "diarrhoea_for_less_than_14_days",
+        "diarrhoea_less_than_14_days"
+      ],
+      "prompt": "If diarrhoea is present, for how long?",
+      "refs": [
+        "p120",
+        "p125",
+        "p21",
+        "p41",
+        "p48",
+        "p50",
+        "p60",
+        "p69",
+        "p73"
+      ]
+    },
+    {
+      "name": "fever_duration_days",
+      "type": "number",
+      "unit": "days",
+      "allowed": null,
+      "synonyms": [
+        "fever_duration",
+        "fever_for_how_long",
+        "fever_for_last_7_days_or_more",
+        "fever_for_less_than_7_days",
+        "fever_less_than_7_days",
+        "fever_started"
+      ],
+      "prompt": "If fever is present, started how many days ago?",
+      "refs": [
+        "p120",
+        "p125",
+        "p21",
+        "p41",
+        "p48",
+        "p50",
+        "p60",
+        "p76",
+        "p87"
+      ]
+    },
+    {
+      "name": "not_able_to_drink_or_feed_anything",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "not_able_to_drink_or_feed_anything"
+      ],
+      "prompt": "If difficulty drinking or feeding, is the child not able to drink or feed anything?",
+      "refs": [
+        "p21"
+      ]
+    },
+    {
+      "name": "breathing_rate",
+      "type": "number",
+      "unit": "breaths per minute",
+      "allowed": null,
+      "synonyms": [
+        "bpm",
+        "breaths_per_minute"
+      ],
+      "prompt": "Record the child's breathing rate.",
+      "refs": [
+        "p28"
+      ]
+    },
+    {
+      "name": "muac_color",
+      "type": "string",
+      "unit": null,
+      "allowed": [
+        "red",
+        "other"
+      ],
+      "synonyms": [
+        "mid_upper_arm_circumference",
+        "muac_strap_color"
+      ],
+      "prompt": "What is the color at the marks on the MUAC strap?",
+      "refs": [
+        "p136",
+        "p138",
+        "p36"
+      ]
+    },
+    {
+      "name": "muac_yellow",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "yellow_on_muac_strap"
+      ],
+      "prompt": "Is the MUAC strap yellow?",
+      "refs": [
+        "p105",
+        "p46"
+      ]
+    },
+    {
+      "name": "breaths_per_minute",
+      "type": "number",
+      "unit": "bpm",
+      "allowed": null,
+      "synonyms": [
+        "count_breaths_in_1_minute"
+      ],
+      "prompt": "Count the child's breaths in 1 minute.",
+      "refs": [
+        "p125",
+        "p50"
+      ]
+    },
+    {
+      "name": "muac_strap_colour",
+      "type": "string",
+      "unit": null,
+      "allowed": [
+        "red",
+        "yellow",
+        "green"
+      ],
+      "synonyms": [
+        "muac_strap_colour"
+      ],
+      "prompt": "What is the MUAC strap colour?",
+      "refs": [
+        "p50"
+      ]
+    },
+    {
+      "name": "malaria_rdt_result",
+      "type": "string",
+      "unit": null,
+      "allowed": [
+        "positive",
+        "negative"
+      ],
+      "synonyms": [
+        "malaria_test_result",
+        "rdt_for_malaria",
+        "rdt_result"
+      ],
+      "prompt": "What is the result of the malaria rapid diagnostic test?",
+      "refs": [
+        "p126",
+        "p54",
+        "p64"
+      ]
+    },
+    {
+      "name": "vaccination_record_complete",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "all_vaccines_received"
+      ],
+      "prompt": "Has the child received all vaccines?",
+      "refs": [
+        "p54"
+      ]
+    },
+    {
+      "name": "rdt_result",
+      "type": "string",
+      "unit": null,
+      "allowed": [
+        "positive",
+        "negative"
+      ],
+      "synonyms": [
+        "rapid_diagnostic_test_result",
+        "rdt_for_malaria",
+        "rdt_result",
+        "test_result"
+      ],
+      "prompt": "What is the result of the rapid diagnostic test for malaria?",
+      "refs": [
+        "p138",
+        "p60",
+        "p76",
+        "p81",
+        "p86"
+      ]
+    },
+    {
+      "name": "child_age_years",
+      "type": "number",
+      "unit": "years",
+      "allowed": null,
+      "synonyms": [
+        "age"
+      ],
+      "prompt": "Enter the child's age in years.",
+      "refs": [
+        "p64"
+      ]
+    },
+    {
+      "name": "fever_days",
+      "type": "number",
+      "unit": "days",
+      "allowed": null,
+      "synonyms": [
+        "fever_duration"
+      ],
+      "prompt": "Enter the number of days the child has had a fever.",
+      "refs": [
+        "p64"
+      ]
+    },
+    {
+      "name": "muac_reading",
+      "type": "string",
+      "unit": null,
+      "allowed": [
+        "YELLOW",
+        "RED",
+        "GREEN"
+      ],
+      "synonyms": [
+        "muac_strap_reading"
+      ],
+      "prompt": "Enter the MUAC strap reading (YELLOW, RED, GREEN).",
+      "refs": [
+        "p64"
+      ]
+    },
+    {
+      "name": "diarrhoea_days",
+      "type": "number",
+      "unit": "days",
+      "allowed": null,
+      "synonyms": [
+        "diarrhea_duration"
+      ],
+      "prompt": "Enter the number of days the child has had diarrhoea.",
+      "refs": [
+        "p64"
+      ]
+    },
+    {
+      "name": "cough_days",
+      "type": "number",
+      "unit": "days",
+      "allowed": null,
+      "synonyms": [
+        "cough_duration"
+      ],
+      "prompt": "Enter the number of days the child has had a cough.",
+      "refs": [
+        "p64"
+      ]
+    },
+    {
+      "name": "weakness",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "weak"
+      ],
+      "prompt": "Is the child weak?",
+      "refs": [
+        "p64"
+      ]
+    },
+    {
+      "name": "child_age_months",
+      "type": "number",
+      "unit": "months",
+      "allowed": null,
+      "synonyms": [
+        "age",
+        "age_2_months_up_to_6_months",
+        "age_6_months_up_to_5_years"
+      ],
+      "prompt": "Enter the child's age in months.",
+      "refs": [
+        "p70",
+        "p73",
+        "p96"
+      ]
+    },
+    {
+      "name": "child_improving",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "child_improves"
+      ],
+      "prompt": "Is the child improving after receiving ORS?",
+      "refs": [
+        "p69"
+      ]
+    },
+    {
+      "name": "age_months",
+      "type": "number",
+      "unit": "months",
+      "allowed": null,
+      "synonyms": [
+        "age"
+      ],
+      "prompt": "Enter the child's age in months.",
+      "refs": [
+        "p109",
+        "p113",
+        "p138",
+        "p86"
+      ]
+    },
+    {
+      "name": "child_age",
+      "type": "number",
+      "unit": "years",
+      "allowed": null,
+      "synonyms": [
+        "age"
+      ],
+      "prompt": "Enter the child's age in years.",
+      "refs": [
+        "p91"
+      ]
+    },
+    {
+      "name": "has_danger_sign",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "danger_sign"
+      ],
+      "prompt": "Does the child have any danger signs?",
+      "refs": [
+        "p92"
+      ]
+    },
+    {
+      "name": "rdt_result_for_malaria",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "positive_rdt_result_for_malaria"
+      ],
+      "prompt": "Is the RDT result for malaria positive?",
+      "refs": [
+        "p91"
+      ]
+    },
+    {
+      "name": "can_drink_or_feed",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "cannot_drink_or_feed"
+      ],
+      "prompt": "Can the child drink or feed?",
+      "refs": [
+        "p93"
+      ]
+    },
+    {
+      "name": "has_blood_in_stool",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "blood_in_the_stool"
+      ],
+      "prompt": "Does the child have blood in the stool?",
+      "refs": [
+        "p93"
+      ]
+    },
+    {
+      "name": "becomes_sicker",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "becomes_sicker"
+      ],
+      "prompt": "Has the child become sicker?",
+      "refs": [
+        "p93"
+      ]
+    },
+    {
+      "name": "vaccines_received",
+      "type": "string",
+      "unit": null,
+      "allowed": [
+        "BCG",
+        "HepB",
+        "OPV0",
+        "DTP-Hib1",
+        "HepB1",
+        "OPV1",
+        "RTV1",
+        "PCV1",
+        "DTP-Hib2",
+        "HepB2",
+        "OPV2",
+        "RTV2",
+        "PCV2",
+        "DTP-Hib3",
+        "HepB3",
+        "OPV3",
+        "RTV3",
+        "PCV3",
+        "MCV1",
+        "DTP",
+        "MCV2"
+      ],
+      "synonyms": [
+        "vaccines_completed"
+      ],
+      "prompt": "List the vaccines the child has received.",
+      "refs": [
+        "p96"
+      ]
+    },
+    {
+      "name": "child_better",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "child_is_better"
+      ],
+      "prompt": "Is the child better?",
+      "refs": [
+        "p100",
+        "p140"
+      ]
+    },
+    {
+      "name": "child_not_better",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "child_is_not_better"
+      ],
+      "prompt": "Is the child not better?",
+      "refs": [
+        "p100",
+        "p140"
+      ]
+    },
+    {
+      "name": "muac_strap_color",
+      "type": "string",
+      "unit": null,
+      "allowed": [
+        "red",
+        "yellow",
+        "green"
+      ],
+      "synonyms": [
+        "muac_strap_colour"
+      ],
+      "prompt": "What is the MUAC strap color?",
+      "refs": [
+        "p103",
+        "p120",
+        "p122",
+        "p125"
+      ]
+    },
+    {
+      "name": "danger_sign",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "danger",
+        "danger_sign"
+      ],
+      "prompt": "Does the child have any danger sign?",
+      "refs": [
+        "p105",
+        "p113",
+        "p138"
+      ]
+    },
+    {
+      "name": "not_able_to_drink_or_feed",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "not_able_to_drink",
+        "not_able_to_drink_or_feed_anything",
+        "not_able_to_feed",
+        "unable_to_drink",
+        "unable_to_feed"
+      ],
+      "prompt": "Is the child not able to drink or feed anything?",
+      "refs": [
+        "p105",
+        "p109",
+        "p122",
+        "p134"
+      ]
+    },
+    {
+      "name": "rdt_positive",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "rdt_positive"
+      ],
+      "prompt": "Is the rapid diagnostic test (RDT) for malaria positive?",
+      "refs": [
+        "p105"
+      ]
+    },
+    {
+      "name": "can_drink",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "able_to_drink",
+        "can_drink"
+      ],
+      "prompt": "Can the child drink?",
+      "refs": [
+        "p113",
+        "p138"
+      ]
+    },
+    {
+      "name": "fever_in_malaria_area",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "fever_in_a_malaria_area"
+      ],
+      "prompt": "Is there fever in a malaria area?",
+      "refs": [
+        "p126"
+      ]
+    },
+    {
+      "name": "temperature",
+      "type": "number",
+      "unit": "celsius",
+      "allowed": null,
+      "synonyms": [
+        "fever"
+      ],
+      "prompt": "What is the child's temperature?",
+      "refs": [
+        "p130"
+      ]
+    },
+    {
+      "name": "child_has_danger_sign",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "danger_sign"
+      ],
+      "prompt": "Does the child have a danger sign?",
+      "refs": [
+        "p140"
+      ]
+    },
+    {
+      "name": "other_problem",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "condition_you_cannot_treat",
+        "other_problem"
+      ],
+      "prompt": "Is there any other problem or condition you cannot treat?",
+      "refs": [
+        "p140"
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "R1",
+      "when": [
+        {
+          "sym": "diarrhoea",
+          "eq": true
+        },
+        {
+          "sym": "blood_in_stool",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "bloody_diarrhoea"
+        ],
+        "actions": [],
+        "guideline_ref": "p5",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R2",
+      "when": [
+        {
+          "sym": "fever",
+          "eq": true
+        },
+        {
+          "sym": "convulsions",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "fever_with_convulsions"
+        ],
+        "actions": [],
+        "guideline_ref": "p5",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R3",
+      "when": [
+        {
+          "sym": "difficult_drinking_or_feeding",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "feeding_difficulty"
+        ],
+        "actions": [],
+        "guideline_ref": "p5",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R4",
+      "when": [
+        {
+          "sym": "vomiting",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "vomiting"
+        ],
+        "actions": [],
+        "guideline_ref": "p5",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R5",
+      "when": [
+        {
+          "sym": "chest_indrawing",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "chest_indrawing"
+        ],
+        "actions": [],
+        "guideline_ref": "p5",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R3",
+      "when": [
+        {
+          "sym": "fast_breathing",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "fast_breathing"
+        ],
+        "actions": [
+          {
+            "id": "give_antibiotic",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p45",
+        "priority": 3
+      }
+    },
+    {
+      "rule_id": "R7",
+      "when": [
+        {
+          "sym": "unusually_sleepy_or_unconscious",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "altered_consciousness"
+        ],
+        "actions": [],
+        "guideline_ref": "p5",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "2",
+      "when": [
+        {
+          "sym": "unusually_sleepy_or_unconscious",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "unusually_sleepy_or_unconscious"
+        ],
+        "actions": [],
+        "guideline_ref": "p41",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "4",
+      "when": [
+        {
+          "sym": "swelling_of_both_feet",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "swelling_of_both_feet"
+        ],
+        "actions": [],
+        "guideline_ref": "p41",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "6",
+      "when": [],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "diarrhoea_14_days"
+        ],
+        "actions": [],
+        "guideline_ref": "p39",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "8",
+      "when": [],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "fever_7_days"
+        ],
+        "actions": [],
+        "guideline_ref": "p39",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "9",
+      "when": [
+        {
+          "sym": "convulsions",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "convulsions"
+        ],
+        "actions": [],
+        "guideline_ref": "p39",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "10",
+      "when": [
+        {
+          "sym": "not_able_to_drink_or_eat",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "not_able_to_drink_or_eat"
+        ],
+        "actions": [],
+        "guideline_ref": "p39",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "11",
+      "when": [
+        {
+          "sym": "vomits_everything",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "vomits_everything"
+        ],
+        "actions": [],
+        "guideline_ref": "p39",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "1",
+      "when": [
+        {
+          "sym": "danger_sign_present",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "danger_sign_present"
+        ],
+        "actions": [
+          {
+            "id": "begin_treatment",
+            "if_available": true
+          },
+          {
+            "id": "assist_referral",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p104",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "2",
+      "when": [
+        {
+          "sym": "child_can_drink",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "can_drink"
+        ],
+        "actions": [
+          {
+            "id": "advise_fluids_and_feeding",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p112",
+        "priority": 3
+      }
+    },
+    {
+      "rule_id": "4",
+      "when": [
+        {
+          "any_of": [
+            {
+              "sym": "blood_in_stool",
+              "eq": true
+            },
+            {
+              "sym": "child_becomes_sicker",
+              "eq": true
+            }
+          ]
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "blood_in_stool_or_sicker"
+        ],
+        "actions": [],
+        "guideline_ref": "p9",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R1",
+      "when": [
+        {
+          "sym": "has_diarrhoea",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "diarrhoea_less_than_14_days"
+        ],
+        "actions": [
+          {
+            "id": "advise_home_care",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p16",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R2",
+      "when": [
+        {
+          "sym": "has_fever",
+          "eq": true
+        },
+        {
+          "sym": "malaria_area",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "fever_less_than_7_days_in_malaria_area"
+        ],
+        "actions": [
+          {
+            "id": "advise_home_care",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p16",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R1",
+      "when": [
+        {
+          "sym": "difficulty_drinking_or_feeding",
+          "eq": true
+        },
+        {
+          "sym": "vomits_everything",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "unable_to_drink_or_feed"
+        ],
+        "actions": [],
+        "guideline_ref": "p14",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R4",
+      "when": [
+        {
+          "sym": "muac_red",
+          "eq": true
+        },
+        {
+          "sym": "swelling_of_both_feet",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "severe_malnutrition"
+        ],
+        "actions": [],
+        "guideline_ref": "p14",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R5",
+      "when": [
+        {
+          "obs": "cough_duration",
+          "op": "ge",
+          "value": 14.0
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "persistent_cough"
+        ],
+        "actions": [],
+        "guideline_ref": "p14",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R6",
+      "when": [
+        {
+          "obs": "diarrhoea_duration",
+          "op": "ge",
+          "value": 14.0
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "persistent_diarrhoea"
+        ],
+        "actions": [],
+        "guideline_ref": "p14",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R7",
+      "when": [
+        {
+          "obs": "fever_duration",
+          "op": "ge",
+          "value": 7.0
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "persistent_fever"
+        ],
+        "actions": [],
+        "guideline_ref": "p14",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R8",
+      "when": [
+        {
+          "obs": "cough_duration",
+          "op": "lt",
+          "value": 14.0
+        },
+        {
+          "obs": "diarrhoea_duration",
+          "op": "lt",
+          "value": 14.0
+        },
+        {
+          "obs": "fever_duration",
+          "op": "lt",
+          "value": 7.0
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "mild_symptoms"
+        ],
+        "actions": [],
+        "guideline_ref": "p14",
+        "priority": 3
+      }
+    },
+    {
+      "rule_id": "R2",
+      "when": [
+        {
+          "sym": "not_able_to_drink_or_feed_anything",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "not_able_to_drink_or_feed_anything"
+        ],
+        "actions": [],
+        "guideline_ref": "p21",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R6",
+      "when": [
+        {
+          "sym": "blood_in_stool",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "blood_in_stool"
+        ],
+        "actions": [],
+        "guideline_ref": "p21",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "2",
+      "when": [
+        {
+          "obs": "age_in_months",
+          "op": "ge",
+          "value": 2.0
+        },
+        {
+          "obs": "age_in_months",
+          "op": "lt",
+          "value": 12.0
+        },
+        {
+          "obs": "breathing_rate",
+          "op": "ge",
+          "value": 50.0
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "fast_breathing"
+        ],
+        "actions": [],
+        "guideline_ref": "p29",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R2",
+      "when": [
+        {
+          "obs": "muac_color",
+          "op": "eq",
+          "value": "red"
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "severe_malnutrition"
+        ],
+        "actions": [],
+        "guideline_ref": "p36",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R3",
+      "when": [
+        {
+          "sym": "swelling_of_both_feet",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "severe_malnutrition"
+        ],
+        "actions": [],
+        "guideline_ref": "p38",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "1",
+      "when": [
+        {
+          "obs": "cough_duration_days",
+          "op": "ge",
+          "value": 14.0
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "cough_14_days"
+        ],
+        "actions": [],
+        "guideline_ref": "p41",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "2",
+      "when": [
+        {
+          "obs": "diarrhoea_duration_days",
+          "op": "ge",
+          "value": 14.0
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "diarrhoea_14_days"
+        ],
+        "actions": [],
+        "guideline_ref": "p41",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "4",
+      "when": [
+        {
+          "obs": "fever_duration_days",
+          "op": "ge",
+          "value": 7.0
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "fever_7_days"
+        ],
+        "actions": [],
+        "guideline_ref": "p41",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "10",
+      "when": [
+        {
+          "sym": "muac_red",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "muac_red"
+        ],
+        "actions": [],
+        "guideline_ref": "p43",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R1",
+      "when": [
+        {
+          "obs": "diarrhoea_duration_days",
+          "op": "lt",
+          "value": 14.0
+        },
+        {
+          "sym": "blood_in_stool",
+          "eq": false
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "diarrhoea_no_danger_sign"
+        ],
+        "actions": [
+          {
+            "id": "give_ors_and_zinc",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p45",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R2",
+      "when": [
+        {
+          "obs": "fever_duration_days",
+          "op": "lt",
+          "value": 7.0
+        },
+        {
+          "sym": "malaria_area",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "fever_malaria_area"
+        ],
+        "actions": [
+          {
+            "id": "perform_rdt",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p45",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R4",
+      "when": [
+        {
+          "sym": "muac_yellow",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "muac_yellow"
+        ],
+        "actions": [
+          {
+            "id": "refer_for_supplemental_feeding",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p46",
+        "priority": 3
+      }
+    },
+    {
+      "rule_id": "R6",
+      "when": [
+        {
+          "sym": "difficulty_drinking_or_feeding",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "difficulty_drinking_or_feeding"
+        ],
+        "actions": [],
+        "guideline_ref": "p48",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "6",
+      "when": [
+        {
+          "sym": "difficulty_drinking_or_feeding",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "unable_to_drink_or_feed"
+        ],
+        "actions": [],
+        "guideline_ref": "p52",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "9",
+      "when": [
+        {
+          "sym": "breaths_per_minute",
+          "eq": true
+        },
+        {
+          "sym": "age_months",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "fast_breathing"
+        ],
+        "actions": [],
+        "guideline_ref": "p52",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "11",
+      "when": [
+        {
+          "sym": "unusually_sleepy_or_unconscious",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "unusually_sleepy"
+        ],
+        "actions": [],
+        "guideline_ref": "p52",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "13",
+      "when": [
+        {
+          "sym": "swelling_of_both_feet",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "swelling_of_feet"
+        ],
+        "actions": [],
+        "guideline_ref": "p52",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "14",
+      "when": [
+        {
+          "sym": "diarrhoea_duration_days",
+          "eq": true
+        },
+        {
+          "sym": "blood_in_stool",
+          "eq": false
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "diarrhoea_no_blood"
+        ],
+        "actions": [],
+        "guideline_ref": "p52",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "15",
+      "when": [
+        {
+          "sym": "fever_duration_days",
+          "eq": true
+        },
+        {
+          "sym": "malaria_area",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "fever_malaria_area"
+        ],
+        "actions": [],
+        "guideline_ref": "p52",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "16",
+      "when": [
+        {
+          "sym": "cough_duration_days",
+          "eq": true
+        },
+        {
+          "sym": "breaths_per_minute",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "cough_fast_breathing"
+        ],
+        "actions": [],
+        "guideline_ref": "p52",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "17",
+      "when": [
+        {
+          "sym": "muac_strap_colour",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "yellow_muac"
+        ],
+        "actions": [],
+        "guideline_ref": "p52",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "rule_2",
+      "when": [
+        {
+          "sym": "fever",
+          "eq": true
+        },
+        {
+          "obs": "malaria_rdt_result",
+          "op": "eq",
+          "value": "positive"
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "malaria_positive"
+        ],
+        "actions": [
+          {
+            "id": "administer_antimalarial",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p54",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "rule_3",
+      "when": [
+        {
+          "sym": "vaccination_record_complete",
+          "eq": false
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "incomplete_vaccination"
+        ],
+        "actions": [],
+        "guideline_ref": "p54",
+        "priority": 3
+      }
+    },
+    {
+      "rule_id": "1",
+      "when": [
+        {
+          "obs": "diarrhoea_duration_days",
+          "op": "lt",
+          "value": 14.0
+        },
+        {
+          "sym": "blood_in_stool",
+          "eq": false
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "diarrhoea_no_blood"
+        ],
+        "actions": [
+          {
+            "id": "give_ors",
+            "if_available": true
+          },
+          {
+            "id": "give_zinc",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p60",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "2",
+      "when": [
+        {
+          "obs": "fever_duration_days",
+          "op": "lt",
+          "value": 7.0
+        },
+        {
+          "sym": "malaria_area",
+          "eq": true
+        },
+        {
+          "obs": "rdt_result",
+          "op": "eq",
+          "value": "positive"
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "malaria_positive"
+        ],
+        "actions": [
+          {
+            "id": "give_antimalarial_al",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p60",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R1",
+      "when": [
+        {
+          "obs": "fever_days",
+          "op": "ge",
+          "value": 1.0
+        },
+        {
+          "obs": "muac_reading",
+          "op": "eq",
+          "value": "YELLOW"
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "fever_yellow_muac"
+        ],
+        "actions": [
+          {
+            "id": "give_ors",
+            "if_available": true
+          },
+          {
+            "id": "give_zinc",
+            "if_available": true
+          },
+          {
+            "id": "do_malaria_rdt",
+            "if_available": true
+          },
+          {
+            "id": "give_antimalarial_al",
+            "if_available": true
+          },
+          {
+            "id": "give_antibiotic",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p64",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R2",
+      "when": [
+        {
+          "obs": "fever_days",
+          "op": "ge",
+          "value": 3.0
+        },
+        {
+          "obs": "diarrhoea_days",
+          "op": "ge",
+          "value": 3.0
+        },
+        {
+          "sym": "vomiting",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "fever_diarrhoea_vomiting"
+        ],
+        "actions": [
+          {
+            "id": "give_ors",
+            "if_available": true
+          },
+          {
+            "id": "give_zinc",
+            "if_available": true
+          },
+          {
+            "id": "do_malaria_rdt",
+            "if_available": true
+          },
+          {
+            "id": "give_antimalarial_al",
+            "if_available": true
+          },
+          {
+            "id": "give_antibiotic",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p64",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R3",
+      "when": [
+        {
+          "obs": "cough_days",
+          "op": "ge",
+          "value": 4.0
+        },
+        {
+          "sym": "vomiting",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "cough_vomiting"
+        ],
+        "actions": [
+          {
+            "id": "give_ors",
+            "if_available": true
+          },
+          {
+            "id": "give_zinc",
+            "if_available": true
+          },
+          {
+            "id": "do_malaria_rdt",
+            "if_available": true
+          },
+          {
+            "id": "give_antimalarial_al",
+            "if_available": true
+          },
+          {
+            "id": "give_antibiotic",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p64",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R4",
+      "when": [
+        {
+          "obs": "diarrhoea_days",
+          "op": "ge",
+          "value": 3.0
+        },
+        {
+          "sym": "weakness",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "diarrhoea_weakness"
+        ],
+        "actions": [
+          {
+            "id": "give_ors",
+            "if_available": true
+          },
+          {
+            "id": "give_zinc",
+            "if_available": true
+          },
+          {
+            "id": "do_malaria_rdt",
+            "if_available": true
+          },
+          {
+            "id": "give_antimalarial_al",
+            "if_available": true
+          },
+          {
+            "id": "give_antibiotic",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p64",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R5",
+      "when": [
+        {
+          "obs": "fever_days",
+          "op": "ge",
+          "value": 2.0
+        },
+        {
+          "obs": "cough_days",
+          "op": "ge",
+          "value": 2.0
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "fever_cough"
+        ],
+        "actions": [
+          {
+            "id": "give_ors",
+            "if_available": true
+          },
+          {
+            "id": "give_zinc",
+            "if_available": true
+          },
+          {
+            "id": "do_malaria_rdt",
+            "if_available": true
+          },
+          {
+            "id": "give_antimalarial_al",
+            "if_available": true
+          },
+          {
+            "id": "give_antibiotic",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p64",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "1",
+      "when": [
+        {
+          "all_of": [
+            {
+              "obs": "diarrhoea_duration_days",
+              "op": "lt",
+              "value": 14.0
+            },
+            {
+              "sym": "blood_in_stool",
+              "eq": false
+            },
+            {
+              "sym": "child_improving",
+              "eq": false
+            },
+            {
+              "sym": "danger_sign_present",
+              "eq": true
+            }
+          ]
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "danger_sign"
+        ],
+        "actions": [
+          {
+            "id": "refer_to_health_facility",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p69",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "2",
+      "when": [
+        {
+          "all_of": [
+            {
+              "obs": "diarrhoea_duration_days",
+              "op": "lt",
+              "value": 14.0
+            },
+            {
+              "sym": "blood_in_stool",
+              "eq": false
+            },
+            {
+              "sym": "child_improving",
+              "eq": true
+            }
+          ]
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "improving"
+        ],
+        "actions": [
+          {
+            "id": "give_ors_packets",
+            "if_available": true
+          },
+          {
+            "id": "advise_ors_intake",
+            "if_available": true
+          },
+          {
+            "id": "give_zinc_supplement",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p69",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "1",
+      "when": [
+        {
+          "all_of": [
+            {
+              "obs": "diarrhoea_duration_days",
+              "op": "lt",
+              "value": 14.0
+            },
+            {
+              "sym": "blood_in_stool",
+              "eq": false
+            }
+          ]
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "diarrhoea_no_blood"
+        ],
+        "actions": [
+          {
+            "id": "give_ors",
+            "if_available": true
+          },
+          {
+            "id": "give_zinc",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p73",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "2",
+      "when": [
+        {
+          "all_of": [
+            {
+              "obs": "fever_duration_days",
+              "op": "lt",
+              "value": 7.0
+            },
+            {
+              "sym": "malaria_area",
+              "eq": true
+            },
+            {
+              "obs": "rdt_result",
+              "op": "eq",
+              "value": "positive"
+            }
+          ]
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "fever_malaria_positive"
+        ],
+        "actions": [
+          {
+            "id": "give_antimalarial_al",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p76",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "malaria_treatment_2m_3y",
+      "when": [],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "malaria_positive"
+        ],
+        "actions": [
+          {
+            "id": "give_al_1_tablet_twice_daily_3_days",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p86",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R1",
+      "when": [
+        {
+          "sym": "has_danger_sign",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "danger_sign"
+        ],
+        "actions": [],
+        "guideline_ref": "p92",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R2",
+      "when": [
+        {
+          "sym": "can_drink_or_feed",
+          "eq": false
+        },
+        {
+          "sym": "becomes_sicker",
+          "eq": true
+        },
+        {
+          "sym": "has_blood_in_stool",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "cannot_drink_or_feed",
+          "becomes_sicker",
+          "blood_in_stool"
+        ],
+        "actions": [],
+        "guideline_ref": "p93",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R3",
+      "when": [
+        {
+          "sym": "rdt_result_for_malaria",
+          "eq": true
+        },
+        {
+          "sym": "has_danger_sign",
+          "eq": false
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "malaria_positive_no_danger_sign"
+        ],
+        "actions": [
+          {
+            "id": "advise_on_bednet",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p94",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "2",
+      "when": [
+        {
+          "sym": "danger_sign_present",
+          "eq": false
+        },
+        {
+          "obs": "child_age_months",
+          "op": "lt",
+          "value": 12.0
+        },
+        {
+          "obs": "vaccines_received",
+          "op": "ne",
+          "value": "all"
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "vaccines_not_up_to_date"
+        ],
+        "actions": [
+          {
+            "id": "advise_next_vaccine",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p96",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R2",
+      "when": [
+        {
+          "sym": "child_not_better",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "child_not_better"
+        ],
+        "actions": [
+          {
+            "id": "assist_referral",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p100",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R4",
+      "when": [
+        {
+          "sym": "child_better",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "child_better"
+        ],
+        "actions": [
+          {
+            "id": "continue_treatment_at_home",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p140",
+        "priority": 4
+      }
+    },
+    {
+      "rule_id": "R4",
+      "when": [
+        {
+          "sym": "danger_sign_present",
+          "eq": false
+        },
+        {
+          "sym": "child_not_better",
+          "eq": false
+        },
+        {
+          "sym": "child_better",
+          "eq": false
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "no_improvement"
+        ],
+        "actions": [],
+        "guideline_ref": "p100",
+        "priority": 4
+      }
+    },
+    {
+      "rule_id": "R1",
+      "when": [
+        {
+          "sym": "danger_sign",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "danger_sign"
+        ],
+        "actions": [
+          {
+            "id": "explain_urgency",
+            "if_available": true
+          },
+          {
+            "id": "give_first_dose_treatment",
+            "if_available": true
+          },
+          {
+            "id": "assist_referral",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p105",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R2",
+      "when": [
+        {
+          "sym": "danger_sign",
+          "eq": false
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "no_danger_sign"
+        ],
+        "actions": [
+          {
+            "id": "advise_home_care",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p105",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R3",
+      "when": [
+        {
+          "sym": "fever",
+          "eq": true
+        },
+        {
+          "sym": "convulsions",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "fever_convulsions"
+        ],
+        "actions": [
+          {
+            "id": "give_rectal_artesunate",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p105",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R4",
+      "when": [
+        {
+          "sym": "fever",
+          "eq": true
+        },
+        {
+          "sym": "unusually_sleepy_or_unconscious",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "fever_sleepy_unconscious"
+        ],
+        "actions": [
+          {
+            "id": "give_rectal_artesunate",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p105",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R5",
+      "when": [
+        {
+          "sym": "fever",
+          "eq": true
+        },
+        {
+          "sym": "not_able_to_drink_or_feed",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "fever_not_drinking"
+        ],
+        "actions": [
+          {
+            "id": "give_rectal_artesunate",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p105",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R6",
+      "when": [
+        {
+          "sym": "fever",
+          "eq": true
+        },
+        {
+          "sym": "vomits_everything",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "fever_vomiting"
+        ],
+        "actions": [
+          {
+            "id": "give_rectal_artesunate",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p105",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R9",
+      "when": [
+        {
+          "sym": "diarrhoea",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "diarrhoea"
+        ],
+        "actions": [
+          {
+            "id": "give_ors",
+            "if_available": true
+          },
+          {
+            "id": "give_zinc",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p105",
+        "priority": 3
+      }
+    },
+    {
+      "rule_id": "R11",
+      "when": [
+        {
+          "sym": "rdt_positive",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "malaria_positive"
+        ],
+        "actions": [
+          {
+            "id": "give_antimalarial",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p105",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R1",
+      "when": [
+        {
+          "sym": "diarrhoea",
+          "eq": true
+        },
+        {
+          "sym": "not_able_to_drink_or_feed",
+          "eq": false
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "diarrhoea"
+        ],
+        "actions": [
+          {
+            "id": "give_ors",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p108",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R2",
+      "when": [
+        {
+          "sym": "fever",
+          "eq": true
+        },
+        {
+          "any_of": [
+            {
+              "sym": "convulsions",
+              "eq": true
+            },
+            {
+              "sym": "unusually_sleepy_or_unconscious",
+              "eq": true
+            },
+            {
+              "sym": "not_able_to_drink_or_feed",
+              "eq": true
+            },
+            {
+              "sym": "vomits_everything",
+              "eq": true
+            }
+          ]
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "fever_with_danger_sign"
+        ],
+        "actions": [
+          {
+            "id": "give_rectal_artesunate",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p109",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R3",
+      "when": [
+        {
+          "sym": "fever",
+          "eq": true
+        },
+        {
+          "sym": "not_able_to_drink_or_feed",
+          "eq": false
+        },
+        {
+          "sym": "convulsions",
+          "eq": false
+        },
+        {
+          "sym": "unusually_sleepy_or_unconscious",
+          "eq": false
+        },
+        {
+          "sym": "vomits_everything",
+          "eq": false
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "fever"
+        ],
+        "actions": [
+          {
+            "id": "give_oral_antimalarial_al",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p110",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R4",
+      "when": [
+        {
+          "sym": "chest_indrawing",
+          "eq": true
+        },
+        {
+          "sym": "not_able_to_drink_or_feed",
+          "eq": false
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "chest_indrawing"
+        ],
+        "actions": [
+          {
+            "id": "give_amoxicillin",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p110",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R5",
+      "when": [
+        {
+          "sym": "fast_breathing",
+          "eq": true
+        },
+        {
+          "sym": "not_able_to_drink_or_feed",
+          "eq": false
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "fast_breathing"
+        ],
+        "actions": [
+          {
+            "id": "give_amoxicillin",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p110",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "1",
+      "when": [
+        {
+          "sym": "fever",
+          "eq": true
+        },
+        {
+          "sym": "danger_sign",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "fever_with_danger_sign"
+        ],
+        "actions": [
+          {
+            "id": "give_rectal_artesunate",
+            "if_available": true
+          },
+          {
+            "id": "give_oral_antimalarial",
+            "if_available": true
+          },
+          {
+            "id": "write_referral_note",
+            "if_available": true
+          },
+          {
+            "id": "arrange_transportation",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p113",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "2",
+      "when": [
+        {
+          "sym": "chest_indrawing",
+          "eq": true
+        },
+        {
+          "sym": "can_drink",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "chest_indrawing"
+        ],
+        "actions": [
+          {
+            "id": "give_oral_antibiotic",
+            "if_available": true
+          },
+          {
+            "id": "write_referral_note",
+            "if_available": true
+          },
+          {
+            "id": "arrange_transportation",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p113",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "4",
+      "when": [
+        {
+          "sym": "can_drink",
+          "eq": true
+        },
+        {
+          "sym": "fever",
+          "eq": false
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "can_drink_no_fever"
+        ],
+        "actions": [
+          {
+            "id": "advise_fluids_feeding",
+            "if_available": true
+          },
+          {
+            "id": "advise_keep_warm",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p115",
+        "priority": 3
+      }
+    },
+    {
+      "rule_id": "R2",
+      "when": [
+        {
+          "sym": "danger_sign_present",
+          "eq": false
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "no_danger_sign"
+        ],
+        "actions": [
+          {
+            "id": "advise_on_home_care",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p121",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R2",
+      "when": [
+        {
+          "sym": "danger_sign_present",
+          "eq": false
+        },
+        {
+          "obs": "diarrhoea_duration_days",
+          "op": "lt",
+          "value": 14.0
+        },
+        {
+          "sym": "blood_in_stool",
+          "eq": false
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "no_danger_sign",
+          "diarrhoea_less_than_14_days",
+          "no_blood_in_stool"
+        ],
+        "actions": [
+          {
+            "id": "give_ors",
+            "if_available": true
+          },
+          {
+            "id": "give_zinc",
+            "if_available": true
+          },
+          {
+            "id": "advise_on_home_care",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p126",
+        "priority": 3
+      }
+    },
+    {
+      "rule_id": "R3",
+      "when": [
+        {
+          "sym": "danger_sign_present",
+          "eq": false
+        },
+        {
+          "obs": "fever_duration_days",
+          "op": "lt",
+          "value": 7.0
+        },
+        {
+          "sym": "fever_in_malaria_area",
+          "eq": true
+        },
+        {
+          "obs": "malaria_rdt_result",
+          "op": "eq",
+          "value": "positive"
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "no_danger_sign",
+          "fever_less_than_7_days",
+          "malaria_positive"
+        ],
+        "actions": [
+          {
+            "id": "give_antimalarial",
+            "if_available": true
+          },
+          {
+            "id": "advise_on_home_care",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p126",
+        "priority": 3
+      }
+    },
+    {
+      "rule_id": "R4",
+      "when": [
+        {
+          "sym": "danger_sign_present",
+          "eq": false
+        },
+        {
+          "obs": "breaths_per_minute",
+          "op": "ge",
+          "value": 50.0
+        },
+        {
+          "obs": "age_months",
+          "op": "lt",
+          "value": 12.0
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "fast_breathing"
+        ],
+        "actions": [
+          {
+            "id": "give_antibiotic",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p126",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R5",
+      "when": [
+        {
+          "sym": "danger_sign_present",
+          "eq": false
+        },
+        {
+          "obs": "breaths_per_minute",
+          "op": "ge",
+          "value": 40.0
+        },
+        {
+          "obs": "age_months",
+          "op": "ge",
+          "value": 12.0
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "fast_breathing"
+        ],
+        "actions": [
+          {
+            "id": "give_antibiotic",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p126",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R1",
+      "when": [
+        {
+          "obs": "temperature",
+          "op": "ge",
+          "value": 37.5
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "fever"
+        ],
+        "actions": [],
+        "guideline_ref": "p130",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R2",
+      "when": [
+        {
+          "any_of": [
+            {
+              "sym": "convulsions",
+              "eq": true
+            },
+            {
+              "sym": "unusually_sleepy_or_unconscious",
+              "eq": true
+            },
+            {
+              "sym": "not_able_to_drink_or_feed",
+              "eq": true
+            },
+            {
+              "sym": "vomits_everything",
+              "eq": true
+            }
+          ]
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "danger_sign"
+        ],
+        "actions": [
+          {
+            "id": "give_rectal_artesunate",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p134",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R6",
+      "when": [
+        {
+          "sym": "swelling_of_both_feet",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "edema"
+        ],
+        "actions": [],
+        "guideline_ref": "p136",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R2",
+      "when": [
+        {
+          "sym": "danger_sign",
+          "eq": false
+        },
+        {
+          "sym": "can_drink",
+          "eq": true
+        },
+        {
+          "obs": "age_months",
+          "op": "ge",
+          "value": 2.0
+        },
+        {
+          "obs": "age_months",
+          "op": "lt",
+          "value": 12.0
+        },
+        {
+          "sym": "fast_breathing",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "fast_breathing"
+        ],
+        "actions": [
+          {
+            "id": "give_amoxicillin_1_tab",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p138",
+        "priority": 3
+      }
+    },
+    {
+      "rule_id": "R3",
+      "when": [
+        {
+          "sym": "danger_sign",
+          "eq": false
+        },
+        {
+          "sym": "can_drink",
+          "eq": true
+        },
+        {
+          "obs": "age_months",
+          "op": "ge",
+          "value": 12.0
+        },
+        {
+          "obs": "age_months",
+          "op": "lt",
+          "value": 60.0
+        },
+        {
+          "sym": "fast_breathing",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "fast_breathing"
+        ],
+        "actions": [
+          {
+            "id": "give_amoxicillin_2_tabs",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p138",
+        "priority": 3
+      }
+    },
+    {
+      "rule_id": "R4",
+      "when": [
+        {
+          "sym": "fever",
+          "eq": true
+        },
+        {
+          "sym": "malaria_area",
+          "eq": true
+        },
+        {
+          "obs": "rdt_result",
+          "op": "eq",
+          "value": "positive"
+        },
+        {
+          "obs": "age_months",
+          "op": "ge",
+          "value": 2.0
+        },
+        {
+          "obs": "age_months",
+          "op": "lt",
+          "value": 36.0
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "malaria_positive"
+        ],
+        "actions": [
+          {
+            "id": "give_al_1_tab",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p138",
+        "priority": 3
+      }
+    },
+    {
+      "rule_id": "R5",
+      "when": [
+        {
+          "sym": "fever",
+          "eq": true
+        },
+        {
+          "sym": "malaria_area",
+          "eq": true
+        },
+        {
+          "obs": "rdt_result",
+          "op": "eq",
+          "value": "positive"
+        },
+        {
+          "obs": "age_months",
+          "op": "ge",
+          "value": 36.0
+        },
+        {
+          "obs": "age_months",
+          "op": "lt",
+          "value": 60.0
+        }
+      ],
+      "then": {
+        "propose_triage": "home",
+        "set_flags": [],
+        "reasons": [
+          "malaria_positive"
+        ],
+        "actions": [
+          {
+            "id": "give_al_2_tabs",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p138",
+        "priority": 3
+      }
+    },
+    {
+      "rule_id": "R6",
+      "when": [
+        {
+          "sym": "muac_color",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "muac_yellow"
+        ],
+        "actions": [
+          {
+            "id": "counsel_feeding",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p138",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R1",
+      "when": [
+        {
+          "sym": "child_has_danger_sign",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "danger_sign"
+        ],
+        "actions": [
+          {
+            "id": "refer_urgently_to_health_facility",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p140",
+        "priority": 1
+      }
+    },
+    {
+      "rule_id": "R2",
+      "when": [
+        {
+          "sym": "child_not_better",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "hospital",
+        "set_flags": [
+          "danger_sign"
+        ],
+        "reasons": [
+          "not_better"
+        ],
+        "actions": [
+          {
+            "id": "refer_urgently_to_health_facility",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p140",
+        "priority": 2
+      }
+    },
+    {
+      "rule_id": "R3",
+      "when": [
+        {
+          "sym": "other_problem",
+          "eq": true
+        }
+      ],
+      "then": {
+        "propose_triage": "clinic",
+        "set_flags": [
+          "clinic_referral"
+        ],
+        "reasons": [
+          "other_problem"
+        ],
+        "actions": [
+          {
+            "id": "write_referral_note",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p140",
+        "priority": 3
+      }
+    }
+  ]
+}

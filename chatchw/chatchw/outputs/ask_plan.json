@@ -1,0 +1,60 @@
+[
+  {
+    "module": "diarrhea",
+    "ask": [
+      "diarrhea"
+    ],
+    "followups_if": {
+      "diarrhea==true": [
+        "blood_in_stool",
+        "diarrhea_duration_days"
+      ]
+    }
+  },
+  {
+    "module": "fever_malaria",
+    "ask": [
+      "fever"
+    ],
+    "followups_if": {
+      "fever==true": [
+        "temperature_c",
+        "fever_duration_days",
+        "malaria_area"
+      ]
+    }
+  },
+  {
+    "module": "respiratory",
+    "ask": [
+      "cough"
+    ],
+    "followups_if": {
+      "cough==true": [
+        "resp_rate",
+        "cough_duration_days",
+        "chest_indrawing"
+      ]
+    }
+  },
+  {
+    "module": "nutrition",
+    "ask": [
+      "muac_mm",
+      "edema_both_feet"
+    ],
+    "followups_if": {}
+  },
+  {
+    "module": "danger_signs",
+    "ask": [
+      "convulsions",
+      "unconscious",
+      "unable_to_drink",
+      "vomiting_everything",
+      "chest_indrawing",
+      "edema_both_feet"
+    ],
+    "followups_if": {}
+  }
+]

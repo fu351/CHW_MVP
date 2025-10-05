@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(/C:\\Users\\mabhi\\Documents\\GitHub\\CHW_MVP\\chatchw/**)",
+      "Read(/C:\\Users\\mabhi\\Documents\\GitHub\\CHW_MVP/**)",
+      "Read(/C:\\Users\\mabhi\\Documents\\GitHub\\CHW_MVP\\chatchw\\chatchw/**)",
+      "Read(/C:\\Users\\mabhi\\Documents\\GitHub\\CHW_MVP\\chatchw\\chatchw/**)",
+      "Read(/C:\\Users\\mabhi\\Documents\\GitHub\\CHW_MVP\\chatchw\\chatchw/**)",
+      "Bash(python:*)",
+      "Bash(py generate_fixed_artifacts.py:*)",
+      "Bash(py generate_fixed_artifacts_simple.py:*)",
+      "Read(/C:\\Users\\mabhi\\Documents\\GitHub\\CHW_MVP\\openai_output_v4_fixed\\02_process_models/**)",
+      "Bash(py test_fixed_chatbot.py)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

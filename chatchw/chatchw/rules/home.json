@@ -1,0 +1,69 @@
+[
+  {
+    "rule_id": "HOME-01",
+    "when": [
+      {
+        "sym": "convulsion",
+        "eq": false
+      },
+      {
+        "sym": "edema_both_feet",
+        "eq": false
+      },
+      {
+        "sym": "blood_in_stool",
+        "eq": false
+      },
+      {
+        "obs": "temp",
+        "op": "lt",
+        "value": 38.0
+      },
+      {
+        "obs": "muac_mm",
+        "op": "ge",
+        "value": 115.0
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "reasons": [
+        "normal.assessment"
+      ],
+      "priority": 50
+    }
+  },
+  {
+    "rule_id": "HOME-02",
+    "when": [
+      {
+        "sym": "convulsion",
+        "eq": false
+      },
+      {
+        "sym": "edema_both_feet",
+        "eq": false
+      },
+      {
+        "sym": "blood_in_stool",
+        "eq": false
+      },
+      {
+        "sym": "feels_very_hot",
+        "eq": false
+      },
+      {
+        "obs": "diarrhea_days",
+        "op": "eq",
+        "value": 0
+      }
+    ],
+    "then": {
+      "propose_triage": "home",
+      "reasons": [
+        "no.concerning.symptoms"
+      ],
+      "priority": 45
+    }
+  }
+]
