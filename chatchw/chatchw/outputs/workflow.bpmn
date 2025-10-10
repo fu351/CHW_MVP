@@ -12,7 +12,7 @@
     <bpmn:endEvent id="hospital" name="Hospital"/>
     <bpmn:endEvent id="clinic" name="Clinic"/>
     <bpmn:endEvent id="home" name="Home"/>
-
+    
     <bpmn:sequenceFlow id="flow1" sourceRef="startEvent" targetRef="askDiarrhea"/>
     <bpmn:sequenceFlow id="flow2" sourceRef="askDiarrhea" targetRef="diarrheaPresent"/>
     <bpmn:sequenceFlow id="flow3" sourceRef="diarrheaPresent" targetRef="collectDiarrheaDetails">

@@ -1,31 +1,9 @@
 {
-  "unmapped_rule_ids": [
-    "r1",
-    "r2",
-    "r3",
-    "r4",
-    "rule_1",
-    "rule_2",
-    "rule_3",
-    "rule_4",
-    "rule_5",
-    "rule_6",
-    "rule_7",
-    "rule_8",
-    "rule_9",
-    "rule_10",
-    "rule_11",
-    "rule_12",
-    "rule_13",
-    "rule_14",
-    "rule_15"
-  ],
+  "unmapped_rule_ids": [],
   "module_counts": {
-    "hospital": 90,
-    "clinic": 70,
-    "home": 30
+    "hospital": 36,
+    "clinic": 18,
+    "home": 16
   },
-  "notes": [
-    "fallback_merge_used"
-  ]
+  "notes": []
 }

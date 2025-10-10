@@ -14,10 +14,19 @@ Key improvements:
 - ASK_PLAN validator against IR variables; unknown questions dropped, logged to QA
 - DMN sanitizer for common tag/text issues
 - Centralized debug writes under ./.chatchw_debug
+
+NEW (bulk update):
+- Rule schema normalization (propose_triage → triage, set_flags → flags), drop empty WHEN, ban derived outputs in conditions
+- Global rule_id dedupe/normalization
+- Canonical variable mapping + rewrite of all conditions
+- Fail-fast preflight (duplicates, empties)
+- ASK ownership pass (single owner per variable to avoid double-asks)
+- Coverage hinting with flattened canonical condition strings
 """
 
 from __future__ import annotations
 
+import collections
 import json
 import os
 import re
@@ -41,7 +50,7 @@ except Exception:  # pragma: no cover
 
 if PydanticAvailable:
 
-    Op = Union[str]  # we'll validate allowed ops in prompts; pydantic literal optional
+    Op = Union[str]  # we’ll validate allowed ops in prompts; pydantic literal optional
 
     class Variable(BaseModel):
         name: str
@@ -76,7 +85,7 @@ if PydanticAvailable:
         actions: List[dict] = []
         guideline_ref: Optional[str] = None
         priority: int = 0
-        advice: List[str] = []  # ← new: treatment & advisory text snippets
+        advice: List[str] = []  # treatment & advisory text snippets
 
     class Rule(BaseModel):
         rule_id: str
@@ -108,7 +117,6 @@ def _strip_code_fences(text: str) -> str:
         if s.endswith("```"):
             s = s[:-3]
     return s.strip()
-
 
 def _loose_to_json(s: str) -> Any:
     """Repair common JSON issues: code fences, line/block comments, trailing commas, and crop to first obj/array."""
@@ -144,7 +152,6 @@ def _loose_to_json(s: str) -> Any:
                 pass
     return json.loads(s)
 
-
 def _call_json_with_retries(call_fn, schema_model=None, retries=3, sleep=1.5):
     last_exc = None
     for i in range(retries):
@@ -158,7 +165,6 @@ def _call_json_with_retries(call_fn, schema_model=None, retries=3, sleep=1.5):
             last_exc = e
             time.sleep(sleep * (2 ** i))
     raise last_exc
-
 
 def _extract_fenced_blocks(text: str) -> List[Tuple[str, str]]:
     blocks: List[Tuple[str, str]] = []
@@ -179,9 +185,174 @@ def _extract_fenced_blocks(text: str) -> List[Tuple[str, str]]:
         i = end + 3
     return blocks
 
+# ---------------------------- Normalization helpers ----------------
+_CANON_TRIAGE_KEYS = ("triage", "propose_triage")
+_CANON_FLAG_KEYS = ("flags", "set_flags")
+_DERIVED_BLOCKLIST = {"danger_sign", "clinic_referral", "triage"}
+
+def _normalize_rule_schema(rule: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Make rule schema consistent; drop if invalid/empty WHEN or derived outputs used as inputs."""
+    r = dict(rule or {})
+    th = dict(r.get("then") or {})
+    # triage
+    triage = None
+    for k in _CANON_TRIAGE_KEYS:
+        if th.get(k) is not None:
+            triage = th[k]
+            break
+    if triage is not None:
+        th["triage"] = triage
+    # flags
+    flags = None
+    for k in _CANON_FLAG_KEYS:
+        if th.get(k) is not None:
+            flags = th[k]
+            break
+    th["flags"] = list(flags or [])
+    # defaults
+    th.setdefault("reasons", [])
+    th.setdefault("actions", [])
+    th.setdefault("advice", [])
+    th["priority"] = int(th.get("priority") or 0)
+    r["then"] = th
+
+    # Validate WHEN (ban empty lists and bad shapes, ban derived outputs in conditions)
+    when = r.get("when")
+    if not isinstance(when, list) or len(when) == 0:
+        return None
+    def _has_bad_sym(c: Dict[str, Any]) -> bool:
+        return "sym" in c and str(c.get("sym")).strip().lower() in _DERIVED_BLOCKLIST
+    for cond in when:
+        if not isinstance(cond, dict):
+            return None
+        if _has_bad_sym(cond):
+            return None
+        if "all_of" in cond or "any_of" in cond:
+            seq = cond.get("all_of") or cond.get("any_of") or []
+            for sub in seq:
+                if _has_bad_sym(sub):
+                    return None
+    return r
+
+def _dedupe_rule_ids(rules: List[Dict[str, Any]], prefix: str = "r") -> List[Dict[str, Any]]:
+    seen = {}
+    out = []
+    for i, r in enumerate(rules, 1):
+        rid = str(r.get("rule_id") or f"{prefix}_{i}").strip()
+        rid = re.sub(r"\s+", "_", rid.lower())
+        if rid in seen:
+            k = 2
+            new_id = f"{rid}__{k}"
+            while new_id in seen:
+                k += 1
+                new_id = f"{rid}__{k}"
+            rid = new_id
+        seen[rid] = True
+        r["rule_id"] = rid
+        out.append(r)
+    return out
+
+def _build_canonical_map(config: Dict[str, Any], variables: List[Dict[str, Any]]) -> Dict[str, str]:
+    canon_set = set(config.get("canonical_variables", []))
+    by_name = { (v.get("name") or "").strip().lower(): v for v in variables if isinstance(v, dict) }
+    idx: Dict[str, str] = {}
+    for name, v in by_name.items():
+        syns = set([name]) | set((v.get("synonyms") or []))
+        target = next((s for s in syns if s in canon_set), name)
+        for s in syns:
+            idx[str(s).strip().lower()] = target
+    return idx
+
+def _rewrite_rule_to_canon(rule: Dict[str, Any], canon: Dict[str, str]) -> Dict[str, Any]:
+    r = dict(rule)
+    def map_var(x: str) -> str:
+        return canon.get(str(x).strip().lower(), str(x).strip().lower())
+    new_when = []
+    for c in r.get("when", []):
+        c = dict(c)
+        if "sym" in c:
+            c["sym"] = map_var(c["sym"])
+        elif "obs" in c:
+            c["obs"] = map_var(c["obs"])
+        elif "all_of" in c or "any_of" in c:
+            k = "all_of" if "all_of" in c else "any_of"
+            seq = []
+            for s in c.get(k) or []:
+                s = dict(s)
+                if "sym" in s: s["sym"] = map_var(s["sym"])
+                if "obs" in s: s["obs"] = map_var(s["obs"])
+                seq.append(s)
+            c[k] = seq
+        new_when.append(c)
+    r["when"] = new_when
+    return r
+
+def _flatten_rule_conditions(rule: Dict[str, Any]) -> List[str]:
+    out = []
+    def one(c):
+        if "sym" in c:
+            return f"{c['sym']}=={str(c.get('eq')).lower()}"
+        if "obs" in c:
+            return f"{c['obs']} {c['op']} {json.dumps(c['value'])}"
+        return None
+    for c in rule.get("when", []):
+        if "all_of" in c or "any_of" in c:
+            k = "all_of" if "all_of" in c else "any_of"
+            parts = [one(s) for s in (c.get(k) or []) if one(s)]
+            out.append(f"{k}:" + " && ".join(parts))
+        else:
+            s = one(c)
+            if s: out.append(s)
+    return out
+
+def _rules_flattened(ir: Dict[str, Any]) -> List[Dict[str, Any]]:
+    arr = []
+    for r in ir.get("rules", []):
+        arr.append({
+            "rule_id": r.get("rule_id"),
+            "triage": (r.get("then") or {}).get("triage"),
+            "conds": _flatten_rule_conditions(r)
+        })
+    return arr
+
+def _preflight_ir(ir: Dict[str, Any]) -> None:
+    names = [ (v.get("name") or "").strip().lower() for v in ir.get("variables", []) if isinstance(v, dict) ]
+    dup_var_names = [n for n, cnt in collections.Counter(names).items() if cnt > 1]
+    if dup_var_names:
+        raise RuntimeError(f"Duplicate variable names after merge: {dup_var_names}")
+
+    ids = [ (r.get("rule_id") or "").strip().lower() for r in ir.get("rules", []) if isinstance(r, dict) ]
+    dups = [i for i,c in collections.Counter(ids).items() if c>1]
+    if dups:
+        raise RuntimeError(f"Duplicate rule_ids after dedupe pass: {dups}")
+
+    empties = [r.get("rule_id") for r in ir.get("rules", []) if not (r.get("when") or [])]
+    if empties:
+        raise RuntimeError(f"Empty WHEN in rules: {empties}")
+
+def _enforce_ask_ownership(ask_plan: List[Dict[str, Any]], priority_order=("danger_signs","respiratory","diarrhea","fever_malaria","nutrition")):
+    owner: Dict[str, str] = {}
+    order = {m:i for i,m in enumerate(priority_order)}
+    for blk in sorted([b for b in ask_plan if isinstance(b, dict)], key=lambda b: order.get(b.get("module","zzz"), 999)):
+        module = blk.get("module")
+        kept_ask = []
+        for q in blk.get("ask", []) or []:
+            if q not in owner:
+                owner[q] = module
+                kept_ask.append(q)
+        blk["ask"] = kept_ask
+        fuw = {}
+        for cond, qs in (blk.get("followups_if") or {}).items():
+            new_qs = []
+            for q in qs:
+                if q not in owner:
+                    owner[q] = module
+                    new_qs.append(q)
+            fuw[cond] = new_qs
+        blk["followups_if"] = fuw
+    return ask_plan
 
 # ---------------------------- Guarded Extractor ----------------------------
-
 class OpenAIGuardedExtractor:
     def __init__(
         self,
@@ -252,7 +423,6 @@ class OpenAIGuardedExtractor:
         canon = ", ".join(self.config.get("canonical_variables", default_canon_vars))
 
         # ---------------- PROMPTS ----------------
-
         # Step 1 prompt (per-section)
         self.section_system = (
             "You extract WHO CHW clinical rules. Return ONLY JSON.\n\n"
@@ -286,7 +456,7 @@ class OpenAIGuardedExtractor:
             "- Keep every literal threshold\nINPUT\n<PASTE ALL SECTION JSONs>"
         )
 
-        # Step 3 prompt (DMN + ASK_PLAN) - enforced aggregator inputs and per-sign rows (+ advice)
+        # Step 3 prompt (DMN + ASK_PLAN)
         self.dmn_system = (
             "Convert RULES_JSON into modular DMN 1.4 using the DMN 1.4 MODEL namespace (2019-11-11). Return exactly two fenced blocks:\n"
             "1) ```xml <dmn:definitions>…```  2) ```json ASK_PLAN```\n\n"
@@ -294,39 +464,18 @@ class OpenAIGuardedExtractor:
             "- Root tag MUST be <dmn:definitions xmlns:dmn=\"https://www.omg.org/spec/DMN/20191111/MODEL/\">. No other DMN namespaces.\n"
             "- Decisions: decide_danger_signs, decide_diarrhea, decide_fever_malaria, decide_respiratory, decide_nutrition, aggregate_final\n"
             "- Each module decision uses <dmn:decisionTable hitPolicy=\"FIRST\">\n  Inputs: only relevant canonical variables\n"
-            "  Outputs: triage:string, danger_sign:boolean, clinic_referral:boolean, reason:string, ref:string, advice:string  (advice is a JSON-encoded array as string)\n"
+            "  Outputs: triage:string, danger_sign:boolean, clinic_referral:boolean, reason:string, ref:string, advice:string\n"
             "  Rows: use FEEL literals/comparators only; escape &lt; and &gt; in <dmn:text>.\n"
-            "  Invariants: hospital → danger_sign=true; clinic → clinic_referral=true. No effect strings.\n"
-            "- decide_danger_signs MUST have one row per sign (no row requiring multiple signs):\n"
-            "  convulsions==true → triage:\"hospital\", danger_sign:true, reason:\"convulsions\", ref:\"pXX\", advice:\"[]\"\n"
-            "  unconscious==true → triage:\"hospital\", danger_sign:true, reason:\"unconscious\", ref:\"pXX\", advice:\"[]\"\n"
-            "  unable_to_drink==true → triage:\"hospital\", danger_sign:true, reason:\"unable_to_drink\", ref:\"pXX\", advice:\"[]\"\n"
-            "  vomiting_everything==true → triage:\"hospital\", danger_sign:true, reason:\"vomiting_everything\", ref:\"pXX\", advice:\"[]\"\n"
-            "  chest_indrawing==true → triage:\"hospital\", danger_sign:true, reason:\"severe_respiratory_distress\", ref:\"pXX\", advice:\"[]\"\n"
-            "  muac_mm < 115 → triage:\"clinic\", clinic_referral:true, reason:\"severe_acute_malnutrition\", ref:\"pXX\", advice:\"[]\"\n"
-            "  edema_both_feet==true → triage:\"clinic\", clinic_referral:true, reason:\"bilateral_pitting_edema\", ref:\"pXX\", advice:\"[]\"\n"
-            "- decide_diarrhea:\n"
-            "  blood_in_stool==true → clinic_referral:true, triage:\"clinic\", reason:\"dysentery\", ref:\"pXX\", advice:\"[\\\"start ORS if available\\\"]\"\n"
-            "  diarrhea_duration_days >= 14 → clinic_referral:true, triage:\"clinic\", reason:\"persistent_diarrhea\", ref:\"pXX\", advice:\"[\\\"continue ORS, monitor\\\"]\"\n"
-            "- decide_fever_malaria:\n"
-            "  malaria_area==true AND fever==true AND fever_duration_days in [3..6] → clinic_referral:true, reason:\"fever_in_malaria_area\", ref:\"pXX\", advice:\"[]\"\n"
-            "  fever==true AND temperature_c >= 39 → clinic_referral:true, reason:\"high_fever\", ref:\"pXX\", advice:\"[\\\"tepid sponging if safe\\\"]\"\n"
-            "  fever==true AND fever_duration_days >= 7 → clinic_referral:true, reason:\"prolonged_fever\", ref:\"pXX\", advice:\"[]\"\n"
-            "- decide_respiratory (age thresholds, do not duplicate chest_indrawing clinic):\n"
-            "  age_months < 12 AND resp_rate >= 50 → clinic_referral:true, reason:\"fast_breathing_infant\", ref:\"pXX\", advice:\"[]\"\n"
-            "  age_months >= 12 AND resp_rate >= 40 → clinic_referral:true, reason:\"fast_breathing_child\", ref:\"pXX\", advice:\"[]\"\n"
-            "- decide_nutrition: MUAC 115–124 → clinic_referral:true; >=125 → home (advice:\"[\\\"continue feeding\\\"]\" for home rows)\n"
-            "- aggregate_final MUST HAVE INPUT COLUMNS referencing module outputs:\n"
-            "  Inputs: decide_danger_signs.danger_sign (boolean), decide_diarrhea.clinic_referral, decide_fever_malaria.clinic_referral, decide_respiratory.clinic_referral, decide_nutrition.clinic_referral\n"
-            "  Rules (FIRST):\n"
-            "   Row1: danger_sign == true → triage:\"hospital\", reason:\"danger_sign\", ref:\"aggregator\", advice:\"[]\"\n"
-            "   Row2: any clinic_referral input == true → triage:\"clinic\", reason:\"needs_clinic_referral\", ref:\"aggregator\", advice:\"[]\"\n"
-            "   Row3: otherwise → triage:\"home\", reason:\"home_care\", ref:\"aggregator\", advice:\"[\\\"fluids, feeding, return if worse\\\"]\"\n"
-            "  The aggregator does NOT compute per-module reasons; engine will surface top module reason/ref.\n"
+            "  Invariants: hospital → danger_sign=true; clinic → clinic_referral=true.\n"
+            "- decide_danger_signs one row per sign (no multi-sign rows)\n"
+            "- decide_diarrhea: blood_in_stool==true → clinic; diarrhea_duration_days >= 14 → clinic\n"
+            "- decide_fever_malaria: add classic fever/malaria escalations\n"
+            "- decide_respiratory: age-based fast breathing thresholds\n"
+            "- decide_nutrition: MUAC 115–124 → clinic; >=125 → home\n"
+            "- aggregate_final inputs: module booleans; FIRST policy rows → hospital/clinic/home\n"
             "- Add <dmn:informationRequirement> from aggregate_final to each module decision.\n"
-            "- Ensure <dmn:inputData> exists for every canonical variable (boolean|number|string).\n"
-            "- No contains() or non-DMN elements.\n\n"
-            "ASK_PLAN (use canonical names; parent-first with gated follow-ups):\n"
+            "- Ensure <dmn:inputData> exists for every canonical variable.\n\n"
+            "ASK_PLAN (canonical names; parent-first with gated follow-ups):\n"
             "[ {\"module\":\"diarrhea\",\"ask\":[\"diarrhea\"],\"followups_if\":{\"diarrhea==true\":[\"blood_in_stool\",\"diarrhea_duration_days\"]}},\n"
             "  {\"module\":\"fever_malaria\",\"ask\":[\"fever\"],\"followups_if\":{\"fever==true\":[\"temperature_c\",\"fever_duration_days\",\"malaria_area\"]}},\n"
             "  {\"module\":\"respiratory\",\"ask\":[\"cough\"],\"followups_if\":{\"cough==true\":[\"resp_rate\",\"cough_duration_days\",\"chest_indrawing\"]}},\n"
@@ -348,8 +497,9 @@ class OpenAIGuardedExtractor:
         self.coverage_system = (
             "Given RULES_JSON and the DMN XML, return ONLY JSON:\n"
             "{\"unmapped_rule_ids\":[...], \"module_counts\":{...}, \"notes\":[...]}\n"
-            "Rules are mapped if their literal conditions appear as inputEntry cells in some module row with same triage tier.\n"
-            "INPUT\nRULES_JSON: <merged IR>\nDMN: <xml>"
+            "Use RULES_JSON.ir_flat.conds (canonical stringified conditions) to match DMN inputEntry texts literally when possible.\n"
+            "A rule is mapped if its literal conditions appear as inputEntry cells in some module row with the same triage tier.\n"
+            "INPUT\nRULES_JSON: <merged IR + ir_flat>\nDMN: <xml>"
         )
 
     # ---------------- PDF sectioning (smarter) -----------------
@@ -370,20 +520,7 @@ class OpenAIGuardedExtractor:
                 raw.append((i, t))
 
         def is_clinical(t: str) -> bool:
-            keys = [
-                "fever",
-                "diarrhea",
-                "cough",
-                "muac",
-                "convulsion",
-                "vomit",
-                "resp",
-                "edema",
-                "temperature",
-                "age",
-                "danger",
-                "triage",
-            ]
+            keys = ["fever", "diarrhea", "cough", "muac", "convulsion", "vomit", "resp", "edema", "temperature", "age", "danger", "triage"]
             score = sum(k in t.lower() for k in keys)
             return score >= 1 and len(t) > 200
 
@@ -420,7 +557,6 @@ class OpenAIGuardedExtractor:
         try:
             return _call_json_with_retries(_call, schema_model=schema_model, retries=3)
         except Exception as e:
-            # Save debug payload
             Path(self.debug_dir / "guarded_debug_last.txt").write_text(f"SYSTEM:\n{system}\n\nUSER:\n{user}\n\nERR:{e}", encoding="utf-8")
             raise
 
@@ -443,10 +579,20 @@ class OpenAIGuardedExtractor:
             user = f"SECTION_ID: {sec_id}\n\nTEXT:\n{text}"
             try:
                 obj = self._chat_json(self.section_system, user, max_tokens=6000, model_key="section", schema_model=IR if PydanticAvailable else None)
-                results.append(obj)
             except Exception:
                 # Skip bad sections but keep going
                 continue
+
+            # Normalize & drop invalid rules early; dedupe rule_ids by-section
+            cleaned = []
+            for r in obj.get("rules", []) or []:
+                nr = _normalize_rule_schema(r)
+                if nr:
+                    cleaned.append(nr)
+                else:
+                    obj.setdefault("qa", {}).setdefault("notes", []).append(f"dropped_rule:{r.get('rule_id')}")
+            obj["rules"] = _dedupe_rule_ids(cleaned, prefix=f"{sec_id}")
+            results.append(obj)
         return results
 
     # ---------------- Step 2: merge -----------------
@@ -455,11 +601,11 @@ class OpenAIGuardedExtractor:
         user = f"INPUT\n{payload}"
         try:
             merged = self._chat_json(self.merge_system, user, max_tokens=6000, model_key="merge", schema_model=IR if PydanticAvailable else None)
-            return merged
         except Exception:
             # Fallback: deterministic merge to guarantee JSON
             variables: Dict[str, Dict[str, Any]] = {}
             rules: List[Dict[str, Any]] = []
+            qa_notes: List[str] = ["fallback_merge_used"]
             for sec in section_objs:
                 for v in (sec.get("variables") or []):
                     if not isinstance(v, dict):
@@ -470,10 +616,8 @@ class OpenAIGuardedExtractor:
                     cur = variables.get(name)
                     if cur is None:
                         vv = dict(v)
-                        if not isinstance(vv.get("synonyms"), list):
-                            vv["synonyms"] = []
-                        if not isinstance(vv.get("refs"), list):
-                            vv["refs"] = []
+                        if not isinstance(vv.get("synonyms"), list): vv["synonyms"] = []
+                        if not isinstance(vv.get("refs"), list): vv["refs"] = []
                         variables[name] = vv
                     else:
                         syn = set(cur.get("synonyms") or []) | set(v.get("synonyms") or [])
@@ -482,14 +626,30 @@ class OpenAIGuardedExtractor:
                         cur["refs"] = sorted(list(refs))
                 for r in (sec.get("rules") or []):
                     if isinstance(r, dict):
-                        rules.append(r)
-            merged_py = {
+                        nr = _normalize_rule_schema(r)
+                        if nr:
+                            rules.append(nr)
+                        else:
+                            qa_notes.append(f"dropped_rule:{r.get('rule_id')}")
+            rules = _dedupe_rule_ids(rules, prefix="merge")
+            merged = {
                 "variables": list(variables.values()),
                 "rules": rules,
                 "canonical_map": {},
-                "qa": {"notes": ["fallback_merge_used"], "unmapped_vars": [], "dedup_dropped": 0, "overlap_fixed": []},
+                "qa": {"notes": qa_notes, "unmapped_vars": [], "dedup_dropped": 0, "overlap_fixed": []},
             }
-            return merged_py
+
+        # Canonical map + rewrite rules to canonical; validate & preflight
+        canon = _build_canonical_map(self.config, merged.get("variables", []))
+        merged["canonical_map"] = canon
+        merged["rules"] = [_rewrite_rule_to_canon(r, canon) for r in (merged.get("rules") or [])]
+        # dedupe rule_ids again (post-normalization)
+        merged["rules"] = _dedupe_rule_ids(merged["rules"], prefix="merged")
+
+        if PydanticAvailable:
+            merged = IR.model_validate(merged).model_dump()
+        _preflight_ir(merged)
+        return merged
 
     # ---------------- Step 3: DMN + ASK_PLAN -----------------
     def generate_dmn_and_ask_plan(self, merged_ir: Dict[str, Any]) -> Tuple[str, Any]:
@@ -537,19 +697,10 @@ class OpenAIGuardedExtractor:
             if isinstance(parsed, (list, dict)):
                 ask_plan = parsed
 
-        # Normalize ASK_PLAN if dict-wrapped
-        if isinstance(ask_plan, dict):
-            if isinstance(ask_plan.get("ASK_PLAN"), list):
-                ask_plan = ask_plan["ASK_PLAN"]
-            elif isinstance(ask_plan.get("ask_plan"), list):
-                ask_plan = ask_plan["ask_plan"]
-            elif isinstance(ask_plan.get("questions"), list):
-                ask_plan = {"questions": ask_plan["questions"]}
-
         # Minimal DMN sanitizer
         def _sanitize_dmn(xml: str) -> str:
             s = xml
-            # Ensure closing dm:n:text tags
+            # Ensure closing text tags
             s = re.sub(r"(<dmn:outputEntry>\s*<dmn:text>)([^<]*?)(</dmn:outputEntry>)", r"\1\2</dmn:text>\3", s, flags=re.DOTALL)
             s = s.replace("<dmn:outputEntry><dmn:text></dmn:text></dmn:outputEntry>", "<dmn:outputEntry><dmn:text>\"\"</dmn:text></dmn:outputEntry>")
             s = s.replace("<dmn:outputEntry><dmn:text></dmn:outputEntry>", "<dmn:outputEntry><dmn:text>\"\"</dmn:text></dmn:outputEntry>")
@@ -571,7 +722,7 @@ class OpenAIGuardedExtractor:
                 pass
             raise RuntimeError("Failed to get DMN and ASK_PLAN from model")
 
-        # ASK_PLAN validation against IR variables (drop unknowns, log)
+        # ASK_PLAN validation against IR variables (drop unknowns, log) + ownership enforcement
         try:
             known_vars = {v["name"] for v in merged_ir.get("variables", []) if isinstance(v, dict) and v.get("name")}
             mutated = []
@@ -580,21 +731,22 @@ class OpenAIGuardedExtractor:
                 for blk in ask_plan:
                     if not isinstance(blk, dict):
                         continue
-                    ask = [q for q in blk.get("ask", []) if q in known_vars]
+                    ask = [q for q in (blk.get("ask") or []) if q in known_vars]
                     fuw = {}
                     for cond, qs in (blk.get("followups_if", {}) or {}).items():
-                        # keep condition string as-is; filter followup vars
-                        fuw[cond] = [q for q in qs if q in known_vars]
-                        for q in qs:
+                        fuw[cond] = [q for q in (qs or []) if q in known_vars]
+                        for q in (qs or []):
                             if q not in known_vars:
                                 unknowns.add(q)
-                    for q in blk.get("ask", []):
+                    for q in (blk.get("ask") or []):
                         if q not in known_vars:
                             unknowns.add(q)
                     mutated.append({"module": blk.get("module"), "ask": ask, "followups_if": fuw})
                 ask_plan = mutated
             if unknowns:
                 merged_ir.setdefault("qa", {}).setdefault("notes", []).append(f"ask_plan_unknowns_dropped:{sorted(list(unknowns))}")
+            # Ownership pass to prevent double-asks
+            ask_plan = _enforce_ask_ownership(ask_plan)
         except Exception:
             pass
 
@@ -608,11 +760,14 @@ class OpenAIGuardedExtractor:
         for _lang, body in blocks:
             if "<bpmn:definitions" in body:
                 return body.strip()
-        # Save debug
         Path(self.debug_dir / "bpmn_debug_last.txt").write_text(text, encoding="utf-8")
         raise RuntimeError("Failed to get BPMN from model")
 
     # ---------------- Step 5: coverage -----------------
     def audit_coverage(self, merged_ir: Dict[str, Any], dmn_xml: str) -> Dict[str, Any]:
-        user = "RULES_JSON:\n" + json.dumps(merged_ir, ensure_ascii=False) + "\nDMN:\n```xml\n" + dmn_xml + "\n```"
+        payload = {
+            "ir": merged_ir,
+            "ir_flat": _rules_flattened(merged_ir)  # helper for exact literal matching
+        }
+        user = "RULES_JSON:\n" + json.dumps(payload, ensure_ascii=False) + "\nDMN:\n```xml\n" + dmn_xml + "\n```"
         return self._chat_json(self.coverage_system, user, max_tokens=6000, model_key="audit", schema_model=None)

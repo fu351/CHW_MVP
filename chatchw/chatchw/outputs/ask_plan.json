@@ -32,16 +32,14 @@
     "followups_if": {
       "cough==true": [
         "resp_rate",
-        "cough_duration_days",
-        "chest_indrawing"
+        "cough_duration_days"
       ]
     }
   },
   {
     "module": "nutrition",
     "ask": [
-      "muac_mm",
-      "edema_both_feet"
+      "muac_mm"
     ],
     "followups_if": {}
   },
