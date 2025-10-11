@@ -1,0 +1,728 @@
+{
+  "variables": [
+    {
+      "name": "diarrhea",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "diarrhoea"
+      ],
+      "prompt": "Does the child have diarrhea?",
+      "refs": [
+        "p9",
+        "p17",
+        "p19",
+        "p22",
+        "p44",
+        "p49",
+        "p70",
+        "p126",
+        "p137"
+      ]
+    },
+    {
+      "name": "blood_in_stool",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "blood in stool"
+      ],
+      "prompt": "Is there blood in the stool?",
+      "refs": [
+        "p9",
+        "p16",
+        "p17",
+        "p19",
+        "p22",
+        "p41",
+        "p49",
+        "p70",
+        "p126",
+        "p137"
+      ]
+    },
+    {
+      "name": "age_months",
+      "type": "number",
+      "unit": "months",
+      "allowed": null,
+      "synonyms": [
+        "age"
+      ],
+      "prompt": "What is the age of the child in months?",
+      "refs": [
+        "p9",
+        "p14-15",
+        "p29-31",
+        "p44",
+        "p62",
+        "p93",
+        "p96-97",
+        "p98-99",
+        "p121",
+        "p124",
+        "p126",
+        "p137"
+      ]
+    },
+    {
+      "name": "fever",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "fever"
+      ],
+      "prompt": "Does the child have a fever?",
+      "refs": [
+        "p17",
+        "p19",
+        "p22",
+        "p44",
+        "p49",
+        "p70",
+        "p121",
+        "p137"
+      ]
+    },
+    {
+      "name": "convulsions",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "convulsions"
+      ],
+      "prompt": "Does the child have convulsions?",
+      "refs": [
+        "p16",
+        "p19",
+        "p22",
+        "p44",
+        "p49",
+        "p70",
+        "p121",
+        "p137"
+      ]
+    },
+    {
+      "name": "unable_to_drink",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "unable to drink"
+      ],
+      "prompt": "Is the child unable to drink?",
+      "refs": [
+        "p16",
+        "p19",
+        "p22",
+        "p44",
+        "p49",
+        "p70",
+        "p121",
+        "p137"
+      ]
+    },
+    {
+      "name": "vomiting_everything",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "vomiting everything"
+      ],
+      "prompt": "Is the child vomiting everything?",
+      "refs": [
+        "p16",
+        "p19",
+        "p22",
+        "p44",
+        "p49",
+        "p70",
+        "p121",
+        "p137"
+      ]
+    },
+    {
+      "name": "chest_indrawing",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "chest indrawing"
+      ],
+      "prompt": "Is there chest indrawing?",
+      "refs": [
+        "p16",
+        "p19",
+        "p22",
+        "p44",
+        "p49",
+        "p70",
+        "p121",
+        "p137"
+      ]
+    },
+    {
+      "name": "fast_breathing",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "fast breathing"
+      ],
+      "prompt": "Is the child breathing fast?",
+      "refs": [
+        "p16",
+        "p19",
+        "p22",
+        "p44",
+        "p49",
+        "p70",
+        "p121",
+        "p137"
+      ]
+    },
+    {
+      "name": "muac_mm",
+      "type": "number",
+      "unit": "mm",
+      "allowed": null,
+      "synonyms": [
+        "MUAC"
+      ],
+      "prompt": "What is the MUAC measurement in mm?",
+      "refs": [
+        "p16",
+        "p19",
+        "p22",
+        "p44",
+        "p49",
+        "p70",
+        "p121",
+        "p137"
+      ]
+    },
+    {
+      "name": "edema_both_feet",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "swelling of both feet"
+      ],
+      "prompt": "Is there swelling of both feet?",
+      "refs": [
+        "p16",
+        "p19",
+        "p22",
+        "p44",
+        "p49",
+        "p70",
+        "p121",
+        "p137"
+      ]
+    },
+    {
+      "name": "unconscious",
+      "type": "boolean",
+      "unit": null,
+      "allowed": null,
+      "synonyms": [
+        "unconscious"
+      ],
+      "prompt": "Is the child unconscious?",
+      "refs": [
+        "p16",
+        "p19",
+        "p22",
+        "p44",
+        "p49",
+        "p70",
+        "p121",
+        "p137"
+      ]
+    },
+    {
+      "name": "temperature_c",
+      "type": "number",
+      "unit": "\u00b0C",
+      "allowed": null,
+      "synonyms": [
+        "body temperature"
+      ],
+      "prompt": "What is the child's temperature in Celsius?",
+      "refs": [
+        "p130"
+      ]
+    },
+    {
+      "name": "resp_rate",
+      "type": "number",
+      "unit": "breaths/minute",
+      "allowed": null,
+      "synonyms": [
+        "breathing rate"
+      ],
+      "prompt": "What is the child's respiratory rate?",
+      "refs": [
+        "p29-31",
+        "p124",
+        "p138"
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "rule_1",
+      "when": [
+        {
+          "obs": "diarrhea",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "obs": "blood_in_stool",
+          "op": "eq",
+          "value": false
+        }
+      ],
+      "then": {
+        "triage": "home",
+        "flags": [],
+        "reasons": [],
+        "actions": [
+          {
+            "id": "give_ors",
+            "if_available": true
+          },
+          {
+            "id": "give_zinc",
+            "if_available": true
+          }
+        ],
+        "guideline_ref": "p126",
+        "priority": 50,
+        "advice": [
+          "Give ORS solution until the child is no longer thirsty.",
+          "Give caregiver 2 ORS packets to take home."
+        ]
+      }
+    },
+    {
+      "rule_id": "rule_2",
+      "when": [
+        {
+          "obs": "fever",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "any_of": [
+            {
+              "obs": "convulsions",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "obs": "unconscious",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "obs": "unable_to_drink",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "obs": "vomiting_everything",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      ],
+      "then": {
+        "triage": "hospital",
+        "flags": [],
+        "reasons": [
+          "danger sign"
+        ],
+        "actions": [],
+        "guideline_ref": "p139",
+        "priority": 90,
+        "advice": []
+      }
+    },
+    {
+      "rule_id": "rule_3",
+      "when": [
+        {
+          "obs": "diarrhea",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "obs": "blood_in_stool",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "then": {
+        "triage": "hospital",
+        "flags": [],
+        "reasons": [
+          "Blood in stool"
+        ],
+        "actions": [],
+        "guideline_ref": "p138",
+        "priority": 90,
+        "advice": []
+      }
+    },
+    {
+      "rule_id": "rule_4",
+      "when": [
+        {
+          "obs": "convulsions",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "then": {
+        "triage": "hospital",
+        "flags": [],
+        "reasons": [
+          "Convulsions"
+        ],
+        "actions": [],
+        "guideline_ref": "p138",
+        "priority": 90,
+        "advice": []
+      }
+    },
+    {
+      "rule_id": "rule_5",
+      "when": [
+        {
+          "obs": "fever",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "obs": "fever_duration_days",
+          "op": "ge",
+          "value": 7
+        }
+      ],
+      "then": {
+        "triage": "hospital",
+        "flags": [],
+        "reasons": [
+          "Fever for last 7 days or more"
+        ],
+        "actions": [],
+        "guideline_ref": "p138",
+        "priority": 90,
+        "advice": []
+      }
+    },
+    {
+      "rule_id": "rule_6",
+      "when": [
+        {
+          "obs": "unable_to_drink",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "then": {
+        "triage": "hospital",
+        "flags": [],
+        "reasons": [
+          "Not able to drink or feed anything"
+        ],
+        "actions": [],
+        "guideline_ref": "p138",
+        "priority": 90,
+        "advice": []
+      }
+    },
+    {
+      "rule_id": "rule_7",
+      "when": [
+        {
+          "obs": "vomiting_everything",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "then": {
+        "triage": "hospital",
+        "flags": [],
+        "reasons": [
+          "Vomits everything"
+        ],
+        "actions": [],
+        "guideline_ref": "p138",
+        "priority": 90,
+        "advice": []
+      }
+    },
+    {
+      "rule_id": "rule_8",
+      "when": [
+        {
+          "obs": "chest_indrawing",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "then": {
+        "triage": "hospital",
+        "flags": [],
+        "reasons": [
+          "Chest indrawing"
+        ],
+        "actions": [],
+        "guideline_ref": "p138",
+        "priority": 90,
+        "advice": []
+      }
+    },
+    {
+      "rule_id": "rule_9",
+      "when": [
+        {
+          "obs": "resp_rate",
+          "op": "ge",
+          "value": 50
+        },
+        {
+          "obs": "age_months",
+          "op": "ge",
+          "value": 2
+        },
+        {
+          "obs": "age_months",
+          "op": "lt",
+          "value": 12
+        }
+      ],
+      "then": {
+        "triage": "hospital",
+        "flags": [],
+        "reasons": [
+          "Fast breathing for age 2 months up to 12 months"
+        ],
+        "actions": [],
+        "guideline_ref": "p138",
+        "priority": 90,
+        "advice": []
+      }
+    },
+    {
+      "rule_id": "rule_10",
+      "when": [
+        {
+          "obs": "resp_rate",
+          "op": "ge",
+          "value": 40
+        },
+        {
+          "obs": "age_months",
+          "op": "ge",
+          "value": 12
+        },
+        {
+          "obs": "age_months",
+          "op": "lt",
+          "value": 60
+        }
+      ],
+      "then": {
+        "triage": "hospital",
+        "flags": [],
+        "reasons": [
+          "Fast breathing for age 12 months up to 5 years"
+        ],
+        "actions": [],
+        "guideline_ref": "p138",
+        "priority": 90,
+        "advice": []
+      }
+    },
+    {
+      "rule_id": "rule_11",
+      "when": [
+        {
+          "obs": "unconscious",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "then": {
+        "triage": "hospital",
+        "flags": [],
+        "reasons": [
+          "Unusually sleepy or unconscious"
+        ],
+        "actions": [],
+        "guideline_ref": "p138",
+        "priority": 90,
+        "advice": []
+      }
+    },
+    {
+      "rule_id": "rule_12",
+      "when": [
+        {
+          "obs": "muac_mm",
+          "op": "eq",
+          "value": "red"
+        }
+      ],
+      "then": {
+        "triage": "hospital",
+        "flags": [],
+        "reasons": [
+          "Red on MUAC strap"
+        ],
+        "actions": [],
+        "guideline_ref": "p138",
+        "priority": 90,
+        "advice": []
+      }
+    },
+    {
+      "rule_id": "rule_13",
+      "when": [
+        {
+          "obs": "edema_both_feet",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "then": {
+        "triage": "hospital",
+        "flags": [],
+        "reasons": [
+          "Swelling of both feet"
+        ],
+        "actions": [],
+        "guideline_ref": "p138",
+        "priority": 90,
+        "advice": []
+      }
+    },
+    {
+      "rule_id": "rule_14",
+      "when": [
+        {
+          "all_of": [
+            {
+              "obs": "cough",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "obs": "diarrhea",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "obs": "convulsions",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "obs": "fever",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "obs": "unable_to_drink",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "obs": "vomiting_everything",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "obs": "chest_indrawing",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "obs": "unconscious",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "obs": "muac_mm",
+              "op": "eq",
+              "value": "green"
+            },
+            {
+              "obs": "edema_both_feet",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      ],
+      "then": {
+        "triage": "home",
+        "flags": [],
+        "reasons": [
+          "No danger signs present"
+        ],
+        "actions": [],
+        "guideline_ref": "p138",
+        "priority": 30,
+        "advice": [
+          "Treat at home and advise caregiver"
+        ]
+      }
+    }
+  ],
+  "canonical_map": {
+    "diarrhea": "diarrhea",
+    "diarrhoea": "diarrhea",
+    "blood in stool": "blood_in_stool",
+    "blood_in_stool": "blood_in_stool",
+    "age": "age_months",
+    "age_months": "age_months",
+    "fever": "fever",
+    "convulsions": "convulsions",
+    "unable to drink": "unable_to_drink",
+    "unable_to_drink": "unable_to_drink",
+    "vomiting everything": "vomiting_everything",
+    "vomiting_everything": "vomiting_everything",
+    "chest_indrawing": "chest_indrawing",
+    "chest indrawing": "chest_indrawing",
+    "fast_breathing": "fast_breathing",
+    "fast breathing": "fast_breathing",
+    "muac": "muac_mm",
+    "muac_mm": "muac_mm",
+    "edema_both_feet": "edema_both_feet",
+    "swelling of both feet": "edema_both_feet",
+    "unconscious": "unconscious",
+    "body temperature": "temperature_c",
+    "temperature_c": "temperature_c",
+    "resp_rate": "resp_rate",
+    "breathing rate": "resp_rate"
+  },
+  "qa": {
+    "notes": [],
+    "unmapped_vars": [],
+    "dedup_dropped": 0,
+    "overlap_fixed": []
+  }
+}

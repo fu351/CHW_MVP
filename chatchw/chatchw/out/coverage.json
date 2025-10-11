@@ -1,0 +1,19 @@
+{
+  "unmapped_rule_ids": [
+    "rule_5",
+    "rule_6",
+    "rule_7",
+    "rule_8",
+    "rule_9",
+    "rule_10",
+    "rule_12",
+    "rule_13",
+    "rule_14"
+  ],
+  "module_counts": {
+    "home": 2,
+    "hospital": 8,
+    "clinic": 2
+  },
+  "notes": []
+}

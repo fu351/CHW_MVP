@@ -1,0 +1,235 @@
+<dmn:definitions xmlns:dmn="https://www.omg.org/spec/DMN/20191111/MODEL/">
+  <dmn:inputData id="diarrhea" name="diarrhea"/>
+  <dmn:inputData id="blood_in_stool" name="blood_in_stool"/>
+  <dmn:inputData id="age_months" name="age_months"/>
+  <dmn:inputData id="fever" name="fever"/>
+  <dmn:inputData id="convulsions" name="convulsions"/>
+  <dmn:inputData id="unable_to_drink" name="unable_to_drink"/>
+  <dmn:inputData id="vomiting_everything" name="vomiting_everything"/>
+  <dmn:inputData id="chest_indrawing" name="chest_indrawing"/>
+  <dmn:inputData id="muac_mm" name="muac_mm"/>
+  <dmn:inputData id="edema_both_feet" name="edema_both_feet"/>
+  <dmn:inputData id="unconscious" name="unconscious"/>
+  <dmn:inputData id="temperature_c" name="temperature_c"/>
+  <dmn:inputData id="resp_rate" name="resp_rate"/>
+  <dmn:decision id="decide_danger_signs" name="decide_danger_signs">
+    <dmn:decisionTable hitPolicy="FIRST">
+      <dmn:input id="convulsions_input" label="convulsions">
+        <dmn:inputExpression typeRef="boolean"><dmn:text>convulsions</dmn:text></dmn:inputExpression>
+      </dmn:input>
+      <dmn:input id="unconscious_input" label="unconscious">
+        <dmn:inputExpression typeRef="boolean"><dmn:text>unconscious</dmn:text></dmn:inputExpression>
+      </dmn:input>
+      <dmn:input id="unable_to_drink_input" label="unable_to_drink">
+        <dmn:inputExpression typeRef="boolean"><dmn:text>unable_to_drink</dmn:text></dmn:inputExpression>
+      </dmn:input>
+      <dmn:input id="vomiting_everything_input" label="vomiting_everything">
+        <dmn:inputExpression typeRef="boolean"><dmn:text>vomiting_everything</dmn:text></dmn:inputExpression>
+      </dmn:input>
+      <dmn:input id="chest_indrawing_input" label="chest_indrawing">
+        <dmn:inputExpression typeRef="boolean"><dmn:text>chest_indrawing</dmn:text></dmn:inputExpression>
+      </dmn:input>
+      <dmn:input id="edema_both_feet_input" label="edema_both_feet">
+        <dmn:inputExpression typeRef="boolean"><dmn:text>edema_both_feet</dmn:text></dmn:inputExpression>
+      </dmn:input>
+      <dmn:output id="triage_output" name="triage" typeRef="string"/>
+      <dmn:output id="danger_sign_output" name="danger_sign" typeRef="boolean"/>
+      <dmn:output id="clinic_referral_output" name="clinic_referral" typeRef="boolean"/>
+      <dmn:output id="reason_output" name="reason" typeRef="string"/>
+      <dmn:output id="ref_output" name="ref" typeRef="string"/>
+      <dmn:output id="advice_output" name="advice" typeRef="string"/>
+      <dmn:rule>
+        <dmn:inputEntry id="convulsions_entry"><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="unconscious_entry"><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="unable_to_drink_entry"><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="vomiting_everything_entry"><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="chest_indrawing_entry"><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="edema_both_feet_entry"><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry id="triage_convulsions"><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="danger_sign_convulsions"><dmn:text>true</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="clinic_referral_convulsions"><dmn:text>false</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="reason_convulsions"><dmn:text>"Convulsions"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="ref_convulsions"><dmn:text>"p138"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="advice_convulsions"><dmn:text>""</dmn:text></dmn:outputEntry>
+      </dmn:rule>
+      <!-- Additional rules for other danger signs -->
+    </dmn:decisionTable>
+  </dmn:decision>
+  <dmn:decision id="decide_diarrhea" name="decide_diarrhea">
+    <dmn:decisionTable hitPolicy="FIRST">
+      <dmn:input id="diarrhea_input" label="diarrhea">
+        <dmn:inputExpression typeRef="boolean"><dmn:text>diarrhea</dmn:text></dmn:inputExpression>
+      </dmn:input>
+      <dmn:input id="blood_in_stool_input" label="blood_in_stool">
+        <dmn:inputExpression typeRef="boolean"><dmn:text>blood_in_stool</dmn:text></dmn:inputExpression>
+      </dmn:input>
+      <dmn:input id="diarrhea_duration_days_input" label="diarrhea_duration_days">
+        <dmn:inputExpression typeRef="number"><dmn:text>diarrhea_duration_days</dmn:text></dmn:inputExpression>
+      </dmn:input>
+      <dmn:output id="triage_output" name="triage" typeRef="string"/>
+      <dmn:output id="danger_sign_output" name="danger_sign" typeRef="boolean"/>
+      <dmn:output id="clinic_referral_output" name="clinic_referral" typeRef="boolean"/>
+      <dmn:output id="reason_output" name="reason" typeRef="string"/>
+      <dmn:output id="ref_output" name="ref" typeRef="string"/>
+      <dmn:output id="advice_output" name="advice" typeRef="string"/>
+      <dmn:rule>
+        <dmn:inputEntry id="diarrhea_entry"><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="blood_in_stool_entry"><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="diarrhea_duration_days_entry"><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry id="triage_diarrhea_blood"><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="danger_sign_diarrhea_blood"><dmn:text>false</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="clinic_referral_diarrhea_blood"><dmn:text>true</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="reason_diarrhea_blood"><dmn:text>"Blood in stool"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="ref_diarrhea_blood"><dmn:text>"p138"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="advice_diarrhea_blood"><dmn:text>""</dmn:text></dmn:outputEntry>
+      </dmn:rule>
+      <dmn:rule>
+        <dmn:inputEntry id="diarrhea_entry_2"><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="blood_in_stool_entry_2"><dmn:text>false</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="diarrhea_duration_days_entry_2"><dmn:text>&gt;= 14</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry id="triage_diarrhea_duration"><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="danger_sign_diarrhea_duration"><dmn:text>false</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="clinic_referral_diarrhea_duration"><dmn:text>true</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="reason_diarrhea_duration"><dmn:text>"Prolonged diarrhea"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="ref_diarrhea_duration"><dmn:text>"p138"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="advice_diarrhea_duration"><dmn:text>""</dmn:text></dmn:outputEntry>
+      </dmn:rule>
+    </dmn:decisionTable>
+  </dmn:decision>
+  <dmn:decision id="decide_fever_malaria" name="decide_fever_malaria">
+    <dmn:decisionTable hitPolicy="FIRST">
+      <dmn:input id="fever_input" label="fever">
+        <dmn:inputExpression typeRef="boolean"><dmn:text>fever</dmn:text></dmn:inputExpression>
+      </dmn:input>
+      <dmn:input id="temperature_c_input" label="temperature_c">
+        <dmn:inputExpression typeRef="number"><dmn:text>temperature_c</dmn:text></dmn:inputExpression>
+      </dmn:input>
+      <dmn:input id="fever_duration_days_input" label="fever_duration_days">
+        <dmn:inputExpression typeRef="number"><dmn:text>fever_duration_days</dmn:text></dmn:inputExpression>
+      </dmn:input>
+      <dmn:input id="malaria_area_input" label="malaria_area">
+        <dmn:inputExpression typeRef="boolean"><dmn:text>malaria_area</dmn:text></dmn:inputExpression>
+      </dmn:input>
+      <dmn:output id="triage_output" name="triage" typeRef="string"/>
+      <dmn:output id="danger_sign_output" name="danger_sign" typeRef="boolean"/>
+      <dmn:output id="clinic_referral_output" name="clinic_referral" typeRef="boolean"/>
+      <dmn:output id="reason_output" name="reason" typeRef="string"/>
+      <dmn:output id="ref_output" name="ref" typeRef="string"/>
+      <dmn:output id="advice_output" name="advice" typeRef="string"/>
+      <dmn:rule>
+        <dmn:inputEntry id="fever_entry"><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="temperature_c_entry"><dmn:text>&gt;= 38.5</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="fever_duration_days_entry"><dmn:text>&gt;= 7</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="malaria_area_entry"><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry id="triage_fever_malaria"><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="danger_sign_fever_malaria"><dmn:text>true</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="clinic_referral_fever_malaria"><dmn:text>false</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="reason_fever_malaria"><dmn:text>"Severe fever in malaria area"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="ref_fever_malaria"><dmn:text>"p138"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="advice_fever_malaria"><dmn:text>""</dmn:text></dmn:outputEntry>
+      </dmn:rule>
+    </dmn:decisionTable>
+  </dmn:decision>
+  <dmn:decision id="decide_respiratory" name="decide_respiratory">
+    <dmn:decisionTable hitPolicy="FIRST">
+      <dmn:input id="resp_rate_input" label="resp_rate">
+        <dmn:inputExpression typeRef="number"><dmn:text>resp_rate</dmn:text></dmn:inputExpression>
+      </dmn:input>
+      <dmn:input id="age_months_input" label="age_months">
+        <dmn:inputExpression typeRef="number"><dmn:text>age_months</dmn:text></dmn:inputExpression>
+      </dmn:input>
+      <dmn:output id="triage_output" name="triage" typeRef="string"/>
+      <dmn:output id="danger_sign_output" name="danger_sign" typeRef="boolean"/>
+      <dmn:output id="clinic_referral_output" name="clinic_referral" typeRef="boolean"/>
+      <dmn:output id="reason_output" name="reason" typeRef="string"/>
+      <dmn:output id="ref_output" name="ref" typeRef="string"/>
+      <dmn:output id="advice_output" name="advice" typeRef="string"/>
+      <dmn:rule>
+        <dmn:inputEntry id="resp_rate_entry"><dmn:text>&gt;= 50</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="age_months_entry"><dmn:text>&gt;= 2 and &lt; 12</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry id="triage_respiratory"><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="danger_sign_respiratory"><dmn:text>false</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="clinic_referral_respiratory"><dmn:text>true</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="reason_respiratory"><dmn:text>"Fast breathing for age 2-12 months"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="ref_respiratory"><dmn:text>"p138"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="advice_respiratory"><dmn:text>""</dmn:text></dmn:outputEntry>
+      </dmn:rule>
+    </dmn:decisionTable>
+  </dmn:decision>
+  <dmn:decision id="decide_nutrition" name="decide_nutrition">
+    <dmn:decisionTable hitPolicy="FIRST">
+      <dmn:input id="muac_mm_input" label="muac_mm">
+        <dmn:inputExpression typeRef="number"><dmn:text>muac_mm</dmn:text></dmn:inputExpression>
+      </dmn:input>
+      <dmn:output id="triage_output" name="triage" typeRef="string"/>
+      <dmn:output id="danger_sign_output" name="danger_sign" typeRef="boolean"/>
+      <dmn:output id="clinic_referral_output" name="clinic_referral" typeRef="boolean"/>
+      <dmn:output id="reason_output" name="reason" typeRef="string"/>
+      <dmn:output id="ref_output" name="ref" typeRef="string"/>
+      <dmn:output id="advice_output" name="advice" typeRef="string"/>
+      <dmn:rule>
+        <dmn:inputEntry id="muac_mm_entry"><dmn:text>&gt;= 115 and &lt; 125</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry id="triage_nutrition"><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="danger_sign_nutrition"><dmn:text>false</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="clinic_referral_nutrition"><dmn:text>true</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="reason_nutrition"><dmn:text>"Moderate malnutrition"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="ref_nutrition"><dmn:text>"p138"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="advice_nutrition"><dmn:text>""</dmn:text></dmn:outputEntry>
+      </dmn:rule>
+      <dmn:rule>
+        <dmn:inputEntry id="muac_mm_entry_2"><dmn:text>&gt;= 125</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry id="triage_nutrition_2"><dmn:text>"home"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="danger_sign_nutrition_2"><dmn:text>false</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="clinic_referral_nutrition_2"><dmn:text>false</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="reason_nutrition_2"><dmn:text>"Normal nutrition"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="ref_nutrition_2"><dmn:text>"p138"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="advice_nutrition_2"><dmn:text>""</dmn:text></dmn:outputEntry>
+      </dmn:rule>
+    </dmn:decisionTable>
+  </dmn:decision>
+  <dmn:decision id="aggregate_final" name="aggregate_final">
+    <dmn:informationRequirement>
+      <dmn:requiredDecision href="#decide_danger_signs"/>
+    </dmn:informationRequirement>
+    <dmn:informationRequirement>
+      <dmn:requiredDecision href="#decide_diarrhea"/>
+    </dmn:informationRequirement>
+    <dmn:informationRequirement>
+      <dmn:requiredDecision href="#decide_fever_malaria"/>
+    </dmn:informationRequirement>
+    <dmn:informationRequirement>
+      <dmn:requiredDecision href="#decide_respiratory"/>
+    </dmn:informationRequirement>
+    <dmn:informationRequirement>
+      <dmn:requiredDecision href="#decide_nutrition"/>
+    </dmn:informationRequirement>
+    <dmn:decisionTable hitPolicy="FIRST">
+      <dmn:input id="danger_signs_input" label="danger_signs">
+        <dmn:inputExpression typeRef="boolean"><dmn:text>danger_signs</dmn:text></dmn:inputExpression>
+      </dmn:input>
+      <dmn:input id="clinic_referral_input" label="clinic_referral">
+        <dmn:inputExpression typeRef="boolean"><dmn:text>clinic_referral</dmn:text></dmn:inputExpression>
+      </dmn:input>
+      <dmn:output id="triage_output" name="triage" typeRef="string"/>
+      <dmn:output id="reason_output" name="reason" typeRef="string"/>
+      <dmn:rule>
+        <dmn:inputEntry id="danger_signs_entry"><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="clinic_referral_entry"><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry id="triage_final_hospital"><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="reason_final_hospital"><dmn:text>"Danger signs present"</dmn:text></dmn:outputEntry>
+      </dmn:rule>
+      <dmn:rule>
+        <dmn:inputEntry id="danger_signs_entry_2"><dmn:text>false</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="clinic_referral_entry_2"><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry id="triage_final_clinic"><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="reason_final_clinic"><dmn:text>"Clinic referral needed"</dmn:text></dmn:outputEntry>
+      </dmn:rule>
+      <dmn:rule>
+        <dmn:inputEntry id="danger_signs_entry_3"><dmn:text>false</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="clinic_referral_entry_3"><dmn:text>false</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry id="triage_final_home"><dmn:text>"home"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="reason_final_home"><dmn:text>"No referral needed"</dmn:text></dmn:outputEntry>
+      </dmn:rule>
+    </dmn:decisionTable>
+  </dmn:decision>
+</dmn:definitions>
