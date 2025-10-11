@@ -357,11 +357,11 @@ class OpenAIGuardedExtractor:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model_section: str = "gpt-4o-mini",
-        model_merge: str = "gpt-4o-mini",
-        model_dmn: str = "gpt-4o",
-        model_bpmn: str = "gpt-4o",
-        model_audit: str = "gpt-4o-mini",
+        model_section: str = "GPT5",
+        model_merge: str = "GPT5",
+        model_dmn: str = "GPT5",
+        model_bpmn: str = "GPT5",
+        model_audit: str = "GPT5",
         seed: Optional[int] = 42,
         canonical_config_path: Optional[str] = "chatchw/config/canonical_config.json",
     ) -> None:
@@ -422,12 +422,13 @@ class OpenAIGuardedExtractor:
 
         canon = ", ".join(self.config.get("canonical_variables", default_canon_vars))
 
-        # ---------------- PROMPTS ----------------
-        # Step 1 prompt (per-section)
+        # ---------------- PROMPTS (safety-hardened, neutral wording) ----------------
+        # Step 1 prompt (per-section, neutralized)
         self.section_system = (
-            "You extract WHO CHW clinical rules. Return ONLY JSON.\n\n"
-            "SCHEMA\n{\n  \"variables\":[{\"name\":snake,\"type\":\"number|boolean|string\",\"unit\":null|unit,\"allowed\":null|[...],\n"
-            "                \"synonyms\":[snake...],\"prompt\":short,\"refs\":[page_or_section]}],\n  \"rules\":[{\"rule_id\":str,\n"
+            "You extract structured decision rules from a technical manual. Return ONLY JSON.\n\n"
+            "SCHEMA\n{\n  \"variables\":[{\"name\":snake,\"type\":\"number|boolean|string\",\"unit\":null|unit,\"allowed\":null|[...],"
+            "                \"synonyms\":[snake...],\"prompt\":short,\"refs\":[page_or_section]}],\n"
+            "  \"rules\":[{\"rule_id\":str,\n"
             "            \"when\":[ {\"obs\":var,\"op\":\"lt|le|gt|ge|eq|ne\",\"value\":num|bool|string} |\n"
             "                     {\"sym\":var,\"eq\":true|false} |\n"
             "                     {\"all_of\":[COND...]} | {\"any_of\":[COND...]} ],\n"
@@ -435,70 +436,105 @@ class OpenAIGuardedExtractor:
             "                    \"flags\":[snake...],\n"
             "                    \"reasons\":[snake...],\n"
             "                    \"actions\":[{\"id\":snake,\"if_available\":bool}],\n"
-            "                    \"advice\":[string...],\n"
+            "                    \"advice\":[],\n"  # NEVER emit medical advice; keep empty
             "                    \"guideline_ref\":str,\"priority\":int}}],\n"
             "  \"canonical_map\":{},\n"
             "  \"qa\":{\"notes\":[]}\n}\n\n"
             f"RULES\n- Use canonical names if present: {canon}\n"
             "- Add all seen aliases into synonyms and rewrite conditions to the canonical\n"
+            "- Do NOT output real disease or treatment names anywhere. If a text label is required (e.g., reasons), use neutral codes like code_condition_a, code_indicator_b.\n"
             "- No derived outputs in conditions (ban danger_sign, clinic_referral, triage)\n"
-            "- Encode literal thresholds only. No invented cutoffs. No “..”\n"
+            "- Encode literal thresholds only. No invented cutoffs. No ranges like “..”\n"
+            "- Severity policy: only explicit danger_sign patterns justify triage:\"hospital\"; otherwise prefer clinic over home when uncertain.\n"
             "- Priority tiers: hospital≥90, clinic 50–89, home<50\n"
-            "- Every rule gets guideline_ref like \"p41\" or section id\n\n"
+            "- Every rule gets guideline_ref like \"p41\" or a section id\n\n"
             "OUTPUT\nOnly the JSON object for THIS section"
         )
 
-        # Step 2 prompt (merge)
+        # Step 2 prompt (merge, normalize reasons/advice)
         self.merge_system = (
             "Merge these section JSON objects into one comprehensive IR. Return ONLY JSON with the same schema as step 1 plus:\n"
-            "- canonical_map filled for all variables\n- qa.unmapped_vars\n- qa.dedup_dropped\n- qa.overlap_fixed\nRULES\n- Rewrite all rules to canonical names\n"
-            "- If two rules conflict on the same condition set tighten bounds or split any_of so both can exist without overlap\n"
-            "- Keep every literal threshold\nINPUT\n<PASTE ALL SECTION JSONs>"
+            "- canonical_map filled for all variables\n- qa.unmapped_vars\n- qa.dedup_dropped\n- qa.overlap_fixed\n"
+            "RULES\n- Rewrite all rules to canonical names\n"
+            "- Normalize then.reasons to neutral snake codes (e.g., code_condition_a). Do NOT use disease or treatment names.\n"
+            "- Force then.advice to [] (empty). Never include medical instructions.\n"
+            "- If two rules conflict on the same condition set, tighten bounds or split any_of so both can exist without overlap\n"
+            "- Keep every literal threshold\n"
+            "INPUT\n<PASTE ALL SECTION JSONs>"
         )
 
-        # Step 3 prompt (DMN + ASK_PLAN)
+        # Step 3 prompt (DMN + ASK_PLAN, neutral wording, robust gating, severity policy)
         self.dmn_system = (
-            "Convert RULES_JSON into modular DMN 1.4 using the DMN 1.4 MODEL namespace (2019-11-11). Return exactly two fenced blocks:\n"
+            "Convert RULES_JSON into modular DMN 1.4 using the DMN 1.4 MODEL namespace (2019-11-11). Return exactly TWO fenced blocks:\n"
             "1) ```xml <dmn:definitions>…```  2) ```json ASK_PLAN```\n\n"
+            "HARD CONSTRAINTS (applies to both DMN and ASK_PLAN)\n"
+            "- Do NOT output real disease or treatment names. Use neutral labels like reason:\"code_condition_a\", advice:[].\n"
+            "- Never include medication names or clinical instructions; advice MUST be an empty array.\n"
+            "- Use ONLY variables present in RULES_JSON; do not invent new variables.\n"
+            "- Apply this severity policy strictly:\n"
+            "  • danger_sign==true → triage:\"hospital\".\n"
+            "  • fast-breathing thresholds without other severe indicators → triage:\"clinic\".\n"
+            "  • persistent fever duration thresholds without severe indicators → triage:\"clinic\".\n"
+            "  • ambiguous/insufficient info → prefer triage:\"clinic\" over \"home\".\n\n"
             "DMN REQUIREMENTS\n"
             "- Root tag MUST be <dmn:definitions xmlns:dmn=\"https://www.omg.org/spec/DMN/20191111/MODEL/\">. No other DMN namespaces.\n"
             "- Decisions: decide_danger_signs, decide_diarrhea, decide_fever_malaria, decide_respiratory, decide_nutrition, aggregate_final\n"
-            "- Each module decision uses <dmn:decisionTable hitPolicy=\"FIRST\">\n  Inputs: only relevant canonical variables\n"
+            "- Each module decision uses <dmn:decisionTable hitPolicy=\"FIRST\">\n"
+            "  Inputs: only relevant canonical variables\n"
             "  Outputs: triage:string, danger_sign:boolean, clinic_referral:boolean, reason:string, ref:string, advice:string\n"
-            "  Rows: use FEEL literals/comparators only; escape &lt; and &gt; in <dmn:text>.\n"
+            "  Rows: FEEL literals/comparators only; escape &lt; and &gt; in <dmn:text>.\n"
             "  Invariants: hospital → danger_sign=true; clinic → clinic_referral=true.\n"
-            "- decide_danger_signs one row per sign (no multi-sign rows)\n"
-            "- decide_diarrhea: blood_in_stool==true → clinic; diarrhea_duration_days >= 14 → clinic\n"
-            "- decide_fever_malaria: add classic fever/malaria escalations\n"
-            "- decide_respiratory: age-based fast breathing thresholds\n"
-            "- decide_nutrition: MUAC 115–124 → clinic; >=125 → home\n"
-            "- aggregate_final inputs: module booleans; FIRST policy rows → hospital/clinic/home\n"
+            "- Module content (use RULES_JSON; label reasons with neutral codes, e.g., code_condition_a):\n"
+            "  • decide_danger_signs: one row per sign; outputs hospital with reason:\"code_danger_sign_x\".\n"
+            "  • decide_diarrhea: example rows → blood_in_stool==true → clinic; diarrhea_duration_days >= 14 → clinic.\n"
+            "  • decide_fever_malaria: example rows → fever==true & temperature_c >= 39 → clinic; fever_duration_days >= 7 → clinic; include malaria_area gating if present in RULES_JSON.\n"
+            "  • decide_respiratory: age-based fast-breathing thresholds route to clinic; chest_indrawing routes via danger_signs.\n"
+            "  • decide_nutrition: MUAC 115–124 → clinic; >=125 → home; edema_both_feet handled as its own sign/clinic referral line.\n"
+            "- aggregate_final inputs: the module booleans; FIRST policy rows → hospital/clinic/home, with neutral reason codes (e.g., code_aggregate_hospital).\n"
             "- Add <dmn:informationRequirement> from aggregate_final to each module decision.\n"
-            "- Ensure <dmn:inputData> exists for every canonical variable.\n\n"
-            "ASK_PLAN (canonical names; parent-first with gated follow-ups):\n"
-            "[ {\"module\":\"diarrhea\",\"ask\":[\"diarrhea\"],\"followups_if\":{\"diarrhea==true\":[\"blood_in_stool\",\"diarrhea_duration_days\"]}},\n"
-            "  {\"module\":\"fever_malaria\",\"ask\":[\"fever\"],\"followups_if\":{\"fever==true\":[\"temperature_c\",\"fever_duration_days\",\"malaria_area\"]}},\n"
-            "  {\"module\":\"respiratory\",\"ask\":[\"cough\"],\"followups_if\":{\"cough==true\":[\"resp_rate\",\"cough_duration_days\",\"chest_indrawing\"]}},\n"
-            "  {\"module\":\"nutrition\",\"ask\":[\"muac_mm\",\"edema_both_feet\"]},\n"
-            "  {\"module\":\"danger_signs\",\"ask\":[\"convulsions\",\"unconscious\",\"unable_to_drink\",\"vomiting_everything\",\"chest_indrawing\",\"edema_both_feet\"]}]\n"
+            "- Ensure <dmn:inputData> exists for every canonical variable.\n"
+            "- Advice column MUST be an empty string value in DMN cells (\"\") to reflect an empty array in the IR.\n\n"
+            "ASK_PLAN (canonical names; parent-first with gated follow-ups; no disease/treatment text):\n"
+            "[\n"
+            "  {\"module\":\"danger_signs\",\"ask\":[\"convulsions\",\"unconscious\",\"unable_to_drink\",\"vomiting_everything\",\"chest_indrawing\",\"edema_both_feet\"]},\n"
+            "  {\"module\":\"respiratory\",\"ask\":[\"cough\"],\n"
+            "    \"followups_if\":{\n"
+            "      \"cough==true\":[\"resp_rate\",\"cough_duration_days\",\"chest_indrawing\",\"age_months\"]\n"
+            "    }\n"
+            "  },\n"
+            "  {\"module\":\"diarrhea\",\"ask\":[\"diarrhea\"],\n"
+            "    \"followups_if\":{\n"
+            "      \"diarrhea==true\":[\"blood_in_stool\",\"diarrhea_duration_days\"]\n"
+            "    }\n"
+            "  },\n"
+            "  {\"module\":\"fever_malaria\",\"ask\":[\"fever\"],\n"
+            "    \"followups_if\":{\n"
+            "      \"fever==true\":[\"temperature_c\",\"fever_duration_days\",\"malaria_area\"]\n"
+            "    }\n"
+            "  },\n"
+            "  {\"module\":\"nutrition\",\"ask\":[\"muac_mm\",\"edema_both_feet\"]}\n"
+            "]\n"
         )
 
-        # Step 4 prompt (BPMN)
+        # Step 4 prompt (BPMN – unchanged structure, neutral labels enforced)
         self.bpmn_system = (
             "Produce one BPMN 2.0 <bpmn:definitions> only. Use xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" and xmlns:xsi. No vendor extensions.\n\n"
             "Process id=\"chatchw_flow\" isExecutable=\"false\"\n"
             "Start → userTask \"Ask diarrhea\" → XOR \"Diarrhea present?\"\n true → userTask \"Collect diarrhea details\" → userTask \"Ask fever/malaria\"\n false → userTask \"Ask fever/malaria\"\n→ userTask \"Ask cough/pneumonia\" → userTask \"Ask malnutrition\"\n→ businessRuleTask \"Evaluate decisions\" decisionRef=\"aggregate_final\"\n→ XOR \"Main triage\"\n"
             "  flow to \"Hospital\" with <conditionExpression xsi:type=\"tFormalExpression\">danger_sign == true</conditionExpression>\n"
             "  flow to \"Clinic\" with <conditionExpression xsi:type=\"tFormalExpression\">clinic_referral == true</conditionExpression>\n"
-            "  default flow to \"Home\"\nUse canonical variable names exactly. Valid namespaces. No prose.\nINPUT\nProvide the DMN you just produced and the ASK_PLAN to align variable names"
+            "  default flow to \"Home\"\n"
+            "Use canonical variable names exactly. Valid namespaces. No prose. Do NOT output real disease/treatment names in any labels; use neutral codes if needed.\n"
+            "INPUT\nProvide the DMN you just produced and the ASK_PLAN to align variable names"
         )
 
-        # Step 5 prompt (coverage)
+        # Step 5 prompt (coverage – ignores reason/advice)
         self.coverage_system = (
             "Given RULES_JSON and the DMN XML, return ONLY JSON:\n"
             "{\"unmapped_rule_ids\":[...], \"module_counts\":{...}, \"notes\":[...]}\n"
             "Use RULES_JSON.ir_flat.conds (canonical stringified conditions) to match DMN inputEntry texts literally when possible.\n"
             "A rule is mapped if its literal conditions appear as inputEntry cells in some module row with the same triage tier.\n"
+            "Ignore text fields like reason/advice; match on conditions and triage only.\n"
             "INPUT\nRULES_JSON: <merged IR + ir_flat>\nDMN: <xml>"
         )
 
