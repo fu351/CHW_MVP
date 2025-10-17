@@ -1,11 +1,11 @@
+.venv/
+venv/
+env/
 __pycache__/
 *.pyc
-.venv/
-.env*
 out/
-outputs/
-_deps/
+.log/
+*.log
 .DS_Store
-Thumbs.db
-.vscode/
 .idea/
+.vscode/

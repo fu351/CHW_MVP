@@ -1,29 +1,4 @@
-"""
-OpenAI-only, guarded extractor implementing a 5-step pipeline (optimized):
-1) Per-section extraction → JSON IR  (strict schema, retries, smarter PDF sectioning)
-2) Global merge + canonicalization → merged IR  (schema-validated)
-3) Modular DMN (FIRST) + ASK_PLAN (+ advice column)  (robust parsing/sanitizing)
-4) BPMN (from DMN + ASK_PLAN)
-5) Coverage audit mapping RULES_JSON to DMN rows
-
-Key improvements:
-- Deterministic LLM params, optional per-step models, retry/backoff, loose→strict JSON repair
-- Pydantic IR schema to prevent bad shapes entering pipeline (incl. 'advice' for treatment guidance)
-- Config-driven canonical variables (fallback to in-file defaults), fewer hardcoded domain bits
-- Smarter PDF sectioning: filter non-clinical pages, chunk to target size
-- ASK_PLAN validator against IR variables; unknown questions dropped, logged to QA
-- DMN sanitizer for common tag/text issues
-- Centralized debug writes under ./.chatchw_debug
-
-NEW (bulk update):
-- Rule schema normalization (propose_triage → triage, set_flags → flags), drop empty WHEN, ban derived outputs in conditions
-- Global rule_id dedupe/normalization
-- Canonical variable mapping + rewrite of all conditions
-- Fail-fast preflight (duplicates, empties)
-- ASK ownership pass (single owner per variable to avoid double-asks)
-- Coverage hinting with flattened canonical condition strings
-"""
-
+# guarded_extractor.py
 from __future__ import annotations
 
 import collections
@@ -41,7 +16,11 @@ try:
 except Exception:  # pragma: no cover
     OpenAI = None  # type: ignore
 
-# ---------------------------- Pydantic IR Schema ----------------------------
+# ---------------- Global toggles ----------------
+# If True, merged_ir.json MUST be produced by the model (no local fallback).
+STRICT_MERGE = True
+
+# ---------------- Pydantic IR Schema ----------------
 try:
     from pydantic import BaseModel, Field, ValidationError, conlist
     PydanticAvailable = True
@@ -49,8 +28,7 @@ except Exception:  # pragma: no cover
     PydanticAvailable = False
 
 if PydanticAvailable:
-
-    Op = Union[str]  # we’ll validate allowed ops in prompts; pydantic literal optional
+    Op = Union[str]
 
     class Variable(BaseModel):
         name: str
@@ -85,7 +63,7 @@ if PydanticAvailable:
         actions: List[dict] = []
         guideline_ref: Optional[str] = None
         priority: int = 0
-        advice: List[str] = []  # treatment & advisory text snippets
+        advice: List[str] = []  # MUST remain empty (no treatment text)
 
     class Rule(BaseModel):
         rule_id: str
@@ -104,7 +82,7 @@ if PydanticAvailable:
         canonical_map: dict = {}
         qa: QA = QA()
 
-# ---------------------------- JSON repair & retries ----------------------------
+# ---------------- JSON repair & retries ----------------
 
 def _strip_code_fences(text: str) -> str:
     if not text:
@@ -119,9 +97,8 @@ def _strip_code_fences(text: str) -> str:
     return s.strip()
 
 def _loose_to_json(s: str) -> Any:
-    """Repair common JSON issues: code fences, line/block comments, trailing commas, and crop to first obj/array."""
     s = _strip_code_fences(s)
-    # strip block & line comments
+    # strip comments
     lines: List[str] = []
     in_block = False
     for ln in s.splitlines():
@@ -139,9 +116,9 @@ def _loose_to_json(s: str) -> Any:
             t = t.split("//", 1)[0]
         lines.append(t)
     s = "\n".join(lines)
-    # remove trailing commas before ] or }
+    # remove trailing commas
     s = re.sub(r",\s*(\]|\})", r"\1", s)
-    # try to parse first object/array window
+    # crop to first obj/array
     for opener, closer in [('{', '}'), ('[', ']')]:
         a, b = s.find(opener), s.rfind(closer)
         if a != -1 and b != -1 and b > a:
@@ -153,6 +130,7 @@ def _loose_to_json(s: str) -> Any:
     return json.loads(s)
 
 def _call_json_with_retries(call_fn, schema_model=None, retries=3, sleep=1.5):
+    """Ensure this helper is in global scope (fixes NameError)."""
     last_exc = None
     for i in range(retries):
         try:
@@ -185,53 +163,43 @@ def _extract_fenced_blocks(text: str) -> List[Tuple[str, str]]:
         i = end + 3
     return blocks
 
-# ---------------------------- Normalization helpers ----------------
+# ---------------- Normalization helpers ----------------
 _CANON_TRIAGE_KEYS = ("triage", "propose_triage")
 _CANON_FLAG_KEYS = ("flags", "set_flags")
 _DERIVED_BLOCKLIST = {"danger_sign", "clinic_referral", "triage"}
 
 def _normalize_rule_schema(rule: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """Make rule schema consistent; drop if invalid/empty WHEN or derived outputs used as inputs."""
     r = dict(rule or {})
     th = dict(r.get("then") or {})
-    # triage
     triage = None
     for k in _CANON_TRIAGE_KEYS:
         if th.get(k) is not None:
-            triage = th[k]
-            break
+            triage = th[k]; break
     if triage is not None:
         th["triage"] = triage
-    # flags
     flags = None
     for k in _CANON_FLAG_KEYS:
         if th.get(k) is not None:
-            flags = th[k]
-            break
+            flags = th[k]; break
     th["flags"] = list(flags or [])
-    # defaults
     th.setdefault("reasons", [])
     th.setdefault("actions", [])
-    th.setdefault("advice", [])
+    th.setdefault("advice", [])  # keep empty
     th["priority"] = int(th.get("priority") or 0)
     r["then"] = th
 
-    # Validate WHEN (ban empty lists and bad shapes, ban derived outputs in conditions)
     when = r.get("when")
     if not isinstance(when, list) or len(when) == 0:
         return None
     def _has_bad_sym(c: Dict[str, Any]) -> bool:
         return "sym" in c and str(c.get("sym")).strip().lower() in _DERIVED_BLOCKLIST
     for cond in when:
-        if not isinstance(cond, dict):
-            return None
-        if _has_bad_sym(cond):
-            return None
+        if not isinstance(cond, dict): return None
+        if _has_bad_sym(cond): return None
         if "all_of" in cond or "any_of" in cond:
             seq = cond.get("all_of") or cond.get("any_of") or []
             for sub in seq:
-                if _has_bad_sym(sub):
-                    return None
+                if _has_bad_sym(sub): return None
     return r
 
 def _dedupe_rule_ids(rules: List[Dict[str, Any]], prefix: str = "r") -> List[Dict[str, Any]]:
@@ -306,31 +274,26 @@ def _flatten_rule_conditions(rule: Dict[str, Any]) -> List[str]:
     return out
 
 def _rules_flattened(ir: Dict[str, Any]) -> List[Dict[str, Any]]:
-    arr = []
-    for r in ir.get("rules", []):
-        arr.append({
-            "rule_id": r.get("rule_id"),
-            "triage": (r.get("then") or {}).get("triage"),
-            "conds": _flatten_rule_conditions(r)
-        })
-    return arr
+    return [{
+        "rule_id": r.get("rule_id"),
+        "triage": (r.get("then") or {}).get("triage"),
+        "conds": _flatten_rule_conditions(r)
+    } for r in ir.get("rules", [])]
 
 def _preflight_ir(ir: Dict[str, Any]) -> None:
     names = [ (v.get("name") or "").strip().lower() for v in ir.get("variables", []) if isinstance(v, dict) ]
     dup_var_names = [n for n, cnt in collections.Counter(names).items() if cnt > 1]
     if dup_var_names:
         raise RuntimeError(f"Duplicate variable names after merge: {dup_var_names}")
-
     ids = [ (r.get("rule_id") or "").strip().lower() for r in ir.get("rules", []) if isinstance(r, dict) ]
     dups = [i for i,c in collections.Counter(ids).items() if c>1]
     if dups:
         raise RuntimeError(f"Duplicate rule_ids after dedupe pass: {dups}")
-
     empties = [r.get("rule_id") for r in ir.get("rules", []) if not (r.get("when") or [])]
     if empties:
         raise RuntimeError(f"Empty WHEN in rules: {empties}")
 
-def _enforce_ask_ownership(ask_plan: List[Dict[str, Any]], priority_order=("danger_signs","respiratory","diarrhea","fever_malaria","nutrition")):
+def _enforce_ask_ownership(ask_plan: List[Dict[str, Any]], priority_order=("module_a","module_b","module_c","module_d","module_e")):
     owner: Dict[str, str] = {}
     order = {m:i for i,m in enumerate(priority_order)}
     for blk in sorted([b for b in ask_plan if isinstance(b, dict)], key=lambda b: order.get(b.get("module","zzz"), 999)):
@@ -352,16 +315,16 @@ def _enforce_ask_ownership(ask_plan: List[Dict[str, Any]], priority_order=("dang
         blk["followups_if"] = fuw
     return ask_plan
 
-# ---------------------------- Guarded Extractor ----------------------------
+# ---------------- Guarded Extractor ----------------
 class OpenAIGuardedExtractor:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model_section: str = "GPT5",
-        model_merge: str = "GPT5",
-        model_dmn: str = "GPT5",
-        model_bpmn: str = "GPT5",
-        model_audit: str = "GPT5",
+        model_section: str = "gpt-5",
+        model_merge: str = "gpt-5",
+        model_dmn: str = "gpt-5",
+        model_bpmn: str = "gpt-5",
+        model_audit: str = "gpt-5",
         seed: Optional[int] = 42,
         canonical_config_path: Optional[str] = "chatchw/config/canonical_config.json",
     ) -> None:
@@ -371,35 +334,34 @@ class OpenAIGuardedExtractor:
         if OpenAI is None:
             raise RuntimeError("openai package not available")
 
+        def _norm(m: str, default: str) -> str:
+            # Accept "auto:xxxxx" and normalize to the real id.
+            if m and m.startswith("auto:"):
+                m = m.split("auto:", 1)[1] or default
+            if m in (None, "", "auto"):
+                return default
+            return m
+
         self.client = OpenAI(api_key=key)
         self.seed = seed
         self.models = dict(
-            section=model_section, merge=model_merge, dmn=model_dmn, bpmn=model_bpmn, audit=model_audit
+            section=_norm(model_section, "gpt-5"),
+            merge=_norm(model_merge, "gpt-5"),
+            dmn=_norm(model_dmn, "gpt-5"),
+            bpmn=_norm(model_bpmn, "gpt-5"),
+            audit=_norm(model_audit, "gpt-5"),
         )
 
-        self.debug_dir = Path(".chatchw_debug")
-        self.debug_dir.mkdir(exist_ok=True)
+        self.debug_dir = Path(".chatchw_debug"); self.debug_dir.mkdir(exist_ok=True)
 
-        # --- Load config (fallback defaults if file missing) ---
+        # --- Load neutral canonical config (no disease/symptom strings) ---
         default_canon_vars = [
-            "diarrhea",
-            "blood_in_stool",
-            "diarrhea_duration_days",
-            "fever",
-            "temperature_c",
-            "fever_duration_days",
-            "cough",
-            "cough_duration_days",
-            "resp_rate",
-            "age_months",
-            "chest_indrawing",
-            "muac_mm",
-            "edema_both_feet",
-            "convulsions",
-            "unconscious",
-            "unable_to_drink",
-            "vomiting_everything",
-            "malaria_area",
+            # generic placeholders to avoid biasing towards any specific condition
+            "symptom1","symptom1_duration_days",
+            "symptom2","symptom2_duration_days",
+            "sign1_present","sign2_present","sign3_present",
+            "measurement1_rate","measurement2_temp_c","measurement3_mm",
+            "age_months","area1_flag"
         ]
         try:
             cfg_path = Path(canonical_config_path)
@@ -409,21 +371,17 @@ class OpenAIGuardedExtractor:
                 self.config = {
                     "canonical_variables": default_canon_vars,
                     "priority_tiers": {"hospital_min": 90, "clinic_min": 50},
-                    "resp_rate_cutoffs": {"infant_ge": 50, "child_ge": 40},
-                    "muac": {"clinic_min": 115, "home_min": 125},
                 }
         except Exception:
             self.config = {
                 "canonical_variables": default_canon_vars,
                 "priority_tiers": {"hospital_min": 90, "clinic_min": 50},
-                "resp_rate_cutoffs": {"infant_ge": 50, "child_ge": 40},
-                "muac": {"clinic_min": 115, "home_min": 125},
             }
 
         canon = ", ".join(self.config.get("canonical_variables", default_canon_vars))
 
-        # ---------------- PROMPTS (safety-hardened, neutral wording) ----------------
-        # Step 1 prompt (per-section, neutralized)
+        # ---------------- PROMPTS (neutralized: no named diseases/symptoms) ----------------
+        # Step 1 prompt (per-section)
         self.section_system = (
             "You extract structured decision rules from a technical manual. Return ONLY JSON.\n\n"
             "SCHEMA\n{\n  \"variables\":[{\"name\":snake,\"type\":\"number|boolean|string\",\"unit\":null|unit,\"allowed\":null|[...],"
@@ -436,114 +394,82 @@ class OpenAIGuardedExtractor:
             "                    \"flags\":[snake...],\n"
             "                    \"reasons\":[snake...],\n"
             "                    \"actions\":[{\"id\":snake,\"if_available\":bool}],\n"
-            "                    \"advice\":[],\n"  # NEVER emit medical advice; keep empty
+            "                    \"advice\":[],\n"
             "                    \"guideline_ref\":str,\"priority\":int}}],\n"
             "  \"canonical_map\":{},\n"
             "  \"qa\":{\"notes\":[]}\n}\n\n"
             f"RULES\n- Use canonical names if present: {canon}\n"
-            "- Add all seen aliases into synonyms and rewrite conditions to the canonical\n"
-            "- Do NOT output real disease or treatment names anywhere. If a text label is required (e.g., reasons), use neutral codes like code_condition_a, code_indicator_b.\n"
-            "- No derived outputs in conditions (ban danger_sign, clinic_referral, triage)\n"
-            "- Encode literal thresholds only. No invented cutoffs. No ranges like “..”\n"
-            "- Severity policy: only explicit danger_sign patterns justify triage:\"hospital\"; otherwise prefer clinic over home when uncertain.\n"
+            "- Replace any real disease/symptom/treatment names with neutral placeholders like disease1, symptom1, sign1, measurement1_*, consistently.\n"
+            "- No derived outputs in conditions (ban keys: danger_sign, clinic_referral, triage)\n"
+            "- Encode literal thresholds only; do not invent cutoffs.\n"
+            "- Severity policy (abstract): explicit critical_sign→triage:\"hospital\"; otherwise prefer clinic over home when uncertain.\n"
             "- Priority tiers: hospital≥90, clinic 50–89, home<50\n"
             "- Every rule gets guideline_ref like \"p41\" or a section id\n\n"
             "OUTPUT\nOnly the JSON object for THIS section"
         )
 
-        # Step 2 prompt (merge, normalize reasons/advice)
+        # Step 2 prompt (merge)
         self.merge_system = (
             "Merge these section JSON objects into one comprehensive IR. Return ONLY JSON with the same schema as step 1 plus:\n"
             "- canonical_map filled for all variables\n- qa.unmapped_vars\n- qa.dedup_dropped\n- qa.overlap_fixed\n"
             "RULES\n- Rewrite all rules to canonical names\n"
-            "- Normalize then.reasons to neutral snake codes (e.g., code_condition_a). Do NOT use disease or treatment names.\n"
-            "- Force then.advice to [] (empty). Never include medical instructions.\n"
-            "- If two rules conflict on the same condition set, tighten bounds or split any_of so both can exist without overlap\n"
+            "- Normalize textual labels to neutral snake codes (e.g., code_condition_a). No real diseases/treatments.\n"
+            "- Force then.advice to [] (empty)\n"
+            "- If two rules conflict on the same conditions, tighten bounds or split any_of\n"
             "- Keep every literal threshold\n"
             "INPUT\n<PASTE ALL SECTION JSONs>"
         )
 
-        # Step 3 prompt (DMN + ASK_PLAN, neutral wording, robust gating, severity policy)
+        # Step 3 prompt (DMN + ASK_PLAN) — fully generic module names
         self.dmn_system = (
             "Convert RULES_JSON into modular DMN 1.4 using the DMN 1.4 MODEL namespace (2019-11-11). Return exactly TWO fenced blocks:\n"
             "1) ```xml <dmn:definitions>…```  2) ```json ASK_PLAN```\n\n"
-            "HARD CONSTRAINTS (applies to both DMN and ASK_PLAN)\n"
-            "- Do NOT output real disease or treatment names. Use neutral labels like reason:\"code_condition_a\", advice:[].\n"
-            "- Never include medication names or clinical instructions; advice MUST be an empty array.\n"
-            "- Use ONLY variables present in RULES_JSON; do not invent new variables.\n"
-            "- Apply this severity policy strictly:\n"
-            "  • danger_sign==true → triage:\"hospital\".\n"
-            "  • fast-breathing thresholds without other severe indicators → triage:\"clinic\".\n"
-            "  • persistent fever duration thresholds without severe indicators → triage:\"clinic\".\n"
-            "  • ambiguous/insufficient info → prefer triage:\"clinic\" over \"home\".\n\n"
+            "HARD CONSTRAINTS\n"
+            "- Use only neutral placeholders; no named diseases or treatments anywhere.\n"
+            "- Advice must be an empty array in IR, empty string cells in DMN.\n"
+            "- Use ONLY variables present in RULES_JSON.\n"
+            "- Severity policy (abstract): critical_sign→hospital; prolonged_or_threshold_only→clinic; ambiguous→prefer clinic over home.\n\n"
             "DMN REQUIREMENTS\n"
-            "- Root tag MUST be <dmn:definitions xmlns:dmn=\"https://www.omg.org/spec/DMN/20191111/MODEL/\">. No other DMN namespaces.\n"
-            "- Decisions: decide_danger_signs, decide_diarrhea, decide_fever_malaria, decide_respiratory, decide_nutrition, aggregate_final\n"
-            "- Each module decision uses <dmn:decisionTable hitPolicy=\"FIRST\">\n"
-            "  Inputs: only relevant canonical variables\n"
+            "- Root tag MUST be <dmn:definitions xmlns:dmn=\"https://www.omg.org/spec/DMN/20191111/MODEL/\">.\n"
+            "- Decisions: decide_module_a, decide_module_b, decide_module_c, decide_module_d, decide_module_e, aggregate_final\n"
+            "- Each module uses <dmn:decisionTable hitPolicy=\"FIRST\">.\n"
             "  Outputs: triage:string, danger_sign:boolean, clinic_referral:boolean, reason:string, ref:string, advice:string\n"
-            "  Rows: FEEL literals/comparators only; escape &lt; and &gt; in <dmn:text>.\n"
-            "  Invariants: hospital → danger_sign=true; clinic → clinic_referral=true.\n"
-            "- Module content (use RULES_JSON; label reasons with neutral codes, e.g., code_condition_a):\n"
-            "  • decide_danger_signs: one row per sign; outputs hospital with reason:\"code_danger_sign_x\".\n"
-            "  • decide_diarrhea: example rows → blood_in_stool==true → clinic; diarrhea_duration_days >= 14 → clinic.\n"
-            "  • decide_fever_malaria: example rows → fever==true & temperature_c >= 39 → clinic; fever_duration_days >= 7 → clinic; include malaria_area gating if present in RULES_JSON.\n"
-            "  • decide_respiratory: age-based fast-breathing thresholds route to clinic; chest_indrawing routes via danger_signs.\n"
-            "  • decide_nutrition: MUAC 115–124 → clinic; >=125 → home; edema_both_feet handled as its own sign/clinic referral line.\n"
-            "- aggregate_final inputs: the module booleans; FIRST policy rows → hospital/clinic/home, with neutral reason codes (e.g., code_aggregate_hospital).\n"
-            "- Add <dmn:informationRequirement> from aggregate_final to each module decision.\n"
+            "- aggregate_final combines the module booleans; FIRST policy rows → hospital/clinic/home with neutral reason codes.\n"
             "- Ensure <dmn:inputData> exists for every canonical variable.\n"
-            "- Advice column MUST be an empty string value in DMN cells (\"\") to reflect an empty array in the IR.\n\n"
-            "ASK_PLAN (canonical names; parent-first with gated follow-ups; no disease/treatment text):\n"
+            "- Advice column MUST be \"\" in outputEntry cells.\n\n"
+            "ASK_PLAN (canonical neutral names, parent-first with gated follow-ups; no medical terms):\n"
             "[\n"
-            "  {\"module\":\"danger_signs\",\"ask\":[\"convulsions\",\"unconscious\",\"unable_to_drink\",\"vomiting_everything\",\"chest_indrawing\",\"edema_both_feet\"]},\n"
-            "  {\"module\":\"respiratory\",\"ask\":[\"cough\"],\n"
-            "    \"followups_if\":{\n"
-            "      \"cough==true\":[\"resp_rate\",\"cough_duration_days\",\"chest_indrawing\",\"age_months\"]\n"
-            "    }\n"
-            "  },\n"
-            "  {\"module\":\"diarrhea\",\"ask\":[\"diarrhea\"],\n"
-            "    \"followups_if\":{\n"
-            "      \"diarrhea==true\":[\"blood_in_stool\",\"diarrhea_duration_days\"]\n"
-            "    }\n"
-            "  },\n"
-            "  {\"module\":\"fever_malaria\",\"ask\":[\"fever\"],\n"
-            "    \"followups_if\":{\n"
-            "      \"fever==true\":[\"temperature_c\",\"fever_duration_days\",\"malaria_area\"]\n"
-            "    }\n"
-            "  },\n"
-            "  {\"module\":\"nutrition\",\"ask\":[\"muac_mm\",\"edema_both_feet\"]}\n"
+            "  {\"module\":\"module_a\",\"ask\":[\"sign1_present\",\"sign2_present\",\"sign3_present\"]},\n"
+            "  {\"module\":\"module_b\",\"ask\":[\"symptom1\"],\"followups_if\":{\"symptom1==true\":[\"measurement1_rate\",\"symptom1_duration_days\",\"age_months\"]}},\n"
+            "  {\"module\":\"module_c\",\"ask\":[\"symptom2\"],\"followups_if\":{\"symptom2==true\":[\"symptom2_duration_days\"]}},\n"
+            "  {\"module\":\"module_d\",\"ask\":[\"measurement2_temp_c\"],\"followups_if\":{}},\n"
+            "  {\"module\":\"module_e\",\"ask\":[\"measurement3_mm\",\"area1_flag\"]}\n"
             "]\n"
         )
 
-        # Step 4 prompt (BPMN – unchanged structure, neutral labels enforced)
+        # Step 4 prompt (BPMN)
         self.bpmn_system = (
-            "Produce one BPMN 2.0 <bpmn:definitions> only. Use xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" and xmlns:xsi. No vendor extensions.\n\n"
+            "Produce one BPMN 2.0 <bpmn:definitions> only. Use xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" and xmlns:xsi.\n"
             "Process id=\"chatchw_flow\" isExecutable=\"false\"\n"
-            "Start → userTask \"Ask diarrhea\" → XOR \"Diarrhea present?\"\n true → userTask \"Collect diarrhea details\" → userTask \"Ask fever/malaria\"\n false → userTask \"Ask fever/malaria\"\n→ userTask \"Ask cough/pneumonia\" → userTask \"Ask malnutrition\"\n→ businessRuleTask \"Evaluate decisions\" decisionRef=\"aggregate_final\"\n→ XOR \"Main triage\"\n"
+            "Start → userTask \"Ask module_b\" → XOR \"module_b present?\"\n true → userTask \"Collect module_b details\" → userTask \"Ask module_c\"\n false → userTask \"Ask module_c\"\n→ userTask \"Ask module_b followups\" → userTask \"Ask module_e\"\n→ businessRuleTask \"Evaluate decisions\" decisionRef=\"aggregate_final\"\n→ XOR \"Main triage\"\n"
             "  flow to \"Hospital\" with <conditionExpression xsi:type=\"tFormalExpression\">danger_sign == true</conditionExpression>\n"
             "  flow to \"Clinic\" with <conditionExpression xsi:type=\"tFormalExpression\">clinic_referral == true</conditionExpression>\n"
             "  default flow to \"Home\"\n"
-            "Use canonical variable names exactly. Valid namespaces. No prose. Do NOT output real disease/treatment names in any labels; use neutral codes if needed.\n"
-            "INPUT\nProvide the DMN you just produced and the ASK_PLAN to align variable names"
+            "Use canonical variable names exactly. Valid namespaces. No prose or medical terms.\n"
         )
 
-        # Step 5 prompt (coverage – ignores reason/advice)
+        # Step 5 prompt (coverage)
         self.coverage_system = (
             "Given RULES_JSON and the DMN XML, return ONLY JSON:\n"
             "{\"unmapped_rule_ids\":[...], \"module_counts\":{...}, \"notes\":[...]}\n"
-            "Use RULES_JSON.ir_flat.conds (canonical stringified conditions) to match DMN inputEntry texts literally when possible.\n"
+            "Use RULES_JSON.ir_flat.conds to match DMN inputEntry texts literally when possible.\n"
             "A rule is mapped if its literal conditions appear as inputEntry cells in some module row with the same triage tier.\n"
             "Ignore text fields like reason/advice; match on conditions and triage only.\n"
             "INPUT\nRULES_JSON: <merged IR + ir_flat>\nDMN: <xml>"
         )
 
-    # ---------------- PDF sectioning (smarter) -----------------
+    # ---------------- PDF sectioning (safer with fallback) -----------------
     def extract_sections_from_pdf(self, pdf_path: str, max_chars: int = 4000) -> List[Tuple[str, str]]:
-        """
-        Return a list of (section_id, text) with page markers retained.
-        Filters to likely-clinical pages and merges adjacent pages into ~max_chars chunks.
-        """
         out: List[Tuple[str, str]] = []
         raw: List[Tuple[int, str]] = []
         with open(pdf_path, "rb") as f:
@@ -555,56 +481,136 @@ class OpenAIGuardedExtractor:
                     t = ""
                 raw.append((i, t))
 
-        def is_clinical(t: str) -> bool:
-            keys = ["fever", "diarrhea", "cough", "muac", "convulsion", "vomit", "resp", "edema", "temperature", "age", "danger", "triage"]
-            score = sum(k in t.lower() for k in keys)
-            return score >= 1 and len(t) > 200
+        def looks_rule_like(t: str) -> bool:
+            # generic signal for guidelines (no disease words)
+            s = t.lower()
+            signals = [
+                r"\bage\b", r"\bmonth", r"\bday", r"\bmeasure", r">=|<=|>|<|==",
+                r"\bpriority\b", r"\bhospital\b", r"\bclinic\b", r"\bhome\b",
+                r"\brefer\b", r"\bguideline", r"\btable\b", r"\bcheck\b"
+            ]
+            pts = sum(bool(re.search(p, s)) for p in signals)
+            return pts >= 2 and len(t) > 200
 
         chunks: List[Tuple[str, str]] = []
         buf = ""
         ids: List[int] = []
         for i, t in raw:
-            if not is_clinical(t):
+            if not looks_rule_like(t):
                 continue
             add = f"[PAGE {i}]\n{t}\n"
             if len(buf) + len(add) > max_chars and buf:
                 chunks.append((f"p{ids[0]}-{ids[-1]}", buf))
-                buf = ""
-                ids = []
+                buf = ""; ids = []
             buf += add
             ids.append(i)
         if buf:
             chunks.append((f"p{ids[0]}-{ids[-1]}", buf))
+
+        # Fallback: if filter yields nothing, chunk ALL pages
+        if not chunks:
+            buf = ""; ids = []
+            for i, t in raw:
+                add = f"[PAGE {i}]\n{t}\n"
+                if len(buf) + len(add) > max_chars and buf:
+                    chunks.append((f"p{ids[0]}-{ids[-1]}", buf))
+                    buf = ""; ids = []
+                buf += add; ids.append(i)
+            if buf:
+                chunks.append((f"p{ids[0]}-{ids[-1]}", buf))
         return chunks
 
     # ---------------- OpenAI helpers -----------------
-    def _chat_json(self, system: str, user: str, max_tokens: int = 6000, model_key: str = "section", schema_model=None) -> Dict[str, Any]:
-        def _call():
-            resp = self.client.chat.completions.create(
-                model=self.models.get(model_key, self.models["section"]),
-                messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-                temperature=0.0,
-                top_p=1,
-                max_tokens=max_tokens,
-                seed=self.seed,  # supported in newer SDKs; safe if ignored
+    def _complete(self, model_name: str, messages: list, max_out: int):
+        base = dict(
+            model=model_name,
+            messages=messages,
+            temperature=0.0,
+            top_p=1,
+            seed=self.seed,
+        )
+        extras = {}
+        if isinstance(model_name, str) and model_name.startswith("gpt-5"):
+            # Try GPT-5 reasoning knobs; we’ll drop them if the API rejects
+            extras = {"reasoning_effort": "minimal", "verbosity": "low"}
+
+        # Try GPT-5 style first
+        try:
+            return self.client.chat.completions.create(
+                max_completion_tokens=max_out,
+                **base, **extras
             )
+        except Exception as e1:
+            msg1 = str(e1).lower()
+
+            # If extras are unsupported, retry without them (still GPT-5 style)
+            if "verbosity" in msg1 or "reasoning" in msg1 or "unsupported parameter" in msg1:
+                try:
+                    return self.client.chat.completions.create(
+                        max_completion_tokens=max_out,
+                        **base
+                    )
+                except Exception as e2:
+                    msg2 = str(e2).lower()
+                    # Fall back to legacy param if max_completion_tokens is rejected
+                    if "max_completion_tokens" in msg2 or "unsupported parameter" in msg2:
+                        try:
+                            return self.client.chat.completions.create(
+                                max_tokens=max_out,
+                                **base
+                            )
+                        except Exception as e3:
+                            msg3 = str(e3).lower()
+                            # As a last resort, drop seed too if it's rejected
+                            if "seed" in msg3 or "unsupported parameter" in msg3:
+                                base_no_seed = dict(base); base_no_seed.pop("seed", None)
+                                return self.client.chat.completions.create(
+                                    max_tokens=max_out,
+                                    **base_no_seed
+                                )
+                            raise
+                    # else bubble up
+                    raise
+
+            # If the issue is the token param itself, fall back to legacy immediately
+            if "max_completion_tokens" in msg1:
+                try:
+                    return self.client.chat.completions.create(
+                        max_tokens=max_out,
+                        **base, **extras
+                    )
+                except Exception as e4:
+                    msg4 = str(e4).lower()
+                    if "seed" in msg4 or "unsupported parameter" in msg4:
+                        base_no_seed = dict(base); base_no_seed.pop("seed", None)
+                        return self.client.chat.completions.create(
+                            max_tokens=max_out,
+                            **base_no_seed, **extras
+                        )
+                    raise
+            # Otherwise bubble up
+            raise
+
+    def _chat_json(self, system: str, user: str, max_out: int = 6000, model_key: str = "section", schema_model=None) -> Dict[str, Any]:
+        model_name = self.models.get(model_key, self.models["section"])
+        messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
+
+        def _call():
+            resp = self._complete(model_name, messages, max_out)
             return (resp.choices[0].message.content or "").strip()
 
         try:
             return _call_json_with_retries(_call, schema_model=schema_model, retries=3)
         except Exception as e:
-            Path(self.debug_dir / "guarded_debug_last.txt").write_text(f"SYSTEM:\n{system}\n\nUSER:\n{user}\n\nERR:{e}", encoding="utf-8")
+            Path(self.debug_dir / "guarded_debug_last.txt").write_text(
+                f"SYSTEM:\n{system}\n\nUSER:\n{user}\n\nERR:{e}", encoding="utf-8"
+            )
             raise
 
-    def _chat_text(self, system: str, user: str, max_tokens: int = 12000, model_key: str = "dmn") -> str:
-        resp = self.client.chat.completions.create(
-            model=self.models.get(model_key, self.models["dmn"]),
-            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-            temperature=0.0,
-            top_p=1,
-            max_tokens=max_tokens,
-            seed=self.seed,
-        )
+    def _chat_text(self, system: str, user: str, max_out: int = 12000, model_key: str = "dmn") -> str:
+        model_name = self.models.get(model_key, self.models["dmn"])
+        messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
+        resp = self._complete(model_name, messages, max_out)
         return (resp.choices[0].message.content or "").strip()
 
     # ---------------- Step 1: per-section -----------------
@@ -614,19 +620,18 @@ class OpenAIGuardedExtractor:
         for sec_id, text in sections:
             user = f"SECTION_ID: {sec_id}\n\nTEXT:\n{text}"
             try:
-                obj = self._chat_json(self.section_system, user, max_tokens=6000, model_key="section", schema_model=IR if PydanticAvailable else None)
+                obj = self._chat_json(
+                    self.section_system, user,
+                    max_out=6000, model_key="section",
+                    schema_model=IR if PydanticAvailable else None
+                )
             except Exception:
-                # Skip bad sections but keep going
                 continue
-
-            # Normalize & drop invalid rules early; dedupe rule_ids by-section
             cleaned = []
             for r in obj.get("rules", []) or []:
                 nr = _normalize_rule_schema(r)
-                if nr:
-                    cleaned.append(nr)
-                else:
-                    obj.setdefault("qa", {}).setdefault("notes", []).append(f"dropped_rule:{r.get('rule_id')}")
+                if nr: cleaned.append(nr)
+                else: obj.setdefault("qa", {}).setdefault("notes", []).append(f"dropped_rule:{r.get('rule_id')}")
             obj["rules"] = _dedupe_rule_ids(cleaned, prefix=f"{sec_id}")
             results.append(obj)
         return results
@@ -635,20 +640,22 @@ class OpenAIGuardedExtractor:
     def merge_sections(self, section_objs: List[Dict[str, Any]]) -> Dict[str, Any]:
         payload = json.dumps(section_objs, ensure_ascii=False)
         user = f"INPUT\n{payload}"
-        try:
-            merged = self._chat_json(self.merge_system, user, max_tokens=6000, model_key="merge", schema_model=IR if PydanticAvailable else None)
-        except Exception:
-            # Fallback: deterministic merge to guarantee JSON
+        if STRICT_MERGE:
+            merged = self._chat_json(
+                self.merge_system, user,
+                max_out=6000, model_key="merge",
+                schema_model=IR if PydanticAvailable else None
+            )
+        else:
+            # Deterministic local fallback
             variables: Dict[str, Dict[str, Any]] = {}
             rules: List[Dict[str, Any]] = []
             qa_notes: List[str] = ["fallback_merge_used"]
             for sec in section_objs:
                 for v in (sec.get("variables") or []):
-                    if not isinstance(v, dict):
-                        continue
+                    if not isinstance(v, dict): continue
                     name = str(v.get("name", "")).strip().lower()
-                    if not name:
-                        continue
+                    if not name: continue
                     cur = variables.get(name)
                     if cur is None:
                         vv = dict(v)
@@ -663,10 +670,8 @@ class OpenAIGuardedExtractor:
                 for r in (sec.get("rules") or []):
                     if isinstance(r, dict):
                         nr = _normalize_rule_schema(r)
-                        if nr:
-                            rules.append(nr)
-                        else:
-                            qa_notes.append(f"dropped_rule:{r.get('rule_id')}")
+                        if nr: rules.append(nr)
+                        else: qa_notes.append(f"dropped_rule:{r.get('rule_id')}")
             rules = _dedupe_rule_ids(rules, prefix="merge")
             merged = {
                 "variables": list(variables.values()),
@@ -679,7 +684,6 @@ class OpenAIGuardedExtractor:
         canon = _build_canonical_map(self.config, merged.get("variables", []))
         merged["canonical_map"] = canon
         merged["rules"] = [_rewrite_rule_to_canon(r, canon) for r in (merged.get("rules") or [])]
-        # dedupe rule_ids again (post-normalization)
         merged["rules"] = _dedupe_rule_ids(merged["rules"], prefix="merged")
 
         if PydanticAvailable:
@@ -690,9 +694,8 @@ class OpenAIGuardedExtractor:
     # ---------------- Step 3: DMN + ASK_PLAN -----------------
     def generate_dmn_and_ask_plan(self, merged_ir: Dict[str, Any]) -> Tuple[str, Any]:
         user = "RULES_JSON:\n" + json.dumps(merged_ir, ensure_ascii=False)
-        text = self._chat_text(self.dmn_system, user, max_tokens=12000, model_key="dmn")
+        text = self._chat_text(self.dmn_system, user, max_out=12000, model_key="dmn")
 
-        # Save raw for troubleshooting
         try:
             Path(self.debug_dir / "dmn_ask_debug_last.txt").write_text(text, encoding="utf-8")
         except Exception:
@@ -708,22 +711,18 @@ class OpenAIGuardedExtractor:
             except Exception:
                 return None
 
-        # First pass: use fenced blocks
         for _lang, body in blocks:
             b = body.strip()
             if dmn_xml is None and "<dmn:definitions" in b and "</dmn:definitions>" in b:
-                dmn_xml = b
-                continue
+                dmn_xml = b; continue
             if ask_plan is None:
                 parsed = _parse_json_loose(b)
                 if isinstance(parsed, (list, dict)):
                     ask_plan = parsed
 
-        # Fallbacks
         if dmn_xml is None:
             s = text
-            start = s.find("<dmn:definitions")
-            end = s.find("</dmn:definitions>")
+            start = s.find("<dmn:definitions"); end = s.find("</dmn:definitions>")
             if start != -1 and end != -1 and end > start:
                 end += len("</dmn:definitions>")
                 dmn_xml = s[start:end].strip()
@@ -733,17 +732,14 @@ class OpenAIGuardedExtractor:
             if isinstance(parsed, (list, dict)):
                 ask_plan = parsed
 
-        # Minimal DMN sanitizer
         def _sanitize_dmn(xml: str) -> str:
             s = xml
-            # Ensure closing text tags
             s = re.sub(r"(<dmn:outputEntry>\s*<dmn:text>)([^<]*?)(</dmn:outputEntry>)", r"\1\2</dmn:text>\3", s, flags=re.DOTALL)
             s = s.replace("<dmn:outputEntry><dmn:text></dmn:text></dmn:outputEntry>", "<dmn:outputEntry><dmn:text>\"\"</dmn:text></dmn:outputEntry>")
             s = s.replace("<dmn:outputEntry><dmn:text></dmn:outputEntry>", "<dmn:outputEntry><dmn:text>\"\"</dmn:text></dmn:outputEntry>")
             s = re.sub(r"(<dmn:inputEntry>\s*<dmn:text>)([^<]*?)(</dmn:inputEntry>)", r"\1\2</dmn:text>\3", s, flags=re.DOTALL)
             s = s.replace("<dmn:inputEntry><dmn:text></dmn:text></dmn:inputEntry>", "<dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>")
             s = s.replace("<dmn:inputEntry><dmn:text></dmn:inputEntry>", "<dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>")
-            # Force MODEL namespace only
             if 'xmlns:dmn="' not in s:
                 s = s.replace("<dmn:definitions", '<dmn:definitions xmlns:dmn="https://www.omg.org/spec/DMN/20191111/MODEL/"', 1)
             return s
@@ -758,30 +754,25 @@ class OpenAIGuardedExtractor:
                 pass
             raise RuntimeError("Failed to get DMN and ASK_PLAN from model")
 
-        # ASK_PLAN validation against IR variables (drop unknowns, log) + ownership enforcement
         try:
             known_vars = {v["name"] for v in merged_ir.get("variables", []) if isinstance(v, dict) and v.get("name")}
             mutated = []
             unknowns = set()
             if isinstance(ask_plan, list):
                 for blk in ask_plan:
-                    if not isinstance(blk, dict):
-                        continue
+                    if not isinstance(blk, dict): continue
                     ask = [q for q in (blk.get("ask") or []) if q in known_vars]
                     fuw = {}
                     for cond, qs in (blk.get("followups_if", {}) or {}).items():
                         fuw[cond] = [q for q in (qs or []) if q in known_vars]
                         for q in (qs or []):
-                            if q not in known_vars:
-                                unknowns.add(q)
+                            if q not in known_vars: unknowns.add(q)
                     for q in (blk.get("ask") or []):
-                        if q not in known_vars:
-                            unknowns.add(q)
+                        if q not in known_vars: unknowns.add(q)
                     mutated.append({"module": blk.get("module"), "ask": ask, "followups_if": fuw})
                 ask_plan = mutated
             if unknowns:
                 merged_ir.setdefault("qa", {}).setdefault("notes", []).append(f"ask_plan_unknowns_dropped:{sorted(list(unknowns))}")
-            # Ownership pass to prevent double-asks
             ask_plan = _enforce_ask_ownership(ask_plan)
         except Exception:
             pass
@@ -791,7 +782,7 @@ class OpenAIGuardedExtractor:
     # ---------------- Step 4: BPMN -----------------
     def generate_bpmn(self, dmn_xml: str, ask_plan: Any) -> str:
         user = "DMN:\n```xml\n" + dmn_xml + "\n```\n\n" + "ASK_PLAN:\n" + json.dumps(ask_plan, ensure_ascii=False)
-        text = self._chat_text(self.bpmn_system, user, max_tokens=6000, model_key="bpmn")
+        text = self._chat_text(self.bpmn_system, user, max_out=6000, model_key="bpmn")
         blocks = _extract_fenced_blocks(text)
         for _lang, body in blocks:
             if "<bpmn:definitions" in body:
@@ -801,9 +792,6 @@ class OpenAIGuardedExtractor:
 
     # ---------------- Step 5: coverage -----------------
     def audit_coverage(self, merged_ir: Dict[str, Any], dmn_xml: str) -> Dict[str, Any]:
-        payload = {
-            "ir": merged_ir,
-            "ir_flat": _rules_flattened(merged_ir)  # helper for exact literal matching
-        }
+        payload = {"ir": merged_ir, "ir_flat": _rules_flattened(merged_ir)}
         user = "RULES_JSON:\n" + json.dumps(payload, ensure_ascii=False) + "\nDMN:\n```xml\n" + dmn_xml + "\n```"
-        return self._chat_json(self.coverage_system, user, max_tokens=6000, model_key="audit", schema_model=None)
+        return self._chat_json(self.coverage_system, user, max_out=6000, model_key="audit", schema_model=None)
