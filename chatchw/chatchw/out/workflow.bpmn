@@ -1,37 +1,87 @@
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="defs">
   <bpmn:process id="chatchw_flow" isExecutable="false">
-    <bpmn:startEvent id="start" name="Start"/>
-    <bpmn:userTask id="ask_diarrhea" name="Ask diarrhea"/>
-    <bpmn:exclusiveGateway id="diarrhea_present" name="Diarrhea present?"/>
-    <bpmn:userTask id="collect_diarrhea_details" name="Collect diarrhea details"/>
-    <bpmn:userTask id="ask_fever_malaria" name="Ask fever/malaria"/>
-    <bpmn:userTask id="ask_cough_pneumonia" name="Ask cough/pneumonia"/>
-    <bpmn:userTask id="ask_malnutrition" name="Ask malnutrition"/>
-    <bpmn:businessRuleTask id="evaluate_decisions" name="Evaluate decisions" decisionRef="aggregate_final"/>
-    <bpmn:exclusiveGateway id="main_triage" name="Main triage"/>
-    <bpmn:endEvent id="hospital" name="Hospital"/>
-    <bpmn:endEvent id="clinic" name="Clinic"/>
-    <bpmn:endEvent id="home" name="Home"/>
-    
-    <bpmn:sequenceFlow id="flow1" sourceRef="start" targetRef="ask_diarrhea"/>
-    <bpmn:sequenceFlow id="flow2" sourceRef="ask_diarrhea" targetRef="diarrhea_present"/>
-    <bpmn:sequenceFlow id="flow3" sourceRef="diarrhea_present" targetRef="collect_diarrhea_details">
-      <bpmn:conditionExpression xsi:type="tFormalExpression">diarrhea == true</bpmn:conditionExpression>
+    <bpmn:startEvent id="start" name="Start">
+      <bpmn:outgoing>f_start_to_b</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:userTask id="ask_module_b" name="Ask module_b">
+      <bpmn:incoming>f_start_to_b</bpmn:incoming>
+      <bpmn:outgoing>f_b_to_xor_present</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="xor_module_b_present" name="module_b present?" default="f_present_false">
+      <bpmn:incoming>f_b_to_xor_present</bpmn:incoming>
+      <bpmn:outgoing>f_present_true</bpmn:outgoing>
+      <bpmn:outgoing>f_present_false</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:userTask id="collect_module_b_details" name="Collect module_b details">
+      <bpmn:incoming>f_present_true</bpmn:incoming>
+      <bpmn:outgoing>f_bdetails_to_ask_c</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:userTask id="ask_module_c" name="Ask module_c">
+      <bpmn:incoming>f_present_false</bpmn:incoming>
+      <bpmn:incoming>f_bdetails_to_ask_c</bpmn:incoming>
+      <bpmn:outgoing>f_c_to_followups_b</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:userTask id="ask_module_b_followups" name="Ask module_b followups">
+      <bpmn:incoming>f_c_to_followups_b</bpmn:incoming>
+      <bpmn:outgoing>f_bfollowups_to_e</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:userTask id="ask_module_e" name="Ask module_e">
+      <bpmn:incoming>f_bfollowups_to_e</bpmn:incoming>
+      <bpmn:outgoing>f_e_to_eval</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:businessRuleTask id="evaluate_decisions" name="Evaluate decisions" implementation="http://www.omg.org/spec/DMN/20191111/MODEL/" xsi:type="tBusinessRuleTask">
+      <bpmn:incoming>f_e_to_eval</bpmn:incoming>
+      <bpmn:outgoing>f_eval_to_main_xor</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <decisionRef>aggregate_final</decisionRef>
+      </bpmn:extensionElements>
+    </bpmn:businessRuleTask>
+
+    <bpmn:exclusiveGateway id="xor_main_triage" name="Main triage" default="f_main_default_home">
+      <bpmn:incoming>f_eval_to_main_xor</bpmn:incoming>
+      <bpmn:outgoing>f_to_hospital</bpmn:outgoing>
+      <bpmn:outgoing>f_to_clinic</bpmn:outgoing>
+      <bpmn:outgoing>f_main_default_home</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:endEvent id="end_hospital" name="Hospital">
+      <bpmn:incoming>f_to_hospital</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:endEvent id="end_clinic" name="Clinic">
+      <bpmn:incoming>f_to_clinic</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:endEvent id="end_home" name="Home">
+      <bpmn:incoming>f_main_default_home</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="f_start_to_b" sourceRef="start" targetRef="ask_module_b"/>
+    <bpmn:sequenceFlow id="f_b_to_xor_present" sourceRef="ask_module_b" targetRef="xor_module_b_present"/>
+    <bpmn:sequenceFlow id="f_present_true" sourceRef="xor_module_b_present" targetRef="collect_module_b_details">
+      <bpmn:conditionExpression xsi:type="tFormalExpression">true</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="flow4" sourceRef="diarrhea_present" targetRef="ask_fever_malaria">
-      <bpmn:conditionExpression xsi:type="tFormalExpression">diarrhea == false</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="flow5" sourceRef="collect_diarrhea_details" targetRef="ask_fever_malaria"/>
-    <bpmn:sequenceFlow id="flow6" sourceRef="ask_fever_malaria" targetRef="ask_cough_pneumonia"/>
-    <bpmn:sequenceFlow id="flow7" sourceRef="ask_cough_pneumonia" targetRef="ask_malnutrition"/>
-    <bpmn:sequenceFlow id="flow8" sourceRef="ask_malnutrition" targetRef="evaluate_decisions"/>
-    <bpmn:sequenceFlow id="flow9" sourceRef="evaluate_decisions" targetRef="main_triage"/>
-    <bpmn:sequenceFlow id="flow10" sourceRef="main_triage" targetRef="hospital">
+    <bpmn:sequenceFlow id="f_present_false" sourceRef="xor_module_b_present" targetRef="ask_module_c"/>
+    <bpmn:sequenceFlow id="f_bdetails_to_ask_c" sourceRef="collect_module_b_details" targetRef="ask_module_c"/>
+    <bpmn:sequenceFlow id="f_c_to_followups_b" sourceRef="ask_module_c" targetRef="ask_module_b_followups"/>
+    <bpmn:sequenceFlow id="f_bfollowups_to_e" sourceRef="ask_module_b_followups" targetRef="ask_module_e"/>
+    <bpmn:sequenceFlow id="f_e_to_eval" sourceRef="ask_module_e" targetRef="evaluate_decisions"/>
+    <bpmn:sequenceFlow id="f_eval_to_main_xor" sourceRef="evaluate_decisions" targetRef="xor_main_triage"/>
+
+    <bpmn:sequenceFlow id="f_to_hospital" sourceRef="xor_main_triage" targetRef="end_hospital">
       <bpmn:conditionExpression xsi:type="tFormalExpression">danger_sign == true</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="flow11" sourceRef="main_triage" targetRef="clinic">
+    <bpmn:sequenceFlow id="f_to_clinic" sourceRef="xor_main_triage" targetRef="end_clinic">
       <bpmn:conditionExpression xsi:type="tFormalExpression">clinic_referral == true</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="flow12" sourceRef="main_triage" targetRef="home" name="Default"/>
+    <bpmn:sequenceFlow id="f_main_default_home" sourceRef="xor_main_triage" targetRef="end_home"/>
   </bpmn:process>
 </bpmn:definitions>

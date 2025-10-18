@@ -1,52 +1,49 @@
-[
-  {
-    "module": "diarrhea",
-    "ask": [
-      "diarrhea"
-    ],
-    "followups_if": {
-      "diarrhea==true": [
-        "blood_in_stool"
+{
+  "ASK_PLAN": [
+    {
+      "module": "module_a",
+      "ask": [
+        "referred_to_health_facility"
+      ]
+    },
+    {
+      "module": "module_b",
+      "ask": [
+        "danger_sign_present",
+        "convulsions_present",
+        "not_able_to_drink_or_eat_anything",
+        "vomits_everything",
+        "unusually_sleepy_or_unconscious"
+      ]
+    },
+    {
+      "module": "module_c",
+      "ask": [
+        "cough_duration_days",
+        "diarrhoea_duration_days",
+        "blood_in_stool",
+        "fever_duration_days"
+      ]
+    },
+    {
+      "module": "module_d",
+      "ask": [
+        "malaria_area",
+        "fever_present",
+        "fever_duration_days",
+        "malaria_test_result"
+      ]
+    },
+    {
+      "module": "module_e",
+      "ask": [
+        "cough_present",
+        "fast_breathing_present",
+        "danger_sign_present",
+        "malaria_area",
+        "breaths_per_minute",
+        "age_months"
       ]
     }
-  },
-  {
-    "module": "fever_malaria",
-    "ask": [
-      "fever"
-    ],
-    "followups_if": {
-      "fever==true": [
-        "temperature_c"
-      ]
-    }
-  },
-  {
-    "module": "respiratory",
-    "ask": [],
-    "followups_if": {
-      "cough==true": [
-        "resp_rate"
-      ]
-    }
-  },
-  {
-    "module": "nutrition",
-    "ask": [
-      "muac_mm"
-    ],
-    "followups_if": {}
-  },
-  {
-    "module": "danger_signs",
-    "ask": [
-      "convulsions",
-      "unconscious",
-      "unable_to_drink",
-      "vomiting_everything",
-      "chest_indrawing",
-      "edema_both_feet"
-    ],
-    "followups_if": {}
-  }
-]
+  ]
+}

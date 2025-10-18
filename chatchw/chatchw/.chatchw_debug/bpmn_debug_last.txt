@@ -1,0 +1,40 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="defs">
+  <bpmn:process id="chatchw_flow" isExecutable="false">
+    <bpmn:startEvent id="start" name="Start"/>
+    <bpmn:userTask id="ask_module_b" name="Ask module_b"/>
+    <bpmn:exclusiveGateway id="gw_module_b_present" name="module_b present?"/>
+    <bpmn:userTask id="collect_module_b_details" name="Collect module_b details"/>
+    <bpmn:userTask id="ask_module_c_1" name="Ask module_c"/>
+    <bpmn:userTask id="ask_module_c_2" name="Ask module_c"/>
+    <bpmn:userTask id="ask_module_b_followups" name="Ask module_b followups"/>
+    <bpmn:userTask id="ask_module_e" name="Ask module_e"/>
+    <bpmn:businessRuleTask id="evaluate_decisions" name="Evaluate decisions" decisionRef="aggregate_final"/>
+    <bpmn:exclusiveGateway id="gw_main_triage" name="Main triage" default="flow_home"/>
+    <bpmn:endEvent id="end_hospital" name="Hospital"/>
+    <bpmn:endEvent id="end_clinic" name="Clinic"/>
+    <bpmn:endEvent id="end_home" name="Home"/>
+
+    <bpmn:sequenceFlow id="flow_start_to_b" sourceRef="start" targetRef="ask_module_b"/>
+    <bpmn:sequenceFlow id="flow_b_to_gw" sourceRef="ask_module_b" targetRef="gw_module_b_present"/>
+    <bpmn:sequenceFlow id="flow_gw_true" sourceRef="gw_module_b_present" targetRef="collect_module_b_details">
+      <bpmn:conditionExpression xsi:type="tFormalExpression">true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_gw_false" sourceRef="gw_module_b_present" targetRef="ask_module_c_1">
+      <bpmn:conditionExpression xsi:type="tFormalExpression">false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_details_to_c" sourceRef="collect_module_b_details" targetRef="ask_module_c_2"/>
+    <bpmn:sequenceFlow id="flow_c_to_b_followups" sourceRef="ask_module_c_1" targetRef="ask_module_b_followups"/>
+    <bpmn:sequenceFlow id="flow_c2_to_b_followups" sourceRef="ask_module_c_2" targetRef="ask_module_b_followups"/>
+    <bpmn:sequenceFlow id="flow_b_followups_to_e" sourceRef="ask_module_b_followups" targetRef="ask_module_e"/>
+    <bpmn:sequenceFlow id="flow_e_to_rules" sourceRef="ask_module_e" targetRef="evaluate_decisions"/>
+    <bpmn:sequenceFlow id="flow_rules_to_main" sourceRef="evaluate_decisions" targetRef="gw_main_triage"/>
+
+    <bpmn:sequenceFlow id="flow_hospital" sourceRef="gw_main_triage" targetRef="end_hospital">
+      <bpmn:conditionExpression xsi:type="tFormalExpression">danger_sign == true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_clinic" sourceRef="gw_main_triage" targetRef="end_clinic">
+      <bpmn:conditionExpression xsi:type="tFormalExpression">clinic_referral == true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_home" sourceRef="gw_main_triage" targetRef="end_home"/>
+  </bpmn:process>
+</bpmn:definitions>
