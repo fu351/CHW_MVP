@@ -364,6 +364,187 @@ def _enforce_ask_ownership(ask_plan: List[Dict[str, Any]], priority_order=("modu
         blk["followups_if"] = fuw
     return ask_plan
 
+# ---------- Duplicate resolution + snake-case, with rule rewriting ----------
+
+def _norm_name(s: Optional[str]) -> str:
+    return (s or "").strip()
+
+def _pages_from_ref_string(s: str) -> List[int]:
+    if not s:
+        return []
+    out = []
+    for tok in re.findall(r"p(\d{1,4})(?:-(\d{1,4}))?", s, flags=re.IGNORECASE):
+        a = int(tok[0]); b = int(tok[1]) if tok[1] else None
+        if b is None:
+            out.append(a)
+        else:
+            lo, hi = sorted((a, b))
+            out.extend(list(range(lo, hi + 1))[:500])
+    return out
+
+def _pages_from_refs(refs: Optional[List[str]]) -> set:
+    pages = set()
+    for r in (refs or []):
+        for p in _pages_from_ref_string(str(r)):
+            pages.add(p)
+    return pages
+
+def _var_sig(v: Dict[str, Any]) -> tuple:
+    t = v.get("type")
+    u = v.get("unit")
+    allowed = tuple(sorted([str(x) for x in (v.get("allowed") or [])]))
+    return (t, u, allowed)
+
+def _coalesce_group(vars_with_same_sig: List[Dict[str, Any]]) -> Dict[str, Any]:
+    base = dict(vars_with_same_sig[0])
+    syn = set(base.get("synonyms") or [])
+    refs = set(base.get("refs") or [])
+    allowed = set(base.get("allowed") or [])
+    for v in vars_with_same_sig[1:]:
+        syn |= set(v.get("synonyms") or [])
+        refs |= set(v.get("refs") or [])
+        allowed |= set(v.get("allowed") or [])
+        if not base.get("prompt") and v.get("prompt"):
+            base["prompt"] = v["prompt"]
+    base["synonyms"] = sorted(list(syn))
+    base["refs"] = sorted(list(refs))
+    base["allowed"] = sorted(list(allowed)) if allowed else []
+    return base
+
+def _resolve_variables_snake_and_rewrite_rules(merged: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    1) Group variables by snake_case(name) so near-duplicates collide.
+    2) Within each group, partition by signature (type/unit/allowed).
+       - Same signature → coalesce (merge synonyms/refs).
+       - Different signatures → keep as distinct variants with suffixes __2, __3...
+    3) Assign final variable names (snake case + optional suffix).
+    4) Rewrite rules to refer to the chosen final names using guideline_ref page overlap.
+    5) Preserve all original spellings in synonyms.
+    """
+    qa_notes = merged.setdefault("qa", {}).setdefault("notes", [])
+    vars_in = [v for v in (merged.get("variables") or []) if isinstance(v, dict) and _norm_name(v.get("name"))]
+    # Build groups by snake key
+    groups: Dict[str, List[Dict[str, Any]]] = {}
+    names_seen_per_group: Dict[str, set] = {}
+    for v in vars_in:
+        orig = _norm_name(v.get("name"))
+        key = _to_snake(orig)
+        vv = dict(v)
+        # keep the original spelling in synonyms so we don't lose semantics
+        syns = set(vv.get("synonyms") or [])
+        syns.add(orig)
+        vv["synonyms"] = sorted(list(syns))
+        groups.setdefault(key, []).append(vv)
+        names_seen_per_group.setdefault(key, set()).update({orig.lower(), *[str(s).strip().lower() for s in syns]})
+
+    new_vars: List[Dict[str, Any]] = []
+    # map any known name (lower) -> variant list for this group
+    name_to_variants: Dict[str, List[Dict[str, Any]]] = {}
+    rename_events: Dict[str, List[str]] = {}
+
+    for base, gvars in groups.items():
+        # Partition by signature
+        sig_bins: Dict[tuple, List[Dict[str, Any]]] = {}
+        for v in gvars:
+            sig_bins.setdefault(_var_sig(v), []).append(v)
+
+        variants_meta = []
+        if len(sig_bins) > 1:
+            qa_notes.append(f"variable_homonyms_split:{base}:{len(sig_bins)}")
+
+        # Coalesce each bin and assign final names
+        idx = 1
+        for _sig, same_sig_vars in sig_bins.items():
+            merged_v = _coalesce_group(same_sig_vars)
+            final_name = base if idx == 1 else f"{base}__{idx}"
+            idx += 1
+            # capture rename info: all originals in this bin
+            originals = { _norm_name(x.get("name")) for x in same_sig_vars if _norm_name(x.get("name")) }
+            for o in originals:
+                rename_events.setdefault(o, []).append(final_name)
+            # finalize
+            merged_v["name"] = final_name
+            pages = _pages_from_refs(merged_v.get("refs") or [])
+            variants_meta.append({"new_name": final_name, "pages": pages})
+            new_vars.append(merged_v)
+
+        # Wire name → variants map (for rule rewriting)
+        for n in names_seen_per_group.get(base, set()):
+            name_to_variants[n] = variants_meta
+
+    # Heuristic picker
+    def pick_variant(seen_name: str, rule_ref: Optional[str]) -> str:
+        variants = name_to_variants.get((seen_name or "").strip().lower())
+        if not variants:
+            # If we don't know, keep its snake base
+            return _to_snake(seen_name)
+        if not rule_ref:
+            return variants[0]["new_name"]
+        r_pages = set(_pages_from_ref_string(rule_ref))
+        best = variants[0]; best_sc = -1
+        for v in variants:
+            sc = len(r_pages & set(v["pages"]))
+            if sc > best_sc:
+                best_sc = sc; best = v
+        return best["new_name"]
+
+    # Rewrite rules
+    rules_out: List[Dict[str, Any]] = []
+    for r in (merged.get("rules") or []):
+        rr = dict(r)
+        rule_ref = _norm_name(((rr.get("then") or {}).get("guideline_ref")))
+        new_when = []
+        for c in (rr.get("when") or []):
+            c = dict(c)
+            if "sym" in c and c["sym"]:
+                sym = _norm_name(c["sym"])
+                key = sym.strip().lower()
+                if key in name_to_variants or _to_snake(sym) in groups:
+                    c["sym"] = pick_variant(sym, rule_ref)
+                else:
+                    # still snake-case it for consistency
+                    c["sym"] = _to_snake(sym)
+            elif "obs" in c and c["obs"]:
+                obs = _norm_name(c["obs"])
+                key = obs.strip().lower()
+                if key in name_to_variants or _to_snake(obs) in groups:
+                    c["obs"] = pick_variant(obs, rule_ref)
+                else:
+                    c["obs"] = _to_snake(obs)
+            elif "all_of" in c or "any_of" in c:
+                k = "all_of" if "all_of" in c else "any_of"
+                seq = []
+                for s in (c.get(k) or []):
+                    s = dict(s)
+                    if "sym" in s and s["sym"]:
+                        sym = _norm_name(s["sym"])
+                        key = sym.strip().lower()
+                        if key in name_to_variants or _to_snake(sym) in groups:
+                            s["sym"] = pick_variant(sym, rule_ref)
+                        else:
+                            s["sym"] = _to_snake(sym)
+                    if "obs" in s and s["obs"]:
+                        obs = _norm_name(s["obs"])
+                        key = obs.strip().lower()
+                        if key in name_to_variants or _to_snake(obs) in groups:
+                            s["obs"] = pick_variant(obs, rule_ref)
+                        else:
+                            s["obs"] = _to_snake(obs)
+                    seq.append(s)
+                c[k] = seq
+            new_when.append(c)
+        rr["when"] = new_when
+        rules_out.append(rr)
+
+    # QA note for visibility
+    if rename_events:
+        # collapse to simple mapping: original -> list of finals
+        merged.setdefault("qa", {}).setdefault("notes", []).append(f"snake_case_renamed:{rename_events}")
+
+    merged["variables"] = new_vars
+    merged["rules"] = rules_out
+    return merged
+
 # ---------- Fact sheet helpers (compact input for merging) ----------
 def _fact_sheet_from_sections(section_objs: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
@@ -717,6 +898,30 @@ class OpenAIGuardedExtractor:
             "INPUT\nFACT_SHEET:\n<COMPACT VARIABLES + RULES>"
         )
 
+        # NEW: Rules consolidation system prompt (fact sheet → unified RULES)
+        self.rules_system = (
+            "You are given a FACT_SHEET extracted from a clinical manual. "
+            "Consolidate overlapping or duplicate facts into an organized list of RULES. "
+            "Return ONLY JSON with:\n"
+            "{ \"rules\": [ {\"rule_id\": str,\n"
+            "               \"when\": [ {\"obs\": var, \"op\":\"lt|le|gt|ge|eq|ne\", \"value\": num|bool|string} |\n"
+            "                         {\"sym\": var, \"eq\": true|false} |\n"
+            "                         {\"all_of\":[COND...] } | {\"any_of\":[COND...]} ],\n"
+            "               \"then\": {\"triage\":\"hospital|clinic|home\",\n"
+            "                         \"flags\":[snake...],\n"
+            "                         \"reasons\":[snake...],\n"
+            "                         \"actions\":[{\"id\":snake,\"if_available\":bool}],\n"
+            "                         \"advice\":[],\n"
+            "                         \"guideline_ref\": str, \"priority\": int } } ] }\n\n"
+            "HARD RULES\n"
+            "1) Preserve the manual’s clinical terms exactly. Do not invent placeholders.\n"
+            "2) Resolve overlaps: merge duplicate conditions, split any_of when needed, keep literal thresholds.\n"
+            "3) Ban derived fields in conditions: danger_sign, clinic_referral, triage.\n"
+            "4) advice must be [].\n"
+            "5) Every rule must have guideline_ref like \"p41\" or a section id.\n\n"
+            "INPUT\nFACT_SHEET:\n<variables + per-section rules>"
+        )
+
         self.dmn_system = (
             "Convert RULES_JSON into modular DMN 1.4 using the DMN 1.4 MODEL namespace (2019-11-11). Return exactly TWO fenced blocks:\n"
             "1) ```xml <dmn:definitions>…```  2) ```json ASK_PLAN```\n\n"
@@ -958,10 +1163,69 @@ class OpenAIGuardedExtractor:
             results.append(obj)
         return results
 
+    # ---------------- NEW: Step 2a — build unified RULES from FACT_SHEET -----------------
+    def generate_rules_from_fact_sheet(self, fact_sheet: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Ask GPT to consolidate overlaps and produce a single RULES list from the compact FACT_SHEET.
+        Normalizes with _normalize_rule_schema and de-dupes ids. Falls back to FACT_SHEET rules if model fails.
+        """
+        payload = json.dumps(fact_sheet, ensure_ascii=False)
+        user = f"FACT_SHEET\n{payload}"
+
+        try:
+            obj = self._chat_json(
+                self.rules_system, user,
+                max_out=8000,
+                model_key="merge",  # reuse merge allocation
+                schema_model=None
+            )
+            rules = obj.get("rules") if isinstance(obj, dict) else obj
+            if not isinstance(rules, list):
+                raise ValueError("rules consolidation returned unexpected shape")
+            cleaned = []
+            for r in rules:
+                nr = _normalize_rule_schema(r)
+                if nr:
+                    cleaned.append(nr)
+            rules_out = _dedupe_rule_ids(cleaned, prefix="rl")
+        except Exception as e:
+            # Safe fallback so pipeline still runs
+            rules_out = []
+            for r in (fact_sheet.get("rules") or []):
+                nr = _normalize_rule_schema(r)
+                if nr:
+                    rules_out.append(nr)
+            rules_out = _dedupe_rule_ids(rules_out, prefix="fs")
+            try:
+                self.debug_dir.joinpath("rules_from_facts_error.txt").write_text(str(e), encoding="utf-8")
+            except Exception:
+                pass
+
+        # Persist for inspection
+        try:
+            self.debug_dir.joinpath("rules_from_facts.json").write_text(
+                json.dumps({"rules": rules_out}, indent=2, ensure_ascii=False), encoding="utf-8"
+            )
+        except Exception:
+            pass
+
+        return rules_out
+
     # ---------------- Step 2: merge (now drives off FACT_SHEET) -----------------
     def merge_sections(self, section_objs: List[Dict[str, Any]]) -> Dict[str, Any]:
-        # Build a compact fact sheet first to shrink prompt size
+        # 0) Build compact fact sheet and save for debug
         fact_sheet = _fact_sheet_from_sections(section_objs)
+        try:
+            self.debug_dir.joinpath("fact_sheet.json").write_text(
+                json.dumps(fact_sheet, indent=2, ensure_ascii=False), encoding="utf-8"
+            )
+        except Exception:
+            pass
+
+        # 1) NEW: Ask GPT to consolidate facts into a canonical RULES list
+        consolidated_rules = self.generate_rules_from_fact_sheet(fact_sheet)
+
+        # 2) Merge variables/QA with model (or fallback), but force rules to the consolidated list
         payload = json.dumps(fact_sheet, ensure_ascii=False)
         user = f"FACT_SHEET\n{payload}"
 
@@ -972,10 +1236,14 @@ class OpenAIGuardedExtractor:
                 model_key="merge",
                 schema_model=IR if PydanticAvailable else None
             )
+            # Overwrite rules with the consolidated ones from fact sheet
+            merged["rules"] = consolidated_rules
+            # If model didn't emit variables, take from fact sheet
+            if not merged.get("variables"):
+                merged["variables"] = fact_sheet.get("variables", [])
         else:
             # Deterministic local fallback using the compact fact sheet
             variables: Dict[str, Dict[str, Any]] = {}
-            rules: List[Dict[str, Any]] = []
             qa_notes: List[str] = ["fallback_merge_used", "source=fact_sheet"]
             for v in (fact_sheet.get("variables") or []):
                 if not isinstance(v, dict): continue
@@ -992,40 +1260,23 @@ class OpenAIGuardedExtractor:
                     refs = set(cur.get("refs") or []) | set(v.get("refs") or [])
                     cur["synonyms"] = sorted(list(syn))
                     cur["refs"] = sorted(list(refs))
-            for r in (fact_sheet.get("rules") or []):
-                if isinstance(r, dict):
-                    nr = _normalize_rule_schema(r)
-                    if nr: rules.append(nr)
-                    else: qa_notes.append(f"dropped_rule:{r.get('rule_id')}")
-            rules = _dedupe_rule_ids(rules, prefix="merge")
             merged = {
                 "variables": list(variables.values()),
-                "rules": rules,
+                "rules": consolidated_rules,
                 "canonical_map": {},
                 "qa": {"notes": qa_notes, "unmapped_vars": [], "dedup_dropped": 0, "overlap_fixed": []},
             }
 
-        # --- Canonicalize variable names to snake_case while preserving originals in synonyms ---
-        snake_changes: Dict[str, str] = {}
-        for v in merged.get("variables", []) or []:
-            if not isinstance(v, dict): continue
-            old = (v.get("name") or "").strip()
-            if not old: continue
-            new = _to_snake(old)
-            if new != old:
-                v["synonyms"] = sorted(list(set((v.get("synonyms") or []) + [old])))
-                v["name"] = new
-                snake_changes[old.lower()] = new
+        # ---- Resolve duplicates & snake-case consistently, then rewrite rules ----
+        merged = _resolve_variables_snake_and_rewrite_rules(merged)
 
-        # Canonical map + rewrite rules to canonical; validate & preflight
+        # Canonical map + rewrite to canonical names (still keeps medical wording)
         canon = _build_canonical_map(self.config, merged.get("variables", []))
         merged["canonical_map"] = canon
         merged["rules"] = [_rewrite_rule_to_canon(r, canon) for r in (merged.get("rules") or [])]
         merged["rules"] = _dedupe_rule_ids(merged["rules"], prefix="merged")
 
-        if snake_changes:
-            merged.setdefault("qa", {}).setdefault("notes", []).append(f"snake_case_renamed:{snake_changes}")
-
+        # Validate
         if PydanticAvailable:
             merged = IR.model_validate(merged).model_dump()
         _preflight_ir(merged)

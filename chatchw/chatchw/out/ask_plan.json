@@ -1,49 +1,48 @@
-{
-  "ASK_PLAN": [
-    {
-      "module": "module_a",
-      "ask": [
-        "referred_to_health_facility"
-      ]
-    },
-    {
-      "module": "module_b",
-      "ask": [
-        "danger_sign_present",
-        "convulsions_present",
-        "not_able_to_drink_or_eat_anything",
-        "vomits_everything",
-        "unusually_sleepy_or_unconscious"
-      ]
-    },
-    {
-      "module": "module_c",
-      "ask": [
-        "cough_duration_days",
-        "diarrhoea_duration_days",
-        "blood_in_stool",
-        "fever_duration_days"
-      ]
-    },
-    {
-      "module": "module_d",
-      "ask": [
-        "malaria_area",
-        "fever_present",
-        "fever_duration_days",
-        "malaria_test_result"
-      ]
-    },
-    {
-      "module": "module_e",
-      "ask": [
-        "cough_present",
-        "fast_breathing_present",
-        "danger_sign_present",
-        "malaria_area",
-        "breaths_per_minute",
-        "age_months"
-      ]
-    }
-  ]
-}
+[
+  {
+    "module": "module_a",
+    "ask": [
+      "convulsions_present",
+      "not_able_to_drink_or_feed_anything",
+      "vomits_everything",
+      "chest_indrawing",
+      "unusually_sleepy_or_unconscious",
+      "muac_color",
+      "swelling_of_both_feet"
+    ],
+    "followups_if": {}
+  },
+  {
+    "module": "module_b",
+    "ask": [
+      "cough_present",
+      "cough_duration_days",
+      "diarrhoea_present",
+      "diarrhoea_duration_days",
+      "blood_in_stool",
+      "fever_present",
+      "fever_duration_days"
+    ],
+    "followups_if": {}
+  },
+  {
+    "module": "module_c",
+    "ask": [
+      "malaria_area"
+    ],
+    "followups_if": {}
+  },
+  {
+    "module": "module_d",
+    "ask": [
+      "fast_breathing",
+      "danger_sign_present"
+    ],
+    "followups_if": {}
+  },
+  {
+    "module": "module_e",
+    "ask": [],
+    "followups_if": {}
+  }
+]
