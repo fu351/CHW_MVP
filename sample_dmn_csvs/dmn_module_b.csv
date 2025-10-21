@@ -1,0 +1,4 @@
+rule_id,condition,action,priority
+B001,chest_pain = true,emergency_cardiac,100
+B002,shortness_breath = true,respiratory_assessment,80
+B003,dizziness = true,neurological_check,60

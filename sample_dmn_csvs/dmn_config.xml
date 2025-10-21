@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<instances>
+    <instance id="dmn_module_a" src="jr://file-csv/dmn_module_a.csv"/>
+    <instance id="dmn_module_b" src="jr://file-csv/dmn_module_b.csv"/>
+    <instance id="dmn_module_c" src="jr://file-csv/dmn_module_c.csv"/>
+    <instance id="dmn_module_d" src="jr://file-csv/dmn_module_d.csv"/>
+    <instance id="dmn_module_e" src="jr://file-csv/dmn_module_e.csv"/>
+    <instance id="dmn_aggregate_final" src="jr://file-csv/dmn_aggregate_final.csv"/>
+</instances>

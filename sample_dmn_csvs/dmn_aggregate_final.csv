@@ -1,0 +1,16 @@
+action,condition,module_id,priority,rule_id
+refer_to_geriatric,age >= 65,dmn_module_a,100,A001
+check_fever,temperature > 38.5,dmn_module_a,50,A002
+monitor_bp,blood_pressure > 140/90,dmn_module_a,75,A003
+emergency_cardiac,chest_pain = true,dmn_module_b,100,B001
+respiratory_assessment,shortness_breath = true,dmn_module_b,80,B002
+neurological_check,dizziness = true,dmn_module_b,60,B003
+glucose_monitoring,diabetes = true,dmn_module_c,70,C001
+bp_management,hypertension = true,dmn_module_c,65,C002
+allergy_alert,medication_allergy = true,dmn_module_c,90,C003
+obstetric_care,pregnancy = true,dmn_module_d,85,D001
+pediatric_protocol,pediatric_age < 12,dmn_module_d,80,D002
+psychiatric_referral,mental_health_crisis = true,dmn_module_d,95,D003
+infection_control,infection_signs = true,dmn_module_e,75,E001
+wound_management,wound_care_needed = true,dmn_module_e,60,E002
+pharmacy_consult,medication_review = true,dmn_module_e,55,E003
