@@ -1,90 +1,31 @@
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="defs">
-  <bpmn:process id="chatchw_flow" isExecutable="false">
-    <bpmn:startEvent id="start" name="Start">
-      <bpmn:outgoing>f_start_to_b</bpmn:outgoing>
-    </bpmn:startEvent>
-
-    <bpmn:userTask id="ask_module_b" name="Ask module_b">
-      <bpmn:incoming>f_start_to_b</bpmn:incoming>
-      <bpmn:outgoing>f_b_to_xor_present</bpmn:outgoing>
-    </bpmn:userTask>
-
-    <bpmn:exclusiveGateway id="xor_module_b_present" name="module_b present?" default="f_xor_present_to_c_false">
-      <bpmn:incoming>f_b_to_xor_present</bpmn:incoming>
-      <bpmn:outgoing>f_xor_present_to_collect_true</bpmn:outgoing>
-      <bpmn:outgoing>f_xor_present_to_c_false</bpmn:outgoing>
-    </bpmn:exclusiveGateway>
-
-    <bpmn:userTask id="collect_module_b_details" name="Collect module_b details">
-      <bpmn:incoming>f_xor_present_to_collect_true</bpmn:incoming>
-      <bpmn:outgoing>f_collect_to_ask_c</bpmn:outgoing>
-    </bpmn:userTask>
-
-    <bpmn:userTask id="ask_module_c_after_collect" name="Ask module_c">
-      <bpmn:incoming>f_collect_to_ask_c</bpmn:incoming>
-      <bpmn:outgoing>f_c_after_collect_to_followups_b</bpmn:outgoing>
-    </bpmn:userTask>
-
-    <bpmn:userTask id="ask_module_c_direct" name="Ask module_c">
-      <bpmn:incoming>f_xor_present_to_c_false</bpmn:incoming>
-      <bpmn:outgoing>f_c_direct_to_followups_b</bpmn:outgoing>
-    </bpmn:userTask>
-
-    <bpmn:userTask id="ask_module_b_followups" name="Ask module_b followups">
-      <bpmn:incoming>f_c_after_collect_to_followups_b</bpmn:incoming>
-      <bpmn:incoming>f_c_direct_to_followups_b</bpmn:incoming>
-      <bpmn:outgoing>f_followups_b_to_e</bpmn:outgoing>
-    </bpmn:userTask>
-
-    <bpmn:userTask id="ask_module_e" name="Ask module_e">
-      <bpmn:incoming>f_followups_b_to_e</bpmn:incoming>
-      <bpmn:outgoing>f_e_to_eval</bpmn:outgoing>
-    </bpmn:userTask>
-
-    <bpmn:businessRuleTask id="evaluate_decisions" name="Evaluate decisions" decisionRef="aggregate_final">
-      <bpmn:incoming>f_e_to_eval</bpmn:incoming>
-      <bpmn:outgoing>f_eval_to_main_xor</bpmn:outgoing>
-    </bpmn:businessRuleTask>
-
-    <bpmn:exclusiveGateway id="xor_main_triage" name="Main triage" default="f_main_to_home">
-      <bpmn:incoming>f_eval_to_main_xor</bpmn:incoming>
-      <bpmn:outgoing>f_main_to_hospital</bpmn:outgoing>
-      <bpmn:outgoing>f_main_to_clinic</bpmn:outgoing>
-      <bpmn:outgoing>f_main_to_home</bpmn:outgoing>
-    </bpmn:exclusiveGateway>
-
-    <bpmn:endEvent id="end_hospital" name="Hospital">
-      <bpmn:incoming>f_main_to_hospital</bpmn:incoming>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Defs" targetNamespace="urn:flow">
+  <bpmn:process id="AskEvaluateRoute" name="Ask Evaluate Route" isExecutable="true">
+    <bpmn:startEvent id="Start" name="Start"/>
+    <bpmn:userTask id="AskTask" name="Ask Questions"/>
+    <bpmn:businessRuleTask id="EvaluateDMN" name="Evaluate DMN" implementation="http://www.omg.org/spec/DMN/20191111/MODEL/" />
+    <bpmn:exclusiveGateway id="RouteGateway" name="Route by triage"/>
+    <bpmn:endEvent id="EndHome" name="Home">
+      <bpmn:terminateEventDefinition xsi:nil="true"/>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndClinic" name="Clinic">
+      <bpmn:terminateEventDefinition xsi:nil="true"/>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndHospital" name="Hospital">
+      <bpmn:terminateEventDefinition xsi:nil="true"/>
     </bpmn:endEvent>
 
-    <bpmn:endEvent id="end_clinic" name="Clinic">
-      <bpmn:incoming>f_main_to_clinic</bpmn:incoming>
-    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="f1" sourceRef="Start" targetRef="AskTask"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="AskTask" targetRef="EvaluateDMN"/>
+    <bpmn:sequenceFlow id="f3" sourceRef="EvaluateDMN" targetRef="RouteGateway"/>
 
-    <bpmn:endEvent id="end_home" name="Home">
-      <bpmn:incoming>f_main_to_home</bpmn:incoming>
-    </bpmn:endEvent>
-
-    <bpmn:sequenceFlow id="f_start_to_b" sourceRef="start" targetRef="ask_module_b"/>
-    <bpmn:sequenceFlow id="f_b_to_xor_present" sourceRef="ask_module_b" targetRef="xor_module_b_present"/>
-    <bpmn:sequenceFlow id="f_xor_present_to_collect_true" sourceRef="xor_module_b_present" targetRef="collect_module_b_details">
-      <bpmn:conditionExpression xsi:type="tFormalExpression">true</bpmn:conditionExpression>
+    <bpmn:sequenceFlow id="toHome" sourceRef="RouteGateway" targetRef="EndHome" name="triage == 'home'">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"><![CDATA[${triage == 'home'}]]></bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="f_xor_present_to_c_false" sourceRef="xor_module_b_present" targetRef="ask_module_c_direct">
-      <bpmn:conditionExpression xsi:type="tFormalExpression">false</bpmn:conditionExpression>
+    <bpmn:sequenceFlow id="toClinic" sourceRef="RouteGateway" targetRef="EndClinic" name="triage == 'clinic'">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"><![CDATA[${triage == 'clinic'}]]></bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="f_collect_to_ask_c" sourceRef="collect_module_b_details" targetRef="ask_module_c_after_collect"/>
-    <bpmn:sequenceFlow id="f_c_after_collect_to_followups_b" sourceRef="ask_module_c_after_collect" targetRef="ask_module_b_followups"/>
-    <bpmn:sequenceFlow id="f_c_direct_to_followups_b" sourceRef="ask_module_c_direct" targetRef="ask_module_b_followups"/>
-    <bpmn:sequenceFlow id="f_followups_b_to_e" sourceRef="ask_module_b_followups" targetRef="ask_module_e"/>
-    <bpmn:sequenceFlow id="f_e_to_eval" sourceRef="ask_module_e" targetRef="evaluate_decisions"/>
-    <bpmn:sequenceFlow id="f_eval_to_main_xor" sourceRef="evaluate_decisions" targetRef="xor_main_triage"/>
-    <bpmn:sequenceFlow id="f_main_to_hospital" sourceRef="xor_main_triage" targetRef="end_hospital">
-      <bpmn:conditionExpression xsi:type="tFormalExpression">danger_sign == true</bpmn:conditionExpression>
+    <bpmn:sequenceFlow id="toHospital" sourceRef="RouteGateway" targetRef="EndHospital" name="triage == 'hospital'">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"><![CDATA[${triage == 'hospital'}]]></bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="f_main_to_clinic" sourceRef="xor_main_triage" targetRef="end_clinic">
-      <bpmn:conditionExpression xsi:type="tFormalExpression">clinic_referral == true</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="f_main_to_home" sourceRef="xor_main_triage" targetRef="end_home"/>
   </bpmn:process>
 </bpmn:definitions>

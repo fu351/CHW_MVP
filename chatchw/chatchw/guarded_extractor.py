@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import collections
+import csv
 import json
 import os
 import re
 import time
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -137,7 +139,7 @@ def _loose_to_json(s: str) -> Any:
     # remove trailing commas
     s = re.sub(r",\s*(\]|\})", r"\1", s)
     # crop to first obj/array
-    for opener, closer in [('{', '}'), ('[', ']')]:
+    for opener, closer in [("{", "}"), ("[", "]")]:
         a, b = s.find(opener), s.rfind(closer)
         if a != -1 and b != -1 and b > a:
             cand = s[a : b + 1]
@@ -223,13 +225,15 @@ def _normalize_rule_schema(rule: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     triage = None
     for k in _CANON_TRIAGE_KEYS:
         if th.get(k) is not None:
-            triage = th[k]; break
+            triage = th[k]
+            break
     if triage is not None:
         th["triage"] = triage
     flags = None
     for k in _CANON_FLAG_KEYS:
         if th.get(k) is not None:
-            flags = th[k]; break
+            flags = th[k]
+            break
     th["flags"] = list(flags or [])
     th.setdefault("reasons", [])
     th.setdefault("actions", [])
@@ -240,15 +244,20 @@ def _normalize_rule_schema(rule: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     when = r.get("when")
     if not isinstance(when, list) or len(when) == 0:
         return None
+
     def _has_bad_sym(c: Dict[str, Any]) -> bool:
         return "sym" in c and str(c.get("sym")).strip().lower() in _DERIVED_BLOCKLIST
+
     for cond in when:
-        if not isinstance(cond, dict): return None
-        if _has_bad_sym(cond): return None
+        if not isinstance(cond, dict):
+            return None
+        if _has_bad_sym(cond):
+            return None
         if "all_of" in cond or "any_of" in cond:
             seq = cond.get("all_of") or cond.get("any_of") or []
             for sub in seq:
-                if _has_bad_sym(sub): return None
+                if _has_bad_sym(sub):
+                    return None
     return r
 
 def _dedupe_rule_ids(rules: List[Dict[str, Any]], prefix: str = "r") -> List[Dict[str, Any]]:
@@ -271,7 +280,7 @@ def _dedupe_rule_ids(rules: List[Dict[str, Any]], prefix: str = "r") -> List[Dic
 
 def _build_canonical_map(config: Dict[str, Any], variables: List[Dict[str, Any]]) -> Dict[str, str]:
     canon_set = set(config.get("canonical_variables", []))
-    by_name = { (v.get("name") or "").strip().lower(): v for v in variables if isinstance(v, dict) }
+    by_name = {(v.get("name") or "").strip().lower(): v for v in variables if isinstance(v, dict)}
     idx: Dict[str, str] = {}
     for name, v in by_name.items():
         syns = set([name]) | set((v.get("synonyms") or []))
@@ -282,8 +291,10 @@ def _build_canonical_map(config: Dict[str, Any], variables: List[Dict[str, Any]]
 
 def _rewrite_rule_to_canon(rule: Dict[str, Any], canon: Dict[str, str]) -> Dict[str, Any]:
     r = dict(rule)
+
     def map_var(x: str) -> str:
         return canon.get(str(x).strip().lower(), str(x).strip().lower())
+
     new_when = []
     for c in r.get("when", []):
         c = dict(c)
@@ -296,8 +307,10 @@ def _rewrite_rule_to_canon(rule: Dict[str, Any], canon: Dict[str, str]) -> Dict[
             seq = []
             for s in c.get(k) or []:
                 s = dict(s)
-                if "sym" in s: s["sym"] = map_var(s["sym"])
-                if "obs" in s: s["obs"] = map_var(s["obs"])
+                if "sym" in s:
+                    s["sym"] = map_var(s["sym"])
+                if "obs" in s:
+                    s["obs"] = map_var(s["obs"])
                 seq.append(s)
             c[k] = seq
         new_when.append(c)
@@ -306,12 +319,14 @@ def _rewrite_rule_to_canon(rule: Dict[str, Any], canon: Dict[str, str]) -> Dict[
 
 def _flatten_rule_conditions(rule: Dict[str, Any]) -> List[str]:
     out = []
+
     def one(c):
         if "sym" in c:
             return f"{c['sym']}=={str(c.get('eq')).lower()}"
         if "obs" in c:
             return f"{c['obs']} {c['op']} {json.dumps(c['value'])}"
         return None
+
     for c in rule.get("when", []):
         if "all_of" in c or "any_of" in c:
             k = "all_of" if "all_of" in c else "any_of"
@@ -319,33 +334,39 @@ def _flatten_rule_conditions(rule: Dict[str, Any]) -> List[str]:
             out.append(f"{k}:" + " && ".join(parts))
         else:
             s = one(c)
-            if s: out.append(s)
+            if s:
+                out.append(s)
     return out
 
 def _rules_flattened(ir: Dict[str, Any]) -> List[Dict[str, Any]]:
-    return [{
-        "rule_id": r.get("rule_id"),
-        "triage": (r.get("then") or {}).get("triage"),
-        "conds": _flatten_rule_conditions(r)
-    } for r in ir.get("rules", [])]
+    return [
+        {
+            "rule_id": r.get("rule_id"),
+            "triage": (r.get("then") or {}).get("triage"),
+            "conds": _flatten_rule_conditions(r),
+        }
+        for r in ir.get("rules", [])
+    ]
 
 def _preflight_ir(ir: Dict[str, Any]) -> None:
-    names = [ (v.get("name") or "").strip().lower() for v in ir.get("variables", []) if isinstance(v, dict) ]
+    names = [(v.get("name") or "").strip().lower() for v in ir.get("variables", []) if isinstance(v, dict)]
     dup_var_names = [n for n, cnt in collections.Counter(names).items() if cnt > 1]
     if dup_var_names:
         raise RuntimeError(f"Duplicate variable names after merge: {dup_var_names}")
-    ids = [ (r.get("rule_id") or "").strip().lower() for r in ir.get("rules", []) if isinstance(r, dict) ]
-    dups = [i for i,c in collections.Counter(ids).items() if c>1]
+    ids = [(r.get("rule_id") or "").strip().lower() for r in ir.get("rules", []) if isinstance(r, dict)]
+    dups = [i for i, c in collections.Counter(ids).items() if c > 1]
     if dups:
         raise RuntimeError(f"Duplicate rule_ids after dedupe pass: {dups}")
     empties = [r.get("rule_id") for r in ir.get("rules", []) if not (r.get("when") or [])]
     if empties:
         raise RuntimeError(f"Empty WHEN in rules: {empties}")
 
-def _enforce_ask_ownership(ask_plan: List[Dict[str, Any]], priority_order=("module_a","module_b","module_c","module_d","module_e")):
+def _enforce_ask_ownership(
+    ask_plan: List[Dict[str, Any]], priority_order=("module_a", "module_b", "module_c", "module_d", "module_e")
+):
     owner: Dict[str, str] = {}
-    order = {m:i for i,m in enumerate(priority_order)}
-    for blk in sorted([b for b in ask_plan if isinstance(b, dict)], key=lambda b: order.get(b.get("module","zzz"), 999)):
+    order = {m: i for i, m in enumerate(priority_order)}
+    for blk in sorted([b for b in ask_plan if isinstance(b, dict)], key=lambda b: order.get(b.get("module", "zzz"), 999)):
         module = blk.get("module")
         kept_ask = []
         for q in blk.get("ask", []) or []:
@@ -374,7 +395,8 @@ def _pages_from_ref_string(s: str) -> List[int]:
         return []
     out = []
     for tok in re.findall(r"p(\d{1,4})(?:-(\d{1,4}))?", s, flags=re.IGNORECASE):
-        a = int(tok[0]); b = int(tok[1]) if tok[1] else None
+        a = int(tok[0])
+        b = int(tok[1]) if tok[1] else None
         if b is None:
             out.append(a)
         else:
@@ -415,11 +437,7 @@ def _resolve_variables_snake_and_rewrite_rules(merged: Dict[str, Any]) -> Dict[s
     """
     1) Group variables by snake_case(name) so near-duplicates collide.
     2) Within each group, partition by signature (type/unit/allowed).
-       - Same signature → coalesce (merge synonyms/refs).
-       - Different signatures → keep as distinct variants with suffixes __2, __3...
-    3) Assign final variable names (snake case + optional suffix).
-    4) Rewrite rules to refer to the chosen final names using guideline_ref page overlap.
-    5) Preserve all original spellings in synonyms.
+    3) Assign final names; rewrite rules consistently.
     """
     qa_notes = merged.setdefault("qa", {}).setdefault("notes", [])
     vars_in = [v for v in (merged.get("variables") or []) if isinstance(v, dict) and _norm_name(v.get("name"))]
@@ -430,7 +448,6 @@ def _resolve_variables_snake_and_rewrite_rules(merged: Dict[str, Any]) -> Dict[s
         orig = _norm_name(v.get("name"))
         key = _to_snake(orig)
         vv = dict(v)
-        # keep the original spelling in synonyms so we don't lose semantics
         syns = set(vv.get("synonyms") or [])
         syns.add(orig)
         vv["synonyms"] = sorted(list(syns))
@@ -438,12 +455,10 @@ def _resolve_variables_snake_and_rewrite_rules(merged: Dict[str, Any]) -> Dict[s
         names_seen_per_group.setdefault(key, set()).update({orig.lower(), *[str(s).strip().lower() for s in syns]})
 
     new_vars: List[Dict[str, Any]] = []
-    # map any known name (lower) -> variant list for this group
     name_to_variants: Dict[str, List[Dict[str, Any]]] = {}
     rename_events: Dict[str, List[str]] = {}
 
     for base, gvars in groups.items():
-        # Partition by signature
         sig_bins: Dict[tuple, List[Dict[str, Any]]] = {}
         for v in gvars:
             sig_bins.setdefault(_var_sig(v), []).append(v)
@@ -452,43 +467,38 @@ def _resolve_variables_snake_and_rewrite_rules(merged: Dict[str, Any]) -> Dict[s
         if len(sig_bins) > 1:
             qa_notes.append(f"variable_homonyms_split:{base}:{len(sig_bins)}")
 
-        # Coalesce each bin and assign final names
         idx = 1
         for _sig, same_sig_vars in sig_bins.items():
             merged_v = _coalesce_group(same_sig_vars)
             final_name = base if idx == 1 else f"{base}__{idx}"
             idx += 1
-            # capture rename info: all originals in this bin
-            originals = { _norm_name(x.get("name")) for x in same_sig_vars if _norm_name(x.get("name")) }
+            originals = {_norm_name(x.get("name")) for x in same_sig_vars if _norm_name(x.get("name"))}
             for o in originals:
                 rename_events.setdefault(o, []).append(final_name)
-            # finalize
             merged_v["name"] = final_name
             pages = _pages_from_refs(merged_v.get("refs") or [])
             variants_meta.append({"new_name": final_name, "pages": pages})
             new_vars.append(merged_v)
 
-        # Wire name → variants map (for rule rewriting)
         for n in names_seen_per_group.get(base, set()):
             name_to_variants[n] = variants_meta
 
-    # Heuristic picker
     def pick_variant(seen_name: str, rule_ref: Optional[str]) -> str:
         variants = name_to_variants.get((seen_name or "").strip().lower())
         if not variants:
-            # If we don't know, keep its snake base
             return _to_snake(seen_name)
         if not rule_ref:
             return variants[0]["new_name"]
         r_pages = set(_pages_from_ref_string(rule_ref))
-        best = variants[0]; best_sc = -1
+        best = variants[0]
+        best_sc = -1
         for v in variants:
             sc = len(r_pages & set(v["pages"]))
             if sc > best_sc:
-                best_sc = sc; best = v
+                best_sc = sc
+                best = v
         return best["new_name"]
 
-    # Rewrite rules
     rules_out: List[Dict[str, Any]] = []
     for r in (merged.get("rules") or []):
         rr = dict(r)
@@ -502,7 +512,6 @@ def _resolve_variables_snake_and_rewrite_rules(merged: Dict[str, Any]) -> Dict[s
                 if key in name_to_variants or _to_snake(sym) in groups:
                     c["sym"] = pick_variant(sym, rule_ref)
                 else:
-                    # still snake-case it for consistency
                     c["sym"] = _to_snake(sym)
             elif "obs" in c and c["obs"]:
                 obs = _norm_name(c["obs"])
@@ -536,69 +545,68 @@ def _resolve_variables_snake_and_rewrite_rules(merged: Dict[str, Any]) -> Dict[s
         rr["when"] = new_when
         rules_out.append(rr)
 
-    # QA note for visibility
     if rename_events:
-        # collapse to simple mapping: original -> list of finals
         merged.setdefault("qa", {}).setdefault("notes", []).append(f"snake_case_renamed:{rename_events}")
 
     merged["variables"] = new_vars
     merged["rules"] = rules_out
     return merged
 
-# ---------- Fact sheet helpers (compact input for merging) ----------
+# ---------- Fact sheet helpers ----------
 def _fact_sheet_from_sections(section_objs: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """
-    Build a compact, deduplicated fact sheet:
-      - variables: minimal fields only (name/type/unit/allowed/synonyms/refs)
-      - rules: normalized 'when' + minimal 'then' (triage/flags/reasons/actions/guideline_ref/priority)
-    """
     var_ix: Dict[str, Dict[str, Any]] = {}
     facts_rules: List[Dict[str, Any]] = []
     for sec in (section_objs or []):
         for v in (sec.get("variables") or []):
-            if not isinstance(v, dict): continue
+            if not isinstance(v, dict):
+                continue
             name = (v.get("name") or "").strip()
-            if not name: continue
+            if not name:
+                continue
             key = name.lower()
             cur = var_ix.get(key)
             if cur is None:
-                cur = dict(name=name,
-                           type=v.get("type"),
-                           unit=v.get("unit"),
-                           allowed=v.get("allowed"),
-                           synonyms=list(v.get("synonyms") or []),
-                           refs=list(v.get("refs") or []))
+                cur = dict(
+                    name=name,
+                    type=v.get("type"),
+                    unit=v.get("unit"),
+                    allowed=v.get("allowed"),
+                    synonyms=list(v.get("synonyms") or []),
+                    refs=list(v.get("refs") or []),
+                )
                 var_ix[key] = cur
             else:
-                # merge synonyms/refs
                 cur["synonyms"] = sorted(list(set((cur.get("synonyms") or []) + (v.get("synonyms") or []))))
                 cur["refs"] = sorted(list(set((cur.get("refs") or []) + (v.get("refs") or []))))
         for r in (sec.get("rules") or []):
-            if not isinstance(r, dict): continue
+            if not isinstance(r, dict):
+                continue
             nr = _normalize_rule_schema(r)
-            if not nr: continue
+            if not nr:
+                continue
             th = nr.get("then") or {}
-            facts_rules.append({
-                "rule_id": r.get("rule_id"),
-                "when": nr.get("when") or [],
-                "then": {
-                    "triage": th.get("triage"),
-                    "flags": th.get("flags") or [],
-                    "reasons": th.get("reasons") or [],
-                    "actions": th.get("actions") or [],
-                    "guideline_ref": th.get("guideline_ref"),
-                    "priority": int(th.get("priority") or 0),
-                    "advice": []  # enforce empty
+            facts_rules.append(
+                {
+                    "rule_id": r.get("rule_id"),
+                    "when": nr.get("when") or [],
+                    "then": {
+                        "triage": th.get("triage"),
+                        "flags": th.get("flags") or [],
+                        "reasons": th.get("reasons") or [],
+                        "actions": th.get("actions") or [],
+                        "guideline_ref": th.get("guideline_ref"),
+                        "priority": int(th.get("priority") or 0),
+                        "advice": [],  # enforce empty
+                    },
                 }
-            })
+            )
     return {
         "variables": list(var_ix.values()),
         "rules": _dedupe_rule_ids(facts_rules, prefix="fs"),
-        "qa": {"notes": ["from_fact_sheet_builder"]}
+        "qa": {"notes": ["from_fact_sheet_builder"]},
     }
 
 # ---------------- Text extraction helpers ----------------
-
 def _extract_pypdf_pages(pdf_path: str) -> List[Tuple[int, str]]:
     pages: List[Tuple[int, str]] = []
     with open(pdf_path, "rb") as f:
@@ -618,7 +626,6 @@ def _extract_pdfminer_pages(pdf_path: str) -> List[Tuple[int, str]]:
         from pdfminer.high_level import extract_text  # type: ignore
     except Exception:
         return []
-    # get page count via pypdf (still works even if text empty)
     try:
         with open(pdf_path, "rb") as f:
             reader = pypdf.PdfReader(f)
@@ -626,7 +633,6 @@ def _extract_pdfminer_pages(pdf_path: str) -> List[Tuple[int, str]]:
     except Exception:
         n = 0
     if n <= 0:
-        # last resort: whole doc (will chunk later)
         try:
             full = extract_text(pdf_path) or ""
             if not full.strip():
@@ -640,10 +646,9 @@ def _extract_pdfminer_pages(pdf_path: str) -> List[Tuple[int, str]]:
             txt = extract_text(pdf_path, page_numbers=[i]) or ""
         except Exception:
             txt = ""
-        out.append((i+1, txt.strip()))
+        out.append((i + 1, txt.strip()))
     return out
 
-# OCR extractor (optional)
 def _extract_ocr_pages(pdf_path: str) -> List[Tuple[int, str]]:
     if not _have_ocr:
         return []
@@ -660,13 +665,11 @@ def _extract_ocr_pages(pdf_path: str) -> List[Tuple[int, str]]:
         pages.append((idx, text.strip()))
     return pages
 
-# Smarter normalization and heading-aware splitting
-
 _heading_rx = re.compile(
     r"^(annex|appendix|module|chapter|section|part|lesson|unit|task|topic)\b"
     r"|\b(assessment|treatment|referral|follow\s*up|training)\b"
     r"|^[A-Z][A-Z0-9 ,:/\-]{6,}$",
-    flags=re.IGNORECASE
+    flags=re.IGNORECASE,
 )
 
 def _normalize_whitespace(s: str) -> str:
@@ -686,22 +689,31 @@ def _strip_repeating_headers_footers(pages: List[Tuple[int, str]]) -> List[Tuple
     for _, t in pages:
         lines = [ln.strip() for ln in (t.splitlines() if t else []) if ln.strip()]
         if not lines:
-            tops.append(""); bottoms.append(""); continue
-        tops.append(lines[0]); bottoms.append(lines[-1])
+            tops.append("")
+            bottoms.append("")
+            continue
+        tops.append(lines[0])
+        bottoms.append(lines[-1])
+
     def common(items):
         ctr = collections.Counter(items)
-        if not ctr: return None
+        if not ctr:
+            return None
         item, cnt = ctr.most_common(1)[0]
         return item if cnt >= max(3, int(0.4 * len(items))) and len(item) >= 6 else None
+
     top_c = common(tops)
     bot_c = common(bottoms)
     cleaned: List[Tuple[int, str]] = []
     for i, t in pages:
         if not t:
-            cleaned.append((i, t)); continue
+            cleaned.append((i, t))
+            continue
         lines = t.splitlines()
-        if top_c and lines and lines[0].strip() == top_c: lines = lines[1:]
-        if bot_c and lines and lines[-1].strip() == bot_c: lines = lines[:-1]
+        if top_c and lines and lines[0].strip() == top_c:
+            lines = lines[1:]
+        if bot_c and lines and lines[-1].strip() == bot_c:
+            lines = lines[:-1]
         cleaned.append((i, "\n".join(lines)))
     return cleaned
 
@@ -777,18 +789,85 @@ def _split_into_sections_by_headings(pages: List[Tuple[int, str]], max_chars: in
 
 def _chunk_pages_len_only(pages: List[Tuple[int, str]], max_chars: int = 4000) -> List[Tuple[str, str]]:
     chunks: List[Tuple[str, str]] = []
-    buf = ""; ids: List[int] = []
+    buf = ""
+    ids: List[int] = []
     for i, t in pages:
         if not t:
             continue
         add = f"[PAGE {i}]\n{t}\n"
         if len(buf) + len(add) > max_chars and buf:
             chunks.append((f"p{ids[0]}-{ids[-1]}", buf))
-            buf = ""; ids = []
-        buf += add; ids.append(i)
+            buf = ""
+            ids = []
+        buf += add
+        ids.append(i)
     if buf:
         chunks.append((f"p{ids[0]}-{ids[-1]}", buf))
     return chunks
+
+# ---------------- DMN parsing + CSV/XLS wiring helpers ----------------
+_DMNN = {"dmn": "https://www.omg.org/spec/DMN/20191111/MODEL/"}
+
+def _text_or(el):
+    return (el.text or "").strip() if el is not None and el.text else ""
+
+def _strip_quotes(s: str) -> str:
+    s = (s or "").strip()
+    if (s.startswith('"') and s.endswith('"')) or (s.startswith("'") and s.endswith("'")):
+        return s[1:-1]
+    return s
+
+def _feel_atom_to_xpath(val: str, var_type: str) -> Optional[str]:
+    t = (var_type or "").lower()
+    v = (val or "").strip()
+    if v.lower() in ("-", "otherwise", ""):
+        return None
+    if v.lower() in ("true", "false"):
+        # For user-entered booleans we use select_one yes/no → 'yes'/'no'
+        return "'yes'" if v.lower() == "true" else "'no'"
+    if re.match(r"^-?\d+(\.\d+)?$", v):
+        return v
+    return f"'{_strip_quotes(v)}'"
+
+def _and_join(parts: List[str]) -> str:
+    parts = [p for p in parts if p and p.strip()]
+    if not parts:
+        return "true()"
+    if len(parts) == 1:
+        return parts[0]
+    return f"({') and ('.join(parts)})"
+
+# ---------- NEW: DMN output validator (fail fast on blanks/invalids) ----------
+def _validate_dmn_outputs_or_die(xml: str) -> None:
+    root = ET.fromstring(xml)
+    required = ["triage", "danger_sign", "clinic_referral", "reason", "ref", "advice"]
+    for dec in root.findall(".//dmn:decision", _DMNN):
+        name = (dec.get("name") or dec.get("id") or "decision").strip()
+        table = dec.find(".//dmn:decisionTable", _DMNN)
+        if table is None:
+            raise RuntimeError(f"{name}: missing <dmn:decisionTable>")
+        outs = table.findall("./dmn:output", _DMNN)
+        have = [(o.get("name") or "").strip() for o in outs]
+        missing = [r for r in required if r not in have]
+        if missing:
+            raise RuntimeError(f"{name}: missing required outputs {missing}")
+        rules = table.findall("./dmn:rule", _DMNN)
+        if not rules:
+            raise RuntimeError(f"{name}: has zero rules")
+        for i, r in enumerate(rules, start=1):
+            vals = [_text_or(e.find("./dmn:text", _DMNN)) for e in r.findall("./dmn:outputEntry", _DMNN)]
+            if len(vals) < len(outs):
+                vals += [""] * (len(outs) - len(vals))
+            triage, danger, clinic, reason, ref, advice = (vals + [""] * 6)[:6]
+            if triage.strip().strip('"') not in ("hospital", "clinic", "home"):
+                raise RuntimeError(f"{name}: rule {i} invalid triage: {triage!r}")
+            if danger.strip().lower() not in ("true", "false"):
+                raise RuntimeError(f"{name}: rule {i} danger_sign not boolean: {danger!r}")
+            if clinic.strip().lower() not in ("true", "false"):
+                raise RuntimeError(f"{name}: rule {i} clinic_referral not boolean: {clinic!r}")
+            if not ref.strip():
+                raise RuntimeError(f"{name}: rule {i} ref is empty (need a page/section ref)")
+            # reason can be empty by policy; advice must exist but may be ""
 
 # ---------------- Guarded Extractor ----------------
 class OpenAIGuardedExtractor:
@@ -804,9 +883,11 @@ class OpenAIGuardedExtractor:
         canonical_config_path: Optional[str] = "chatchw/config/canonical_config.json",
     ) -> None:
         key = api_key or os.getenv("OPENAI_API_KEY")
-        if not key:
-            raise ValueError("OPENAI_API_KEY is required")
-        if OpenAI is None:
+        # Allow running with --dmn/--merged only (no API needed)
+        if not key and not os.getenv("SKIP_OPENAI_CHECK"):
+            # We'll only raise if we actually need to hit the API later.
+            pass
+        if OpenAI is None and key:
             raise RuntimeError("openai package not available")
 
         def _norm(m: str, default: str) -> str:
@@ -816,25 +897,37 @@ class OpenAIGuardedExtractor:
                 return default
             return m
 
-        self.client = OpenAI(api_key=key)
+        self.client = OpenAI(api_key=key) if key and OpenAI else None
         self.seed = seed
         self.models = dict(
             section=_norm(model_section, "gpt-5"),
-            merge=_norm(model_merge,  "gpt-5"),
-            dmn=_norm(model_dmn,      "gpt-5"),
-            bpmn=_norm(model_bpmn,    "gpt-5"),
-            audit=_norm(model_audit,  "gpt-5"),
+            merge=_norm(model_merge, "gpt-5"),
+            dmn=_norm(model_dmn, "gpt-5"),
+            bpmn=_norm(model_bpmn, "gpt-5"),
+            audit=_norm(model_audit, "gpt-5"),
         )
 
-        self.debug_dir = Path(".chatchw_debug"); self.debug_dir.mkdir(exist_ok=True)
+        # usage counters
+        self.usage = {"prompt": 0, "completion": 0, "total": 0}
+        self._usage_events: List[Dict[str, int]] = []
 
-        # --- Load neutral canonical config (external, optional) ---
+        self.debug_dir = Path(".chatchw_debug")
+        self.debug_dir.mkdir(exist_ok=True)
+
+        # canonical config
         default_canon_vars = [
-            "symptom1","symptom1_duration_days",
-            "symptom2","symptom2_duration_days",
-            "sign1_present","sign2_present","sign3_present",
-            "measurement1_rate","measurement2_temp_c","measurement3_mm",
-            "age_months","area1_flag"
+            "symptom1",
+            "symptom1_duration_days",
+            "symptom2",
+            "symptom2_duration_days",
+            "sign1_present",
+            "sign2_present",
+            "sign3_present",
+            "measurement1_rate",
+            "measurement2_temp_c",
+            "measurement3_mm",
+            "age_months",
+            "area1_flag",
         ]
         try:
             cfg_path = Path(canonical_config_path)
@@ -853,13 +946,13 @@ class OpenAIGuardedExtractor:
 
         canon = ", ".join(self.config.get("canonical_variables", default_canon_vars))
 
-        # ---------------- PROMPTS (keep examples generic, OUTPUT may use medical terms) ----------------
+        # ---------------- prompts ----------------
         self.section_system = (
             "You extract structured decision rules from a technical manual. Return ONLY JSON.\n\n"
             "IMPORTANT OUTPUT POLICY\n"
-            "- Preserve original clinical/medical terms (symptoms, signs, diseases, measurements, treatments) EXACTLY as written in the source text wherever they appear (variable names, allowed values, reasons, actions, guideline_ref). Do NOT anonymize or replace with placeholders.\n"
-            "- Any examples in this prompt are GENERIC and illustrative of structure only; do NOT copy their wording or their placeholder variable names into the output.\n"
-            "- Do not answer questions, do not add free-text clinical advice, and do not include any prose outside the JSON object.\n\n"
+            "- Preserve original clinical/medical terms EXACTLY as written in the source text wherever they appear.\n"
+            "- Any examples below are generic; do NOT copy their wording.\n"
+            "- No prose outside the JSON object.\n\n"
             "SCHEMA\n{\n  \"variables\":[{\"name\":snake,\"type\":\"number|boolean|string\",\"unit\":null|unit,\"allowed\":null|[...],"
             "                \"synonyms\":[snake...],\"prompt\":short,\"refs\":[page_or_section]}],\n"
             "  \"rules\":[{\"rule_id\":str,\n"
@@ -874,241 +967,137 @@ class OpenAIGuardedExtractor:
             "                    \"guideline_ref\":str,\"priority\":int}}],\n"
             "  \"canonical_map\":{},\n"
             "  \"qa\":{\"notes\":[]}\n}\n\n"
-            f"RULES\n- Use canonical names if present: {canon} (these are EXAMPLES; prefer the source's actual medical terms).\n"
-            "- Do NOT invent thresholds; encode only literal thresholds from the text.\n"
+            f"RULES\n- Use canonical names if present: {canon} (examples; prefer the source's medical terms).\n"
+            "- Do NOT invent thresholds; encode only literal thresholds.\n"
             "- No derived outputs in conditions (ban keys: danger_sign, clinic_referral, triage).\n"
-            "- Severity policy (abstract): explicit critical_sign→triage:\"hospital\"; otherwise prefer clinic over home when uncertain.\n"
-            "- Priority tiers: hospital≥90, clinic 50–89, home<50.\n"
-            "- Every rule gets guideline_ref like \"p41\" or a section id.\n\n"
-            "OUTPUT\nOnly the JSON object for THIS section."
+            "- Every rule gets guideline_ref like \"p41\" or a section id.\n"
+            "OUTPUT: only JSON for THIS section."
         )
 
-        # NOTE: this prompt now expects a compact FACT_SHEET instead of raw sections
         self.merge_system = (
             "Merge this FACT_SHEET (pre-extracted variables and rules) into one comprehensive IR. "
             "Return ONLY JSON with the same schema as step 1 plus:\n"
             "- canonical_map filled for all variables\n- qa.unmapped_vars\n- qa.dedup_dropped\n- qa.overlap_fixed\n"
             "RULES\n"
-            "- Preserve original clinical/medical terms from inputs; do NOT replace with generic placeholders.\n"
-            "- Normalize labels to snake_case where needed, but keep the medical meaning (e.g., \"acute_respiratory_distress\").\n"
-            "- Rewrite all rules to canonical names (prefer existing variable names from inputs; do not invent placeholders).\n"
-            "- Force then.advice to [] (empty).\n"
-            "- If two rules conflict on the same conditions, tighten bounds or split any_of.\n"
+            "- Preserve original clinical terms; do NOT replace with generic placeholders.\n"
+            "- Normalize labels to snake_case where needed; keep medical meaning.\n"
+            "- Rewrite rules to canonical names.\n"
+            "- Force then.advice to [].\n"
             "- Keep every literal threshold.\n"
             "INPUT\nFACT_SHEET:\n<COMPACT VARIABLES + RULES>"
         )
 
-        # NEW: Rules consolidation system prompt (fact sheet → unified RULES)
         self.rules_system = (
-            "You are given a FACT_SHEET extracted from a clinical manual. "
-            "Consolidate overlapping or duplicate facts into an organized list of RULES. "
-            "Return ONLY JSON with:\n"
-            "{ \"rules\": [ {\"rule_id\": str,\n"
-            "               \"when\": [ {\"obs\": var, \"op\":\"lt|le|gt|ge|eq|ne\", \"value\": num|bool|string} |\n"
-            "                         {\"sym\": var, \"eq\": true|false} |\n"
-            "                         {\"all_of\":[COND...] } | {\"any_of\":[COND...]} ],\n"
-            "               \"then\": {\"triage\":\"hospital|clinic|home\",\n"
-            "                         \"flags\":[snake...],\n"
-            "                         \"reasons\":[snake...],\n"
-            "                         \"actions\":[{\"id\":snake,\"if_available\":bool}],\n"
-            "                         \"advice\":[],\n"
-            "                         \"guideline_ref\": str, \"priority\": int } } ] }\n\n"
-            "HARD RULES\n"
-            "1) Preserve the manual’s clinical terms exactly. Do not invent placeholders.\n"
-            "2) Resolve overlaps: merge duplicate conditions, split any_of when needed, keep literal thresholds.\n"
-            "3) Ban derived fields in conditions: danger_sign, clinic_referral, triage.\n"
-            "4) advice must be [].\n"
-            "5) Every rule must have guideline_ref like \"p41\" or a section id.\n\n"
-            "INPUT\nFACT_SHEET:\n<variables + per-section rules>"
+            "Given a FACT_SHEET (variables + rules), consolidate overlaps into RULES.\n"
+            "Return ONLY JSON: { \"rules\": [ {\"rule_id\": str, \"when\": [...], \"then\": {\"triage\": \"hospital|clinic|home\","
+            " \"flags\":[], \"reasons\":[], \"actions\":[{\"id\":snake,\"if_available\":bool}], \"advice\":[], \"guideline_ref\": str, \"priority\": int } } ] }\n"
+            "HARD RULES: preserve terms; resolve overlaps; ban derived fields in conditions; advice must be []; each rule has guideline_ref.\n"
         )
 
+        # ---------- FIXED: stricter DMN prompt to ensure all outputs are populated ----------
         self.dmn_system = (
             "Convert RULES_JSON into modular DMN 1.4 using the DMN 1.4 MODEL namespace (2019-11-11). Return exactly TWO fenced blocks:\n"
             "1) ```xml <dmn:definitions>…```  2) ```json ASK_PLAN```\n\n"
             "HARD CONSTRAINTS\n"
-            "- Use the variable names EXACTLY as they appear in RULES_JSON (they may be medical terms). Do not invent placeholders.\n"
-            "- Any examples shown here are GENERIC and illustrative only; your output MUST use the actual variable names from RULES_JSON.\n"
+            "- Use the variable names EXACTLY as they appear in RULES_JSON.\n"
             "- Advice must be an empty array in IR, empty string cells in DMN.\n"
-            "- Use ONLY variables present in RULES_JSON.\n"
-            "- Severity policy (abstract): critical_sign→hospital; prolonged_or_threshold_only→clinic; ambiguous→prefer clinic over home.\n\n"
-            "DMN REQUIREMENTS\n"
-            "- Root tag MUST be <dmn:definitions xmlns:dmn=\"https://www.omg.org/spec/DMN/20191111/MODEL/\">.\n"
             "- Decisions: decide_module_a, decide_module_b, decide_module_c, decide_module_d, decide_module_e, aggregate_final\n"
             "- Each module uses <dmn:decisionTable hitPolicy=\"FIRST\"> with outputs: triage:string, danger_sign:boolean, clinic_referral:boolean, reason:string, ref:string, advice:string\n"
-            "- Ensure <dmn:inputData> exists for every variable present in RULES_JSON.\n"
-            "- Advice column MUST be \"\" in outputEntry cells.\n"
-            "- aggregate_final MUST use module boolean outputs directly (no string parsing):\n"
-            "  Inputs: decide_module_b.danger_sign, decide_module_c.clinic_referral, decide_module_d.clinic_referral, decide_module_e.clinic_referral\n"
-            "  Rows (FIRST):\n"
-            "    1) decide_module_b.danger_sign = true → hospital (danger_sign=true, clinic_referral=true)\n"
-            "    2) else if any clinic_referral = true → clinic (danger_sign=false, clinic_referral=true)\n"
-            "    3) else → home (danger_sign=false, clinic_referral=false)\n\n"
-            "ASK_PLAN (example is GENERIC; your output MUST reference the real variables from RULES_JSON):\n"
-            "[\n"
-            "  {\"module\":\"module_a\",\"ask\":[\"sign1_present\",\"sign2_present\",\"sign3_present\"]},\n"
-            "  {\"module\":\"module_b\",\"ask\":[\"symptom1\"],\"followups_if\":{\"symptom1==true\":[\"measurement1_rate\",\"symptom1_duration_days\",\"age_months\"]}},\n"
-            "  {\"module\":\"module_c\",\"ask\":[\"symptom2\"],\"followups_if\":{\"symptom2==true\":[\"symptom2_duration_days\"]}},\n"
-            "  {\"module\":\"module_d\",\"ask\":[\"measurement2_temp_c\"],\"followups_if\":{}},\n"
-            "  {\"module\":\"module_e\",\"ask\":[\"measurement3_mm\",\"area1_flag\"]}\n"
-            "]\n"
+            "- aggregate_final must use boolean outputs directly (no string parsing).\n"
+            "- Populate EVERY <dmn:outputEntry><dmn:text> with a literal value (no blanks):\n"
+            "  • triage: \"hospital\" | \"clinic\" | \"home\"\n"
+            "  • danger_sign: true | false\n"
+            "  • clinic_referral: true | false\n"
+            "  • reason: snake_case string (e.g., severe_dehydration)\n"
+            "  • ref: \"pNN\" or a section id string\n"
+            "  • advice: \"\" (empty string)\n"
+            "- Do not leave any output cells blank.\n"
+            "- Provide an ASK_PLAN array describing input collection order and followups.\n"
         )
 
         self.bpmn_system = (
-            "Produce one BPMN 2.0 <bpmn:definitions> only. Use xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" and xmlns:xsi.\n"
-            "Process id=\"chatchw_flow\" isExecutable=\"false\"\n"
-            "Start → userTask \"Ask module_b\" → XOR \"module_b present?\"\n true → userTask \"Collect module_b details\" → userTask \"Ask module_c\"\n false → userTask \"Ask module_c\"\n→ userTask \"Ask module_b followups\" → userTask \"Ask module_e\"\n→ businessRuleTask \"Evaluate decisions\" decisionRef=\"aggregate_final\"\n→ XOR \"Main triage\"\n"
-            "  flow to \"Hospital\" with <conditionExpression xsi:type=\"tFormalExpression\">danger_sign == true</conditionExpression>\n"
-            "  flow to \"Clinic\" with <conditionExpression xsi:type=\"tFormalExpression\">clinic_referral == true</conditionExpression>\n"
-            "  default flow to \"Home\"\n"
-            "Use variable names exactly as in RULES_JSON/DMN (these may be medical terms). Valid namespaces. No extra prose.\n"
+            "Produce one BPMN 2.0 <bpmn:definitions> only. Use xmlns:bpmn and xmlns:xsi. Build a simple ask -> evaluate -> route flow.\n"
         )
 
         self.coverage_system = (
             "Given RULES_JSON and the DMN XML, return ONLY JSON:\n"
             "{\"unmapped_rule_ids\":[...], \"module_counts\":{...}, \"notes\":[...]}\n"
             "Use RULES_JSON.ir_flat.conds to match DMN inputEntry texts literally when possible.\n"
-            "A rule is mapped if its literal conditions appear as inputEntry cells in some module row with the same triage tier.\n"
-            "Ignore text fields like reason/advice; match on conditions and triage only.\n"
-            "INPUT\nRULES_JSON: <merged IR + ir_flat>\nDMN: <xml>"
+            "Match on conditions and triage only.\n"
         )
 
-    # ---------------- PDF sectioning with multi-strategy fallbacks -----------------
-    def extract_sections_from_pdf(self, pdf_path: str, max_chars: int = 4000) -> List[Tuple[str, str]]:
-        """
-        Return a list of (section_id, text) with page markers retained.
-        Strategy:
-          1) pypdf extraction
-          2) pdfminer layout-aware per-page (if available)
-          3) pdfminer basic per-page
-          4) OCR (pytesseract + pdf2image) per-page (if available)
-        """
-        logp = self.debug_dir / "sectioning.log"
-
-        # 1) pypdf
-        pages = _extract_pypdf_pages(pdf_path)
-        pages = _postprocess_page_text(pages)
-        nonempty = sum(1 for _, t in pages if (t or "").strip())
-        if nonempty > 0:
-            chunks = _split_into_sections_by_headings(pages, max_chars=max_chars)
-            if not chunks:
-                chunks = _chunk_pages_len_only(pages, max_chars=max_chars)
-            try: logp.write_text("Used pypdf extraction\n", encoding="utf-8")
-            except Exception: pass
-            return chunks
-
-        # 2) pdfminer layout-aware
-        if _have_pdfminer:
-            pm_layout = _extract_pdfminer_layout_pages(pdf_path)
-            pm_layout = _postprocess_page_text(pm_layout)
-            if sum(1 for _, t in pm_layout if (t or "").strip()) > 0:
-                chunks = _split_into_sections_by_headings(pm_layout, max_chars=max_chars)
-                if not chunks:
-                    chunks = _chunk_pages_len_only(pm_layout, max_chars=max_chars)
-                try: logp.write_text("Used pdfminer layout extraction\n", encoding="utf-8")
-                except Exception: pass
-                return chunks
-
-        # 3) pdfminer basic
-        if _have_pdfminer:
-            pm_pages = _extract_pdfminer_pages(pdf_path)
-            pm_pages = _postprocess_page_text(pm_pages)
-            if sum(1 for _, t in pm_pages if (t or "").strip()) > 0:
-                chunks = _split_into_sections_by_headings(pm_pages, max_chars=max_chars)
-                if not chunks:
-                    chunks = _chunk_pages_len_only(pm_pages, max_chars=max_chars)
-                try: logp.write_text("Used pdfminer basic extraction\n", encoding="utf-8")
-                except Exception: pass
-                return chunks
-
-        # 4) OCR
-        if _have_ocr:
-            ocr_pages = _extract_ocr_pages(pdf_path)
-            ocr_pages = _postprocess_page_text(ocr_pages)
-            if sum(1 for _, t in ocr_pages if (t or "").strip()) > 0:
-                chunks = _split_into_sections_by_headings(ocr_pages, max_chars=max_chars)
-                if not chunks:
-                    chunks = _chunk_pages_len_only(ocr_pages, max_chars=max_chars)
-                try: logp.write_text("Used OCR extraction (pytesseract + pdf2image)\n", encoding="utf-8")
-                except Exception: pass
-                return chunks
-
-        # Nothing worked
+    # ---------------- OpenAI helpers -----------------
+    def _accumulate_usage(self, resp) -> None:
         try:
-            logp.write_text("No text extracted by any strategy\n", encoding="utf-8")
+            u = getattr(resp, "usage", None)
+            if not u and isinstance(resp, dict):
+                u = resp.get("usage")
+            if not u:
+                return
+            p = int(getattr(u, "prompt_tokens", 0) or (u.get("prompt_tokens") if isinstance(u, dict) else 0) or 0)
+            c = int(getattr(u, "completion_tokens", 0) or (u.get("completion_tokens") if isinstance(u, dict) else 0) or 0)
+            t = int(getattr(u, "total_tokens", 0) or (u.get("total_tokens") if isinstance(u, dict) else (p + c)))
+            self.usage["prompt"] += p
+            self.usage["completion"] += c
+            self.usage["total"] += t
+            self._usage_events.append({"prompt": p, "completion": c, "total": t})
         except Exception:
             pass
-        return []
 
-    # ---------------- OpenAI helpers (GPT-5 safe) -----------------
+    def get_usage_summary(self) -> Dict[str, int]:
+        return dict(self.usage)
+
     def _complete(self, model_name: str, messages: list, max_out: int):
-        # Build a base payload that is compatible with both GPT-5 and older models.
+        if not self.client:
+            raise RuntimeError("OpenAI client not initialized (no API key).")
         base = dict(model=model_name, messages=messages)
-
-        # For GPT-5 models: do NOT force temperature/top_p (some 5-series reject overrides).
-        # For older models: we keep deterministic knobs.
         is_gpt5 = isinstance(model_name, str) and model_name.startswith("gpt-5")
         if not is_gpt5:
             base.update(dict(temperature=0.0, top_p=1))
-
-        # Try GPT-5 token param first; gracefully fall back to legacy.
         extras = {}
         if is_gpt5:
             extras = {"reasoning_effort": "minimal", "verbosity": "low"}
-        # Include seed only initially; if rejected, we drop it in fallbacks.
-        base_seed = dict(base); base_seed["seed"] = getattr(self, "seed", None)
-
-        # Try: gpt-5 style with max_completion_tokens
+        base_seed = dict(base)
+        base_seed["seed"] = getattr(self, "seed", None)
         try:
-            return self.client.chat.completions.create(
-                max_completion_tokens=max_out,
-                **base_seed, **extras
-            )
+            resp = self.client.chat.completions.create(max_completion_tokens=max_out, **base_seed, **extras)
+            self._accumulate_usage(resp)
+            return resp
         except Exception as e1:
             msg1 = str(e1).lower()
-
-            # Retry: remove optional extras if they are not supported
             if "verbosity" in msg1 or "reasoning" in msg1 or "unsupported parameter" in msg1:
                 try:
-                    return self.client.chat.completions.create(
-                        max_completion_tokens=max_out,
-                        **base_seed
-                    )
+                    resp = self.client.chat.completions.create(max_completion_tokens=max_out, **base_seed)
+                    self._accumulate_usage(resp)
+                    return resp
                 except Exception as e2:
                     msg2 = str(e2).lower()
-                    # Fallback to legacy max_tokens if max_completion_tokens unsupported
                     if "max_completion_tokens" in msg2 or "unsupported parameter" in msg2:
                         try:
-                            return self.client.chat.completions.create(
-                                max_tokens=max_out,
-                                **base_seed
-                            )
+                            resp = self.client.chat.completions.create(max_tokens=max_out, **base_seed)
+                            self._accumulate_usage(resp)
+                            return resp
                         except Exception as e3:
                             msg3 = str(e3).lower()
-                            # Last attempt: drop seed if it's rejected
                             if "seed" in msg3 or "unsupported parameter" in msg3:
                                 base_noseed = dict(base)
-                                return self.client.chat.completions.create(
-                                    max_tokens=max_out,
-                                    **base_noseed
-                                )
+                                resp = self.client.chat.completions.create(max_tokens=max_out, **base_noseed)
+                                self._accumulate_usage(resp)
+                                return resp
                             raise
                     raise
-
-            # If the first error complained about max_completion_tokens directly, try legacy
             if "max_completion_tokens" in msg1:
                 try:
-                    return self.client.chat.completions.create(
-                        max_tokens=max_out,
-                        **base_seed, **extras
-                    )
+                    resp = self.client.chat.completions.create(max_tokens=max_out, **base_seed, **extras)
+                    self._accumulate_usage(resp)
+                    return resp
                 except Exception as e4:
                     msg4 = str(e4).lower()
                     if "seed" in msg4 or "unsupported parameter" in msg4:
                         base_noseed = dict(base)
-                        return self.client.chat.completions.create(
-                            max_tokens=max_out,
-                            **base_noseed, **extras
-                        )
+                        resp = self.client.chat.completions.create(max_tokens=max_out, **base_noseed, **extras)
+                        self._accumulate_usage(resp)
+                        return resp
                     raise
             raise
 
@@ -1123,7 +1112,6 @@ class OpenAIGuardedExtractor:
         try:
             return _call_json_with_retries(_call, schema_model=schema_model, retries=3)
         except Exception as e:
-            # truncate huge debug blobs so we can actually read failures
             dbg_user = user
             max_head = 12000
             max_tail = 4000
@@ -1148,37 +1136,27 @@ class OpenAIGuardedExtractor:
             user = f"SECTION_ID: {sec_id}\n\nTEXT:\n{text}"
             try:
                 obj = self._chat_json(
-                    self.section_system, user,
-                    max_out=6000, model_key="section",
-                    schema_model=IR if PydanticAvailable else None
+                    self.section_system, user, max_out=6000, model_key="section", schema_model=IR if PydanticAvailable else None
                 )
             except Exception:
                 continue
             cleaned = []
             for r in obj.get("rules", []) or []:
                 nr = _normalize_rule_schema(r)
-                if nr: cleaned.append(nr)
-                else: obj.setdefault("qa", {}).setdefault("notes", []).append(f"dropped_rule:{r.get('rule_id')}")
+                if nr:
+                    cleaned.append(nr)
+                else:
+                    obj.setdefault("qa", {}).setdefault("notes", []).append(f"dropped_rule:{r.get('rule_id')}")
             obj["rules"] = _dedupe_rule_ids(cleaned, prefix=f"{sec_id}")
             results.append(obj)
         return results
 
-    # ---------------- NEW: Step 2a — build unified RULES from FACT_SHEET -----------------
+    # ---------------- Step 2a: consolidate rules from compact fact sheet -----------------
     def generate_rules_from_fact_sheet(self, fact_sheet: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """
-        Ask GPT to consolidate overlaps and produce a single RULES list from the compact FACT_SHEET.
-        Normalizes with _normalize_rule_schema and de-dupes ids. Falls back to FACT_SHEET rules if model fails.
-        """
         payload = json.dumps(fact_sheet, ensure_ascii=False)
         user = f"FACT_SHEET\n{payload}"
-
         try:
-            obj = self._chat_json(
-                self.rules_system, user,
-                max_out=8000,
-                model_key="merge",  # reuse merge allocation
-                schema_model=None
-            )
+            obj = self._chat_json(self.rules_system, user, max_out=8000, model_key="merge", schema_model=None)
             rules = obj.get("rules") if isinstance(obj, dict) else obj
             if not isinstance(rules, list):
                 raise ValueError("rules consolidation returned unexpected shape")
@@ -1189,7 +1167,6 @@ class OpenAIGuardedExtractor:
                     cleaned.append(nr)
             rules_out = _dedupe_rule_ids(cleaned, prefix="rl")
         except Exception as e:
-            # Safe fallback so pipeline still runs
             rules_out = []
             for r in (fact_sheet.get("rules") or []):
                 nr = _normalize_rule_schema(r)
@@ -1200,60 +1177,48 @@ class OpenAIGuardedExtractor:
                 self.debug_dir.joinpath("rules_from_facts_error.txt").write_text(str(e), encoding="utf-8")
             except Exception:
                 pass
-
-        # Persist for inspection
         try:
             self.debug_dir.joinpath("rules_from_facts.json").write_text(
                 json.dumps({"rules": rules_out}, indent=2, ensure_ascii=False), encoding="utf-8"
             )
         except Exception:
             pass
-
         return rules_out
 
-    # ---------------- Step 2: merge (now drives off FACT_SHEET) -----------------
+    # ---------------- Step 2: merge -----------------
     def merge_sections(self, section_objs: List[Dict[str, Any]]) -> Dict[str, Any]:
-        # 0) Build compact fact sheet and save for debug
         fact_sheet = _fact_sheet_from_sections(section_objs)
         try:
-            self.debug_dir.joinpath("fact_sheet.json").write_text(
-                json.dumps(fact_sheet, indent=2, ensure_ascii=False), encoding="utf-8"
-            )
+            self.debug_dir.joinpath("fact_sheet.json").write_text(json.dumps(fact_sheet, indent=2, ensure_ascii=False), encoding="utf-8")
         except Exception:
             pass
 
-        # 1) NEW: Ask GPT to consolidate facts into a canonical RULES list
         consolidated_rules = self.generate_rules_from_fact_sheet(fact_sheet)
 
-        # 2) Merge variables/QA with model (or fallback), but force rules to the consolidated list
         payload = json.dumps(fact_sheet, ensure_ascii=False)
         user = f"FACT_SHEET\n{payload}"
 
         if STRICT_MERGE:
-            merged = self._chat_json(
-                self.merge_system, user,
-                max_out=8000,  # allow a bit more room here
-                model_key="merge",
-                schema_model=IR if PydanticAvailable else None
-            )
-            # Overwrite rules with the consolidated ones from fact sheet
+            merged = self._chat_json(self.merge_system, user, max_out=8000, model_key="merge", schema_model=IR if PydanticAvailable else None)
             merged["rules"] = consolidated_rules
-            # If model didn't emit variables, take from fact sheet
             if not merged.get("variables"):
                 merged["variables"] = fact_sheet.get("variables", [])
         else:
-            # Deterministic local fallback using the compact fact sheet
             variables: Dict[str, Dict[str, Any]] = {}
             qa_notes: List[str] = ["fallback_merge_used", "source=fact_sheet"]
             for v in (fact_sheet.get("variables") or []):
-                if not isinstance(v, dict): continue
+                if not isinstance(v, dict):
+                    continue
                 name = str(v.get("name", "")).strip()
-                if not name: continue
+                if not name:
+                    continue
                 cur = variables.get(name.lower())
                 if cur is None:
                     vv = dict(v)
-                    if not isinstance(vv.get("synonyms"), list): vv["synonyms"] = []
-                    if not isinstance(vv.get("refs"), list): vv["refs"] = []
+                    if not isinstance(vv.get("synonyms"), list):
+                        vv["synonyms"] = []
+                    if not isinstance(vv.get("refs"), list):
+                        vv["refs"] = []
                     variables[name.lower()] = vv
                 else:
                     syn = set(cur.get("synonyms") or []) | set(v.get("synonyms") or [])
@@ -1267,16 +1232,13 @@ class OpenAIGuardedExtractor:
                 "qa": {"notes": qa_notes, "unmapped_vars": [], "dedup_dropped": 0, "overlap_fixed": []},
             }
 
-        # ---- Resolve duplicates & snake-case consistently, then rewrite rules ----
         merged = _resolve_variables_snake_and_rewrite_rules(merged)
 
-        # Canonical map + rewrite to canonical names (still keeps medical wording)
         canon = _build_canonical_map(self.config, merged.get("variables", []))
         merged["canonical_map"] = canon
         merged["rules"] = [_rewrite_rule_to_canon(r, canon) for r in (merged.get("rules") or [])]
         merged["rules"] = _dedupe_rule_ids(merged["rules"], prefix="merged")
 
-        # Validate
         if PydanticAvailable:
             merged = IR.model_validate(merged).model_dump()
         _preflight_ir(merged)
@@ -1305,7 +1267,8 @@ class OpenAIGuardedExtractor:
         for _lang, body in blocks:
             b = body.strip()
             if dmn_xml is None and "<dmn:definitions" in b and "</dmn:definitions>" in b:
-                dmn_xml = b; continue
+                dmn_xml = b
+                continue
             if ask_plan is None:
                 parsed = _parse_json_loose(b)
                 if isinstance(parsed, (list, dict)):
@@ -1313,7 +1276,8 @@ class OpenAIGuardedExtractor:
 
         if dmn_xml is None:
             s = text
-            start = s.find("<dmn:definitions"); end = s.find("</dmn:definitions>")
+            start = s.find("<dmn:definitions")
+            end = s.find("</dmn:definitions>")
             if start != -1 and end != -1 and end > start:
                 end += len("</dmn:definitions>")
                 dmn_xml = s[start:end].strip()
@@ -1325,16 +1289,24 @@ class OpenAIGuardedExtractor:
 
         def _sanitize_dmn(xml: str) -> str:
             s = xml
-            # Ensure closing tags on entries
             s = re.sub(r"(<dmn:outputEntry>\s*<dmn:text>)([^<]*?)(</dmn:outputEntry>)", r"\1\2</dmn:text>\3", s, flags=re.DOTALL)
-            s = s.replace("<dmn:outputEntry><dmn:text></dmn:text></dmn:outputEntry>", "<dmn:outputEntry><dmn:text>\"\"</dmn:text></dmn:outputEntry>")
-            s = s.replace("<dmn:outputEntry><dmn:text></dmn:outputEntry>", "<dmn:outputEntry><dmn:text>\"\"</dmn:text></dmn:outputEntry>")
+            s = s.replace(
+                "<dmn:outputEntry><dmn:text></dmn:text></dmn:outputEntry>",
+                '<dmn:outputEntry><dmn:text>""</dmn:text></dmn:outputEntry>',
+            )
+            s = s.replace(
+                "<dmn:outputEntry><dmn:text></dmn:outputEntry>",
+                '<dmn:outputEntry><dmn:text>""</dmn:text></dmn:outputEntry>',
+            )
             s = re.sub(r"(<dmn:inputEntry>\s*<dmn:text>)([^<]*?)(</dmn:inputEntry>)", r"\1\2</dmn:text>\3", s, flags=re.DOTALL)
-            s = s.replace("<dmn:inputEntry><dmn:text></dmn:text></dmn:inputEntry>", "<dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>")
-            s = s.replace("<dmn:inputEntry><dmn:text></dmn:inputEntry>", "<dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>")
-            # Convert non-FEEL 'otherwise' to wildcard '-'
-            s = re.sub(r'(<dmn:inputEntry>\s*<dmn:text>)\s*otherwise\s*(</dmn:text>\s*</dmn:inputEntry>)', r'\1-\2', s, flags=re.IGNORECASE)
-            # Namespace
+            s = s.replace(
+                "<dmn:inputEntry><dmn:text></dmn:text></dmn:inputEntry>",
+                "<dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>",
+            )
+            s = s.replace(
+                "<dmn:inputEntry><dmn:text></dmn:inputEntry>",
+                "<dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>",
+            )
             if 'xmlns:dmn="' not in s:
                 s = s.replace("<dmn:definitions", '<dmn:definitions xmlns:dmn="https://www.omg.org/spec/DMN/20191111/MODEL/"', 1)
             return s
@@ -1349,26 +1321,30 @@ class OpenAIGuardedExtractor:
                 pass
             raise RuntimeError("Failed to get DMN and ASK_PLAN from model")
 
-        # Normalize ask_plan to a list of blocks; drop unknown variables safely
+        # ---------- NEW: validate DMN completeness before proceeding ----------
+        _validate_dmn_outputs_or_die(dmn_xml)
+
         try:
             known_vars = {v["name"] for v in merged_ir.get("variables", []) if isinstance(v, dict) and v.get("name")}
             mutated: List[Dict[str, Any]] = []
             unknowns = set()
-            # Accept either a list or an object with ASK_PLAN
             if isinstance(ask_plan, dict) and "ASK_PLAN" in ask_plan:
                 ask_plan = ask_plan.get("ASK_PLAN") or []
             if isinstance(ask_plan, list):
                 for blk in ask_plan:
-                    if not isinstance(blk, dict): continue
+                    if not isinstance(blk, dict):
+                        continue
                     ask = [q for q in (blk.get("ask") or []) if q in known_vars]
                     fuw: Dict[str, List[str]] = {}
                     for cond, qs in (blk.get("followups_if", {}) or {}).items():
                         kept = [q for q in (qs or []) if q in known_vars]
                         fuw[cond] = kept
                         for q in (qs or []):
-                            if q not in known_vars: unknowns.add(q)
+                            if q not in known_vars:
+                                unknowns.add(q)
                     for q in (blk.get("ask") or []):
-                        if q not in known_vars: unknowns.add(q)
+                        if q not in known_vars:
+                            unknowns.add(q)
                     mutated.append({"module": blk.get("module"), "ask": ask, "followups_if": fuw})
                 ask_plan = mutated
             if unknowns:
@@ -1383,26 +1359,18 @@ class OpenAIGuardedExtractor:
     def generate_bpmn(self, dmn_xml: str, ask_plan: Any) -> str:
         user = "DMN:\n```xml\n" + dmn_xml + "\n```\n\n" + "ASK_PLAN:\n" + json.dumps(ask_plan, ensure_ascii=False)
         text = self._chat_text(self.bpmn_system, user, max_out=12000, model_key="bpmn")
-
-        # 1) Preferred: fenced block containing <bpmn:definitions>…</bpmn:definitions>
         blocks = _extract_fenced_blocks(text)
         for _lang, body in blocks:
             if "<bpmn:definitions" in body:
                 return _sanitize_bpmn(body)
-
-        # 2) Raw scrape: namespaced tag
         xml = _extract_xml_tag(text, "bpmn:definitions")
         if xml:
             return _sanitize_bpmn(xml)
-
-        # 3) Raw scrape: non-namespaced <definitions>…</definitions> → normalize to bpmn:
         xml = _extract_xml_tag(text, "definitions")
         if xml:
             xml = re.sub(r"<\s*definitions\b", "<bpmn:definitions", xml, count=1)
             xml = re.sub(r"</\s*definitions\s*>", "</bpmn:definitions>", xml, count=1)
             return _sanitize_bpmn(xml)
-
-        # 4) Debug-friendly dump (truncated if huge), then fail
         try:
             dbg = text
             if len(dbg) > 24000:
@@ -1417,3 +1385,577 @@ class OpenAIGuardedExtractor:
         payload = {"ir": merged_ir, "ir_flat": _rules_flattened(merged_ir)}
         user = "RULES_JSON:\n" + json.dumps(payload, ensure_ascii=False) + "\nDMN:\n```xml\n" + dmn_xml + "\n```"
         return self._chat_json(self.coverage_system, user, max_out=6000, model_key="audit", schema_model=None)
+
+    # ---------------- Step 6: DMN/ASK_PLAN → XLSX (XLSForm) -----------------
+    def export_xlsx_from_dmn(
+            self, merged_ir: Dict[str, Any], ask_plan: List[Dict[str, Any]], out_xlsx_path: str, template_xlsx_path: Optional[str] = None
+        ) -> str:
+        try:
+            from openpyxl import load_workbook, Workbook
+        except Exception as e:
+            raise RuntimeError("openpyxl is required for XLSX export (pip install openpyxl)") from e
+
+        wb: Any
+        if template_xlsx_path and Path(template_xlsx_path).exists():
+            wb = load_workbook(template_xlsx_path)
+            for sheet in ("survey", "choices"):
+                if sheet not in wb.sheetnames:
+                    wb.create_sheet(title=sheet)
+        else:
+            wb = Workbook()
+            if "Sheet" in wb.sheetnames:
+                wb.remove(wb["Sheet"])
+            ws_s = wb.create_sheet("survey")
+            ws_c = wb.create_sheet("choices")
+            ws_s.append(["type", "name", "label", "hint", "required", "constraint", "relevant", "appearance", "calculation"])
+            ws_c.append(["list_name", "name", "label"])
+
+        # ---- Ensure settings sheet with canonical fields (CHT/pyxform-friendly)
+        form_id = Path(out_xlsx_path).stem
+        title = form_id.replace("_", " ").title()
+        version_val = int(time.time())
+        sms_keyword_default = f"J1!{form_id}!"
+        sms_separator_default = "!"
+
+        if "settings" not in wb.sheetnames:
+            ws_set = wb.create_sheet("settings")
+            headers = ["id_string", "title", "default_language", "version", "sms_keyword", "sms_separator", "form_id", "form_title"]
+            ws_set.append(headers)
+            ws_set.append([form_id, title, "en", version_val, sms_keyword_default, sms_separator_default, form_id, title])
+        else:
+            ws_set = wb["settings"]
+            row1 = next(ws_set.iter_rows(min_row=1, max_row=1, values_only=True), None) or []
+            headers = [c or "" for c in row1]
+
+            needed = ["id_string", "title", "default_language", "version", "sms_keyword", "sms_separator", "form_id", "form_title"]
+            for h in needed:
+                if h not in headers:
+                    headers.append(h)
+                    ws_set.cell(row=1, column=len(headers), value=h)
+
+            # ensure there is a row 2
+            row2_vals = next(ws_set.iter_rows(min_row=2, max_row=2, values_only=True), None)
+            if not row2_vals:
+                ws_set.append([""] * len(headers))
+                row2_vals = [""] * len(headers)
+
+            # helper: pick scalar or default
+            def _pick_scalar(val, default):
+                return val if isinstance(val, (str, int, float)) else default
+
+            current_map = {}
+            row2_vals = next(ws_set.iter_rows(min_row=2, max_row=2, values_only=True), None) or []
+            for j, h in enumerate(headers):
+                current_map[h] = row2_vals[j] if j < len(row2_vals) else ""
+
+            row2 = {h: "" for h in headers}
+            row2["id_string"]       = _pick_scalar(current_map.get("id_string"), form_id)
+            row2["title"]           = _pick_scalar(current_map.get("title"), title)
+            row2["default_language"]= _pick_scalar(current_map.get("default_language"), "en")
+            row2["version"]         = _pick_scalar(current_map.get("version"), version_val)
+            row2["sms_keyword"]     = _pick_scalar(current_map.get("sms_keyword"), sms_keyword_default)
+            row2["sms_separator"]   = _pick_scalar(current_map.get("sms_separator"), sms_separator_default)
+            row2["form_id"]         = _pick_scalar(current_map.get("form_id"), form_id)
+            row2["form_title"]      = _pick_scalar(current_map.get("form_title"), title)
+
+            for j, h in enumerate(headers, start=1):
+                ws_set.cell(row=2, column=j, value=row2.get(h, ""))
+
+        ws_survey = wb["survey"]
+        ws_choices = wb["choices"]
+
+        def _headers(ws):
+            row1 = next(ws.iter_rows(min_row=1, max_row=1, values_only=True), None) or []
+            return [c or "" for c in row1]
+
+        s_hdr = _headers(ws_survey)
+        c_hdr = _headers(ws_choices)
+
+        def _col_ix(ws, hdr_list, name):
+            try:
+                return hdr_list.index(name)
+            except Exception:
+                hdr_list.append(name)
+                ws.cell(row=1, column=len(hdr_list), value=name)
+                return len(hdr_list) - 1
+
+        s_ix = {k: _col_ix(ws_survey, s_hdr, k) for k in ("type", "name", "label", "hint", "required", "constraint", "relevant", "appearance", "calculation")}
+        c_ix = {k: _col_ix(ws_choices, c_hdr, k) for k in ("list_name", "name", "label")}
+
+        var_by_name = {(v.get("name") or "").strip(): v for v in (merged_ir.get("variables") or []) if isinstance(v, dict) and v.get("name")}
+
+        def _label_for(name: str) -> str:
+            v = var_by_name.get(name)
+            if v and v.get("prompt"):
+                return str(v["prompt"])
+            return re.sub(r"_+", " ", str(name)).strip().capitalize()
+
+        existing_choices = set()
+        for row in ws_choices.iter_rows(min_row=2, values_only=True):
+            if not row:
+                continue
+            list_name, name, _ = (row + (None, None, None))[:3]
+            if list_name and name:
+                existing_choices.add((str(list_name), str(name)))
+
+        def ensure_yes_no():
+            for val in ("yes", "no"):
+                if ("yes_no", val) not in existing_choices:
+                    vals = ["yes_no", val, val.capitalize()]
+                    row = [None] * len(c_hdr)
+                    row[c_ix["list_name"]] = vals[0]
+                    row[c_ix["name"]] = vals[1]
+                    row[c_ix["label"]] = vals[2]
+                    ws_choices.append(row)
+                    existing_choices.add(("yes_no", val))
+
+        ensure_yes_no()
+
+        def ensure_list(list_name: str, values: List[str]):
+            for v in values or []:
+                key = (list_name, str(v))
+                if key not in existing_choices:
+                    row = [None] * len(c_hdr)
+                    row[c_ix["list_name"]] = list_name
+                    row[c_ix["name"]] = str(v)
+                    row[c_ix["label"]] = re.sub(r"_+", " ", str(v)).strip().capitalize()
+                    ws_choices.append(row)
+                    existing_choices.add(key)
+
+        def cond_to_relevant(cond: str) -> Optional[str]:
+            s = str(cond or "").strip()
+            m = re.match(r"""^\s*([A-Za-z0-9_]+)\s*([=!<>]=|[<>]|=)\s*(.+?)\s*$""", s)
+            if not m:
+                return None
+            var, op, val = m.groups()
+            val = val.strip()
+            if val.lower() in ("true", "false"):
+                val = "'yes'" if val.lower() == "true" else "'no'"
+            elif re.match(r"^-?\d+(\.\d+)?$", val):
+                pass
+            else:
+                val = val.strip().strip('"').strip("'")
+                val = f"'{val}'"
+            if op == "==":
+                op = "="
+            return f"${{{var}}} {op} {val}"
+
+        relevant_for: Dict[str, List[str]] = {}
+        for blk in (ask_plan or []):
+            fuw = (blk or {}).get("followups_if") or {}
+            for cond, qs in fuw.items():
+                r = cond_to_relevant(cond)
+                if not r:
+                    continue
+                for q in (qs or []):
+                    relevant_for.setdefault(q, []).append(r)
+
+        def append_row(row_dict: Dict[str, Any]):
+            row = [None] * len(s_hdr)
+            for k, v in row_dict.items():
+                if k not in s_ix:
+                    s_ix[k] = _col_ix(ws_survey, s_hdr, k)
+                row[s_ix[k]] = v
+            ws_survey.append(row)
+
+        added_questions: set = set()
+        for blk in (ask_plan or []):
+            mod = (blk or {}).get("module") or "module"
+            append_row({"type": "begin group", "name": f"{_to_snake(mod)}_group", "label": re.sub(r"_+", " ", mod).title()})
+            for q in (blk or {}).get("ask", []) or []:
+                if q in added_questions:
+                    continue
+                v = var_by_name.get(q, {})
+                qtype = str(v.get("type") or "").lower()
+                allowed = v.get("allowed") or []
+                if qtype == "boolean":
+                    q_type_cell = "select_one yes_no"
+                elif allowed:
+                    list_name = f"list_{q}"
+                    ensure_list(list_name, allowed)
+                    q_type_cell = f"select_one {list_name}"
+                elif qtype == "number":
+                    q_type_cell = "decimal"
+                else:
+                    q_type_cell = "text"
+                rel_expr = None
+                if q in relevant_for:
+                    rel_expr = " or ".join(sorted(set(relevant_for[q])))
+                append_row({"type": q_type_cell, "name": q, "label": _label_for(q), "required": None, "relevant": rel_expr})
+                added_questions.add(q)
+            append_row({"type": "end group"})
+
+        outp = Path(out_xlsx_path)
+        outp.parent.mkdir(parents=True, exist_ok=True)
+        wb.save(str(outp))
+        return str(outp)
+
+
+    # ---------------- Step 7: DMN → per-module CSVs -----------------
+    def parse_dmn_decision_tables(self, dmn_xml: str) -> Dict[str, dict]:
+        root = ET.fromstring(dmn_xml)
+        out: Dict[str, dict] = {}
+        for dec in root.findall(".//dmn:decision", _DMNN):
+            name = (dec.get("name") or dec.get("id") or "module").strip()
+            mod = re.sub(r"^decide[_\-:]+", "", name).strip() or "module"
+            table = dec.find(".//dmn:decisionTable", _DMNN)
+            if table is None:
+                continue
+            inputs = [_text_or(i.find("./dmn:inputExpression/dmn:text", _DMNN)) for i in table.findall("./dmn:input", _DMNN)]
+            outputs = [(o.get("name") or "").strip() for o in table.findall("./dmn:output", _DMNN)]
+            rows = []
+            for r in table.findall("./dmn:rule", _DMNN):
+                conds = [_text_or(e.find("./dmn:text", _DMNN)) for e in r.findall("./dmn:inputEntry", _DMNN)]
+                outs = [_text_or(e.find("./dmn:text", _DMNN)) for e in r.findall("./dmn:outputEntry", _DMNN)]
+                rows.append({"conds": conds, "outs": outs})
+            out[mod] = {"inputs": inputs, "outputs": outputs, "rows": rows}
+        return out
+
+    
+
+    def export_csvs_from_dmn(self, dmn_xml: str, out_dir: str) -> Dict[str, str]:
+    # --- normalize refs like 'p11-10, p 7 - 6 ; P15-P17' → 'p10-11, p6-7; p15-17'
+        def _normalize_page_ranges(ref: str) -> str:
+            """
+            Normalize page ranges in a string:
+            - 'p11-10' -> 'p10-11'
+            - 'P  23 -  7' -> 'p7-23'
+            - '15-17' -> 'p15-17'
+            Handles multiple refs separated by comma/semicolon and arbitrary whitespace.
+            Leaves single refs like 'p12' unchanged.
+            """
+            s = _strip_quotes(ref or "")
+
+            # add 'p' if a range lacks it entirely (e.g., "12-9")
+            def _ensure_p_prefix(m):
+                a, b = m.group(1), m.group(2)
+                return f"p{a}-{b}"
+
+            s = re.sub(r"\b(\d{1,4})\s*-\s*(\d{1,4})\b", _ensure_p_prefix, s)
+
+            # now normalize any pA - pB variants, preserving lower→higher
+            def _swap_if_needed(m):
+                a = int(m.group(1))
+                b = int(m.group(2))
+                lo, hi = sorted((a, b))
+                return f"p{lo}-{hi}"
+
+            s = re.sub(r"[Pp]\s*(\d{1,4})\s*-\s*[Pp]?\s*(\d{1,4})", _swap_if_needed, s)
+
+            # squeeze spaces around separators and after commas/semicolons
+            s = re.sub(r"\s*([,;])\s*", r"\1 ", s)
+            return s.strip()
+
+        tables = self.parse_dmn_decision_tables(dmn_xml)
+        out_map: Dict[str, str] = {}
+        outp = Path(out_dir)
+        outp.mkdir(parents=True, exist_ok=True)
+
+        def norm_out_val(col: str, val: str) -> str:
+            v = _strip_quotes(val or "")
+            if col in ("danger_sign", "clinic_referral"):
+                vv = v.strip().lower()
+                if vv in ("true", "false"):
+                    return vv
+            if col == "ref":
+                return _normalize_page_ranges(v)
+            return v
+
+        # Fill defaults for any blank cells so we never crash on export
+        DEFAULTS = {
+            "triage": "home",
+            "danger_sign": "false",
+            "clinic_referral": "false",
+            "reason": "",
+            "ref": "p0",
+            "advice": ""
+        }
+
+        for mod, t in tables.items():
+            outs = [c for c in t["outputs"] if c] or ["triage", "danger_sign", "clinic_referral", "reason", "ref", "advice"]
+            fname = f"dmn_{mod}.csv"  # disk file is dmn_<mod>.csv; pulldata id is 'dmn_<mod>'
+            fpath = outp / fname
+            with open(fpath, "w", newline="", encoding="utf-8") as f:
+                w = csv.writer(f)
+                w.writerow(["key"] + outs)
+                for i, row in enumerate(t["rows"], start=1):
+                    key = f"r{str(i).zfill(3)}"
+                    raw_vals = row["outs"][: len(outs)]
+                    raw_vals += [""] * (len(outs) - len(raw_vals))
+
+                    filled = []
+                    for col_name, cell in zip(outs, raw_vals):
+                        v = cell if (cell is not None and str(cell).strip() != "") else DEFAULTS.get(col_name, "")
+                        filled.append(norm_out_val(col_name, v))
+
+                    w.writerow([key] + filled)
+            out_map[mod] = str(fpath)
+
+        return out_map
+
+
+
+        # Fill defaults for any blank cells so we never crash on export
+        DEFAULTS = {
+            "triage": "home",
+            "danger_sign": "false",
+            "clinic_referral": "false",
+            "reason": "",
+            "ref": "p0",
+            "advice": ""
+        }
+
+        for mod, t in tables.items():
+            outs = [c for c in t["outputs"] if c] or ["triage", "danger_sign", "clinic_referral", "reason", "ref", "advice"]
+            fname = f"dmn_{mod}.csv"  # single .csv on disk; pulldata id will be 'dmn_<mod>'
+            fpath = outp / fname
+            with open(fpath, "w", newline="", encoding="utf-8") as f:
+                w = csv.writer(f)
+                w.writerow(["key"] + outs)
+                for i, row in enumerate(t["rows"], start=1):
+                    key = f"r{str(i).zfill(3)}"
+                    raw_vals = row["outs"][: len(outs)]
+                    raw_vals += [""] * (len(outs) - len(raw_vals))
+
+                    # Fill blanks with defaults and normalize
+                    filled = []
+                    for col_name, val in zip(outs, raw_vals):
+                        v = val if (val is not None and str(val).strip() != "") else DEFAULTS.get(col_name, "")
+                        filled.append(norm_out_val(col_name, v))
+
+                    w.writerow([key] + filled)
+            out_map[mod] = str(fpath)
+        return out_map
+
+    # ---------------- Step 8: Wire DMN outputs into XLSForm -----------------
+    def wire_decisions_into_xlsx(self, xlsx_path: str, dmn_xml: str, merged_ir: Dict[str, Any], media_id_prefix: str = "dmn_") -> None:
+        from openpyxl import load_workbook
+
+        wb = load_workbook(xlsx_path)
+        ws = wb["survey"]
+
+        def hdrs():
+            row1 = next(ws.iter_rows(min_row=1, max_row=1, values_only=True), None) or []
+            return [c or "" for c in row1]
+
+        hdr = hdrs()
+
+        def col(name):
+            if name in hdr:
+                return hdr.index(name)
+            hdr.append(name)
+            ws.cell(row=1, column=len(hdr), value=name)
+            return len(hdr) - 1
+
+        # Always get proper column indexes
+        c_type = col("type")
+        c_name = col("name")
+        c_calc = col("calculation")
+        c_lab  = col("label")
+        c_rel  = col("relevant")
+
+        def append_by_cols(values: dict):
+            """values is a dict like {'type': 'calculate', 'name': 'x', 'calculation': '...', 'label': '...', 'relevant': None}"""
+            row = [None] * len(hdr)
+            if "type" in values:         row[c_type] = values["type"]
+            if "name" in values:         row[c_name] = values["name"]
+            if "calculation" in values:  row[c_calc] = values["calculation"]
+            if "label" in values:        row[c_lab]  = values["label"]
+            if "relevant" in values:     row[c_rel]  = values["relevant"]
+            ws.append(row)
+
+        var_types = {(v.get("name") or "").strip(): (v.get("type") or "string") for v in (merged_ir.get("variables") or []) if isinstance(v, dict)}
+
+        def map_var_token_to_xls(var_token: str) -> str:
+            tok = (var_token or "").strip()
+            if "." in tok:
+                left, right = tok.rsplit(".", 1)
+                mod = re.sub(r"^decide[_\-:]+", "", left)
+                return f"{media_id_prefix}{_to_snake(mod)}_{_to_snake(right)}"
+            return tok
+
+        def feel_to_xls_test(expr: str) -> Optional[str]:
+            s = (expr or "").strip()
+            if s in ("", "-", "otherwise"):
+                return None
+            m = re.match(r"^\s*([A-Za-z_][A-Za-z0-9_\.\-:]*)\s*(=|==|!=|<=|>=|<|>)\s*(.+?)\s*$", s)
+            if not m:
+                return None
+            var_tok, op, rhs = m.groups()
+            if op == "==":
+                op = "="
+            xls_var = map_var_token_to_xls(var_tok)
+            lhs_is_calc = xls_var.startswith(media_id_prefix)
+            val = (rhs or "").strip()
+            if val.lower() in ("true", "false"):
+                rhs_x = "'true'" if lhs_is_calc else ("'yes'" if val.lower() == "true" else "'no'")
+            elif re.match(r"^-?\d+(\.\d+)?$", val):
+                rhs_x = val
+            else:
+                rhs_x = f"'{_strip_quotes(val)}'"
+            return f"${{{xls_var}}} {op} {rhs_x}"
+
+        tables = self.parse_dmn_decision_tables(dmn_xml)
+        for mod, t in tables.items():
+            # Build row matchers (unchanged)
+            row_tests = []
+            for i, row in enumerate(t["rows"], start=1):
+                conjuncts = []
+                for inp, feel in zip(t["inputs"], row["conds"]):
+                    xp = feel_to_xls_test(feel)
+                    if xp:
+                        conjuncts.append(xp)
+                row_tests.append((f"r{str(i).zfill(3)}", _and_join(conjuncts)))
+
+            expr = "''"
+            for key, test in reversed(row_tests):
+                expr = f"if({test}, '{key}', {expr})"
+
+            # spacer (pad to header length so we don’t shift columns)
+            ws.append([None] * len(hdr))
+
+            # <module>_key calculate — write by column name
+            append_by_cols({
+                "type": "calculate",
+                "name": f"{mod}_key",
+                "calculation": expr,
+                "label": f"{mod} key",
+                "relevant": None
+            })
+
+            # DMN output calculates — write by column name
+            outs = [c for c in t["outputs"] if c] or ["triage", "danger_sign", "clinic_referral", "reason", "ref", "advice"]
+            for out_col in outs:
+                name = f"{media_id_prefix}{mod}_{out_col}"
+                calc = f"pulldata('{media_id_prefix}{mod}','{out_col}','key', ${{{mod}_key}})"
+                append_by_cols({
+                    "type": "calculate",
+                    "name": name,
+                    "calculation": calc,
+                    "label": f"{mod} {out_col}".replace("_", " "),
+                    "relevant": None
+                })
+
+        wb.save(xlsx_path)
+
+
+    # ---------------- PDF sectioning wrapper -----------------
+    def extract_sections_from_pdf(self, pdf_path: str, max_chars: int = 4000) -> List[Tuple[str, str]]:
+        logp = self.debug_dir / "sectioning.log"
+
+        pages = _extract_pypdf_pages(pdf_path)
+        pages = _postprocess_page_text(pages)
+        nonempty = sum(1 for _, t in pages if (t or "").strip())
+        if nonempty > 0:
+            chunks = _split_into_sections_by_headings(pages, max_chars=max_chars)
+            if not chunks:
+                chunks = _chunk_pages_len_only(pages, max_chars=max_chars)
+            try:
+                logp.write_text("Used pypdf extraction\n", encoding="utf-8")
+            except Exception:
+                pass
+            return chunks
+
+        if _have_pdfminer:
+            pm_layout = _extract_pdfminer_layout_pages(pdf_path)
+            pm_layout = _postprocess_page_text(pm_layout)
+            if sum(1 for _, t in pm_layout if (t or "").strip()) > 0:
+                chunks = _split_into_sections_by_headings(pm_layout, max_chars=max_chars)
+                if not chunks:
+                    chunks = _chunk_pages_len_only(pm_layout, max_chars=max_chars)
+                try:
+                    logp.write_text("Used pdfminer layout extraction\n", encoding="utf-8")
+                except Exception:
+                    pass
+                return chunks
+
+        if _have_pdfminer:
+            pm_pages = _extract_pdfminer_pages(pdf_path)
+            pm_pages = _postprocess_page_text(pm_pages)
+            if sum(1 for _, t in pm_pages if (t or "").strip()) > 0:
+                chunks = _split_into_sections_by_headings(pm_pages, max_chars=max_chars)
+                if not chunks:
+                    chunks = _chunk_pages_len_only(pm_pages, max_chars=max_chars)
+                try:
+                    logp.write_text("Used pdfminer basic extraction\n", encoding="utf-8")
+                except Exception:
+                    pass
+                return chunks
+
+        if _have_ocr:
+            ocr_pages = _extract_ocr_pages(pdf_path)
+            ocr_pages = _postprocess_page_text(ocr_pages)
+            if sum(1 for _, t in ocr_pages if (t or "").strip()) > 0:
+                chunks = _split_into_sections_by_headings(ocr_pages, max_chars=max_chars)
+                if not chunks:
+                    chunks = _chunk_pages_len_only(ocr_pages, max_chars=max_chars)
+                try:
+                    logp.write_text("Used OCR extraction (pytesseract + pdf2image)\n", encoding="utf-8")
+                except Exception:
+                    pass
+                return chunks
+
+        try:
+            logp.write_text("No text extracted by any strategy\n", encoding="utf-8")
+        except Exception:
+            pass
+        return []
+
+# ---------------- convenience: minimal CLI-ish usage (optional) ----------------
+if __name__ == "__main__":
+    import argparse, sys
+
+    parser = argparse.ArgumentParser(description="Extract -> DMN -> CSVs -> XLSForm -> wire pulldata()")
+    parser.add_argument("--pdf", required=False, help="Guideline PDF")
+    parser.add_argument("--dmn", required=False, help="Existing DMN XML path (skips model steps)")
+    parser.add_argument("--merged", required=False, help="Existing merged_ir.json path (skips model steps)")
+    parser.add_argument("--ask", required=False, help="Existing ask_plan.json path (optional)")
+    parser.add_argument("--xlsx-out", default="forms/app/orchestrator.xlsx")
+    parser.add_argument("--media-dir", default="forms/app/orchestrator-media")
+    parser.add_argument("--template", default=None)
+    args = parser.parse_args()
+
+    gx = OpenAIGuardedExtractor(api_key=os.environ.get("OPENAI_API_KEY"))
+
+    merged = None
+    dmn_xml = None
+    ask_plan = None
+
+    if args.pdf:
+        if not os.getenv("OPENAI_API_KEY"):
+            print("❌ OPENAI_API_KEY not set", file=sys.stderr)
+            sys.exit(1)
+        sections = gx.extract_rules_per_section(args.pdf)
+        merged = gx.merge_sections(sections)
+        dmn_xml, ask_plan = gx.generate_dmn_and_ask_plan(merged)
+    elif args.dmn and args.merged:
+        dmn_xml = Path(args.dmn).read_text(encoding="utf-8")
+        merged = json.loads(Path(args.merged).read_text(encoding="utf-8"))
+        if args.ask and Path(args.ask).exists():
+            raw = json.loads(Path(args.ask).read_text(encoding="utf-8"))
+            ask_plan = raw.get("ASK_PLAN") if isinstance(raw, dict) and "ASK_PLAN" in raw else raw
+        else:
+            # Minimal plan: ask all known variables in one group
+            ask_plan = [
+                {
+                    "module": "module_a",
+                    "ask": [v["name"] for v in (merged.get("variables") or []) if isinstance(v, dict) and v.get("name")],
+                    "followups_if": {},
+                }
+            ]
+    else:
+        print("❌ Supply either --pdf OR both --dmn and --merged", file=sys.stderr)
+        sys.exit(2)
+
+    # 1) CSVs per module (for jr://file-csv/)
+    Path(args.media_dir).mkdir(parents=True, exist_ok=True)
+    gx.export_csvs_from_dmn(dmn_xml, args.media_dir)
+
+    # 2) Build a working XLSForm (questions)
+    gx.export_xlsx_from_dmn(merged, ask_plan, args.xlsx_out, template_xlsx_path=args.template)
+
+    # 3) Wire decision outputs via pulldata() (id without .csv; files are dmn_<mod>.csv)
+    gx.wire_decisions_into_xlsx(args.xlsx_out, dmn_xml, merged)
+
+    print("✓ XLSForm:", args.xlsx_out)
+    print("✓ Media CSVs:", args.media_dir)
