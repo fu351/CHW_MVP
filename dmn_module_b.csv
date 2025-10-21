@@ -1,0 +1,2 @@
+rule_id,conditions,triage_decision,flags,reasons,guideline_reference,priority
+MOD-10,other_problem eq True,hospital,,other_problem,WHO-IMCI-2014-MOD-10,90

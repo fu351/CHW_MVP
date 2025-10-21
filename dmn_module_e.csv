@@ -1,0 +1,6 @@
+rule_id,conditions,triage_decision,flags,reasons,guideline_reference,priority
+WHO_CHW-01,convulsion = True,home,,,WHO-IMCI-2014-WHO_CHW-01,10
+MOD-06,breath_rate lt 50 AND breath_rate lt 40 AND chest_indrawing = False AND unusually_sleepy = False AND unconscious = False,home,,no_severe_signs,WHO-IMCI-2014-MOD-06,10
+MOD-05,diarrhea_days lt 14 AND blood_in_stool = False,home,,diarrhea_less_than_14_days_no_blood,WHO-IMCI-2014-MOD-05,2
+MOD-06,fever_days lt 7 AND in_malaria_area = True,home,,fever_less_than_7_days_in_malaria_area,WHO-IMCI-2014-MOD-06,2
+MOD-07,fast_breathing ge 50 AND chest_indrawing = False,home,,fast_breathing_no_chest_indrawing,WHO-IMCI-2014-MOD-07,2

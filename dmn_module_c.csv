@@ -1,0 +1,46 @@
+rule_id,conditions,triage_decision,flags,reasons,guideline_reference,priority
+MOD-12,diarrhea_duration_days lt 14,clinic,clinic_referral,diarrhea_duration_under_limit,WHO-IMCI-2014-MOD-12,50
+MOD-08,diarrhea_days ge 3,clinic,clinic_referral,diarrhea_more_than_3_days,WHO-IMCI-2014-MOD-08,90
+MOD-09,temp ge 38.5,clinic,clinic_referral,high_fever,WHO-IMCI-2014-MOD-09,90
+MOD-03,difficulty_drinking eq 1,clinic,clinic_referral,difficulty_drinking,WHO-IMCI-2014-MOD-03,80
+MOD-04,vomiting eq 1,clinic,clinic_referral,vomiting_present,WHO-IMCI-2014-MOD-04,80
+MOD-05,diarrhea eq 1,clinic,clinic_referral,diarrhea_present,WHO-IMCI-2014-MOD-05,80
+MOD-13,muac_yellow eq 1,clinic,clinic_referral,muac_yellow,WHO-IMCI-2014-MOD-13,2
+MOD-11,cough_days ge 14,clinic,,cough_for_14_days_or_more,WHO-IMCI-2014-MOD-11,80
+MOD-12,diarrhea_days ge 14,clinic,,diarrhea_for_14_days_or_more,WHO-IMCI-2014-MOD-12,80
+MOD-13,diarrhea_days lt 14 AND blood_in_stool = False,clinic,,diarrhea_less_than_14_days_no_blood,WHO-IMCI-2014-MOD-13,80
+MOD-14,fever_days = True,clinic,,fever_less_than_7_days_in_malaria_area,WHO-IMCI-2014-MOD-14,80
+MOD-15,breaths_per_minute ge 50 AND age_months le 12,clinic,,fast_breathing_age_2_to_12_months,WHO-IMCI-2014-MOD-15,80
+MOD-16,breaths_per_minute ge 40 AND age_months gt 12,clinic,,fast_breathing_age_12_months_to_5_years,WHO-IMCI-2014-MOD-16,80
+MOD-17,muac_color eq yellow,clinic,,yellow_on_muac_strap,WHO-IMCI-2014-MOD-17,80
+MOD-18,danger_signs_present eq False,home,,no_danger_signs,WHO-IMCI-2014-MOD-18,70
+MOD-03,temp ge 38 AND fever = True AND muac_mm ge 125,clinic,clinic_referral,fever_high_muac_normal,WHO-IMCI-2014-MOD-03,80
+MOD-04,temp lt 38 AND diarrhea_days = True,home,,diarrhea_3_days_no_fever,WHO-IMCI-2014-MOD-04,70
+MOD-06,temp ge 38 AND cough = True AND diarrhea_days lt 3,clinic,clinic_referral,fever_with_cough_less_than_3_days,WHO-IMCI-2014-MOD-06,80
+MOD-07,temp lt 38 AND cough = True AND diarrhea_days lt 3,home,,cough_less_than_3_days_no_fever,WHO-IMCI-2014-MOD-07,60
+MOD-03,temp ge 38.5,clinic,clinic_referral,fever_high,WHO-IMCI-2014-MOD-03,80
+MOD-04,temp lt 38.5 AND diarrhea_days ge 3,home,,diarrhea_duration,WHO-IMCI-2014-MOD-04,70
+MOD-07,temp lt 38.5 AND diarrhea_days ge 10,clinic,clinic_referral,diarrhea_long_duration,WHO-IMCI-2014-MOD-07,85
+MOD-08,temp lt 38.5 AND diarrhea_days ge 5,home,,diarrhea_moderate_duration,WHO-IMCI-2014-MOD-08,60
+MOD-12,temp lt 38.5 AND diarrhea_days ge 7,clinic,clinic_referral,diarrhea_long_duration,WHO-IMCI-2014-MOD-12,85
+MOD-01,fever eq 1 AND malaria_area eq True,clinic,clinic_referral,fever_in_malaria_area,WHO-IMCI-2014-MOD-01,90
+MOD-03,rdt_result eq negative,home,,rdt_negative,WHO-IMCI-2014-MOD-03,70
+MOD-04,rdt_result eq invalid,clinic,clinic_referral,rdt_invalid,WHO-IMCI-2014-MOD-04,85
+MOD-05,age ge 2 AND age lt 3 AND rdt_result eq positive,home,,treatment_for_age_2_to_3,WHO-IMCI-2014-MOD-05,75
+MOD-06,age ge 3 AND age lt 5 AND rdt_result eq positive,home,,treatment_for_age_3_to_5,WHO-IMCI-2014-MOD-06,75
+MOD-04,feels_very_hot eq True,clinic,clinic_referral,feels_very_hot,WHO-IMCI-2014-MOD-04,90
+MOD-07,not_getting_better eq True,clinic,clinic_referral,not_getting_better,WHO-IMCI-2014-MOD-07,80
+MOD-08,vaccines_up_to_date eq False,clinic,clinic_referral,vaccines_up_to_date,WHO-IMCI-2014-MOD-08,70
+MOD-15,fever_days lt 7 AND malaria_test eq positive,clinic,clinic_referral,malaria_positive,WHO-IMCI-2014-MOD-15,86
+MOD-02,diarrhea_days ge 1 AND can_drink eq True,clinic,clinic_referral,diarrhea_treatment,WHO-IMCI-2014-MOD-02,90
+MOD-07,chest_indrawing eq True AND can_drink eq True,clinic,clinic_referral,chest_indrawing,WHO-IMCI-2014-MOD-07,90
+MOD-08,fast_breathing eq True AND can_drink eq True,clinic,clinic_referral,fast_breathing,WHO-IMCI-2014-MOD-08,90
+MOD-02,fever_days ge 3 AND cough_days ge 14,clinic,clinic_referral,fever_for_3_days_and_cough_for_14_days,WHO-IMCI-2014-MOD-02,90
+MOD-07,fever_days ge 7 AND diarrhea_days lt 14,clinic,clinic_referral,fever_for_7_days,WHO-IMCI-2014-MOD-07,90
+MOD-05,fever_days lt 7 AND in_malaria_area = True,clinic,clinic_referral,fever_less_than_7_days_in_malaria_area,WHO-IMCI-2014-MOD-05,80
+MOD-10,fast_breathing eq True,clinic,clinic_referral,fast_breathing,WHO-IMCI-2014-MOD-10,80
+MOD-01,"fever = True AND {'all_of': [{'obs': 'days_with_fever', 'op': 'lt', 'value': 7}, {'obs': 'in_malaria_area', 'op': 'eq', 'value': True}]}",clinic,clinic_referral,fever_in_malaria_area,WHO-IMCI-2014-MOD-01,90
+MOD-02,rdt_result eq positive,clinic,,malaria_positive,WHO-IMCI-2014-MOD-02,85
+MOD-04,fast_breathing eq True,clinic,clinic_referral,fast_breathing,WHO-IMCI-2014-MOD-04,85
+MOD-05,yellow_on_muac eq True,clinic,clinic_referral,yellow_on_muac,WHO-IMCI-2014-MOD-05,85
+MOD-09,follow_up_needed eq True,home,,follow_up_needed,WHO-IMCI-2014-MOD-09,70
