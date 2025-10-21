@@ -1,0 +1,4 @@
+key,triage,danger_sign,clinic_referral,reason,ref,advice
+r001,home,false,false,No breathing difficulties,p6,Continue normal activities
+r002,clinic,true,true,Severe breathing problems,p7,Emergency referral required
+r003,clinic,false,true,Mild breathing issues,p8,Monitor closely and seek help if worsening

@@ -1,0 +1,15 @@
+key,module,decision_id,triage,danger_sign,clinic_referral,reason,ref,advice
+r001,a,module_a_decision,home,false,false,No convulsion detected,p1,Continue monitoring at home
+r002,a,module_a_decision,clinic,true,true,Convulsion present - immediate referral needed,p2,Refer to clinic immediately
+r001,b,module_b_decision,home,false,false,No fever detected,p3,Monitor temperature regularly
+r002,b,module_b_decision,clinic,true,true,High fever - potential emergency,p4,Seek immediate medical attention
+r003,b,module_b_decision,clinic,false,true,Moderate fever - needs assessment,p5,Schedule clinic visit within 24 hours
+r001,c,module_c_decision,home,false,false,No breathing difficulties,p6,Continue normal activities
+r002,c,module_c_decision,clinic,true,true,Severe breathing problems,p7,Emergency referral required
+r003,c,module_c_decision,clinic,false,true,Mild breathing issues,p8,Monitor closely and seek help if worsening
+r001,d,module_d_decision,home,false,false,No dehydration signs,p9,Encourage fluid intake
+r002,d,module_d_decision,clinic,true,true,Severe dehydration,p10,Immediate medical intervention needed
+r003,d,module_d_decision,clinic,false,true,Mild dehydration,p11,Increase fluid intake and monitor
+r001,e,module_e_decision,home,false,false,No skin issues detected,p12,Maintain good hygiene
+r002,e,module_e_decision,clinic,true,true,Severe skin infection,p13,Urgent dermatology referral
+r003,e,module_e_decision,clinic,false,true,Mild skin irritation,p14,Apply topical treatment and monitor

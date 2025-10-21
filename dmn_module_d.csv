@@ -1,0 +1,4 @@
+key,triage,danger_sign,clinic_referral,reason,ref,advice
+r001,home,false,false,No dehydration signs,p9,Encourage fluid intake
+r002,clinic,true,true,Severe dehydration,p10,Immediate medical intervention needed
+r003,clinic,false,true,Mild dehydration,p11,Increase fluid intake and monitor
