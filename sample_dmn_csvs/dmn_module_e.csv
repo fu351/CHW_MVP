@@ -1,0 +1,4 @@
+rule_id,condition,action,priority
+E001,infection_signs = true,infection_control,75
+E002,wound_care_needed = true,wound_management,60
+E003,medication_review = true,pharmacy_consult,55

@@ -1,0 +1,4 @@
+rule_id,condition,action,priority
+C001,diabetes = true,glucose_monitoring,70
+C002,hypertension = true,bp_management,65
+C003,medication_allergy = true,allergy_alert,90

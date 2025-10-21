@@ -1,0 +1,4 @@
+rule_id,condition,action,priority
+D001,pregnancy = true,obstetric_care,85
+D002,pediatric_age < 12,pediatric_protocol,80
+D003,mental_health_crisis = true,psychiatric_referral,95

@@ -1,0 +1,4 @@
+rule_id,condition,action,priority
+A001,age >= 65,refer_to_geriatric,100
+A002,temperature > 38.5,check_fever,50
+A003,blood_pressure > 140/90,monitor_bp,75
