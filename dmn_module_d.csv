@@ -1,0 +1,24 @@
+rule_id,conditions,triage_decision,flags,reasons,guideline_reference,priority
+MOD-10,temp lt 38.5,home,,fever_controlled,WHO-IMCI-2014-MOD-10,80
+MOD-01,diarrhea_days lt 14,home,,diarrhea_less_than_14_days,WHO-IMCI-2014-MOD-01,90
+MOD-02,fever_days lt 7,home,,fever_less_than_7_days,WHO-IMCI-2014-MOD-02,90
+MOD-01,diarrhea_days lt 14 AND blood_in_stool = False,home,,diarrhea_no_blood,WHO-IMCI-2014-MOD-01,90
+MOD-02,fever_days lt 7 AND malaria_area = True,home,,fever_less_than_7_days,WHO-IMCI-2014-MOD-02,90
+MOD-03,resp_rate ge 50,home,,fast_breathing,WHO-IMCI-2014-MOD-03,90
+MOD-04,"fever_days lt 7 AND malaria_area = True AND {'all_of': [{'obs': 'rdt_result', 'op': 'eq', 'value': 'positive'}]}",home,,malaria_positive,WHO-IMCI-2014-MOD-04,90
+MOD-05,resp_rate ge 50 AND cough = True,home,,cough_with_fast_breathing,WHO-IMCI-2014-MOD-05,90
+MOD-01,diarrhea_days le 14 AND blood_in_stool = False,home,,diarrhea_less_than_14_days_no_blood,WHO-IMCI-2014-MOD-01,90
+MOD-09,temp lt 38 AND vomiting = True AND diarrhea_days lt 3,home,,vomiting_less_than_3_days_no_fever,WHO-IMCI-2014-MOD-09,50
+MOD-01,diarrhea_days lt 14 AND blood_in_stool = False,home,,diarrhea_no_blood,WHO-IMCI-2014-MOD-01,90
+MOD-09,temp ge 38.5 AND diarrhea_days lt 3,home,,fever_short_duration,WHO-IMCI-2014-MOD-09,50
+MOD-02,rdt_result eq positive,home,,rdt_positive,WHO-IMCI-2014-MOD-02,80
+MOD-01,fever_days lt 7 AND RDT_result = False AND lives_in_malaria_area = False,home,,follow_up_visit_in_3_days,WHO-IMCI-2014-MOD-01,90
+MOD-02,fever_days lt 7 AND RDT_result = True,home,,treat_with_antimalarial,WHO-IMCI-2014-MOD-02,90
+MOD-03,cough = True AND fast_breathing = True AND danger_sign = False,home,clinic_referral,treat_with_amoxicillin,WHO-IMCI-2014-MOD-03,85
+MOD-05,child_age_months ge 2 AND child_age_months lt 12,home,,give_1_tablet_amoxicillin_twice_daily_for_5_days,WHO-IMCI-2014-MOD-05,80
+MOD-06,child_age_months ge 12 AND child_age_months lt 60,home,,give_2_tablets_amoxicillin_twice_daily_for_5_days,WHO-IMCI-2014-MOD-06,80
+MOD-16,fever_days lt 7 AND malaria_test eq negative,home,,malaria_negative,WHO-IMCI-2014-MOD-16,85
+MOD-02,diarrhea_days ge 14 AND blood_in_stool = False,home,,diarrhea_less_than_14_days_no_blood,WHO-IMCI-2014-MOD-02,90
+MOD-12,"{'all_of': [{'obs': 'temp', 'op': 'lt', 'value': 37.5}, {'obs': 'diarrhea_days', 'op': 'lt', 'value': 14}, {'sym': 'blood_in_stool', 'eq': False}]}",home,,diarrhea_less_than_14_days_no_blood,WHO-IMCI-2014-MOD-12,50
+MOD-13,temp lt 37.5,home,,no_danger_sign,WHO-IMCI-2014-MOD-13,50
+MOD-03,rdt_result eq negative,home,,malaria_negative,WHO-IMCI-2014-MOD-03,80
