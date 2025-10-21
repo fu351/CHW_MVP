@@ -1,0 +1,4 @@
+key,triage,danger_sign,clinic_referral,reason,ref,advice
+r001,clinic,false,true,age_2_months_up_to_5_years,p10-11,
+r002,hospital,true,false,too_sick_to_be_treated_at_home,p10-11,
+r003,clinic,false,true,eligible_for_home_treatment_support,p10-11,
