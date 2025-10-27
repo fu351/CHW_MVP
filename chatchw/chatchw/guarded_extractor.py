@@ -1395,7 +1395,7 @@ class OpenAIGuardedExtractor:
         except Exception as e:
             raise RuntimeError("openpyxl is required for XLSX export (pip install openpyxl)") from e
 
-        wb: Any
+        # --- base workbook
         if template_xlsx_path and Path(template_xlsx_path).exists():
             wb = load_workbook(template_xlsx_path)
             for sheet in ("survey", "choices"):
@@ -1410,56 +1410,18 @@ class OpenAIGuardedExtractor:
             ws_s.append(["type", "name", "label", "hint", "required", "constraint", "relevant", "appearance", "calculation"])
             ws_c.append(["list_name", "name", "label"])
 
-        # ---- Ensure settings sheet with canonical fields (CHT/pyxform-friendly)
+        # --- SETTINGS: recreate exactly to match CHT xls2json.py
         form_id = Path(out_xlsx_path).stem
         title = form_id.replace("_", " ").title()
         version_val = int(time.time())
         sms_keyword_default = f"J1!{form_id}!"
         sms_separator_default = "!"
 
-        if "settings" not in wb.sheetnames:
-            ws_set = wb.create_sheet("settings")
-            headers = ["id_string", "title", "default_language", "version", "sms_keyword", "sms_separator", "form_id", "form_title"]
-            ws_set.append(headers)
-            ws_set.append([form_id, title, "en", version_val, sms_keyword_default, sms_separator_default, form_id, title])
-        else:
-            ws_set = wb["settings"]
-            row1 = next(ws_set.iter_rows(min_row=1, max_row=1, values_only=True), None) or []
-            headers = [c or "" for c in row1]
-
-            needed = ["id_string", "title", "default_language", "version", "sms_keyword", "sms_separator", "form_id", "form_title"]
-            for h in needed:
-                if h not in headers:
-                    headers.append(h)
-                    ws_set.cell(row=1, column=len(headers), value=h)
-
-            # ensure there is a row 2
-            row2_vals = next(ws_set.iter_rows(min_row=2, max_row=2, values_only=True), None)
-            if not row2_vals:
-                ws_set.append([""] * len(headers))
-                row2_vals = [""] * len(headers)
-
-            # helper: pick scalar or default
-            def _pick_scalar(val, default):
-                return val if isinstance(val, (str, int, float)) else default
-
-            current_map = {}
-            row2_vals = next(ws_set.iter_rows(min_row=2, max_row=2, values_only=True), None) or []
-            for j, h in enumerate(headers):
-                current_map[h] = row2_vals[j] if j < len(row2_vals) else ""
-
-            row2 = {h: "" for h in headers}
-            row2["id_string"]       = _pick_scalar(current_map.get("id_string"), form_id)
-            row2["title"]           = _pick_scalar(current_map.get("title"), title)
-            row2["default_language"]= _pick_scalar(current_map.get("default_language"), "en")
-            row2["version"]         = _pick_scalar(current_map.get("version"), version_val)
-            row2["sms_keyword"]     = _pick_scalar(current_map.get("sms_keyword"), sms_keyword_default)
-            row2["sms_separator"]   = _pick_scalar(current_map.get("sms_separator"), sms_separator_default)
-            row2["form_id"]         = _pick_scalar(current_map.get("form_id"), form_id)
-            row2["form_title"]      = _pick_scalar(current_map.get("form_title"), title)
-
-            for j, h in enumerate(headers, start=1):
-                ws_set.cell(row=2, column=j, value=row2.get(h, ""))
+        if "settings" in wb.sheetnames:
+            del wb["settings"]
+        ws_set = wb.create_sheet("settings")
+        ws_set.append(["id_string", "title", "default_language", "version", "sms_keyword", "sms_separator"])
+        ws_set.append([str(form_id), str(title), "en", int(version_val), str(sms_keyword_default), str(sms_separator_default)])
 
         ws_survey = wb["survey"]
         ws_choices = wb["choices"]
@@ -1490,6 +1452,7 @@ class OpenAIGuardedExtractor:
                 return str(v["prompt"])
             return re.sub(r"_+", " ", str(name)).strip().capitalize()
 
+        # choices: ensure yes_no once
         existing_choices = set()
         for row in ws_choices.iter_rows(min_row=2, values_only=True):
             if not row:
@@ -1501,11 +1464,10 @@ class OpenAIGuardedExtractor:
         def ensure_yes_no():
             for val in ("yes", "no"):
                 if ("yes_no", val) not in existing_choices:
-                    vals = ["yes_no", val, val.capitalize()]
                     row = [None] * len(c_hdr)
-                    row[c_ix["list_name"]] = vals[0]
-                    row[c_ix["name"]] = vals[1]
-                    row[c_ix["label"]] = vals[2]
+                    row[c_ix["list_name"]] = "yes_no"
+                    row[c_ix["name"]] = val
+                    row[c_ix["label"]] = val.capitalize()
                     ws_choices.append(row)
                     existing_choices.add(("yes_no", val))
 
@@ -1534,8 +1496,7 @@ class OpenAIGuardedExtractor:
             elif re.match(r"^-?\d+(\.\d+)?$", val):
                 pass
             else:
-                val = val.strip().strip('"').strip("'")
-                val = f"'{val}'"
+                val = f"'{_strip_quotes(val)}'"
             if op == "==":
                 op = "="
             return f"${{{var}}} {op} {val}"
@@ -1578,9 +1539,7 @@ class OpenAIGuardedExtractor:
                     q_type_cell = "decimal"
                 else:
                     q_type_cell = "text"
-                rel_expr = None
-                if q in relevant_for:
-                    rel_expr = " or ".join(sorted(set(relevant_for[q])))
+                rel_expr = " or ".join(sorted(set(relevant_for[q]))) if q in relevant_for else None
                 append_row({"type": q_type_cell, "name": q, "label": _label_for(q), "required": None, "relevant": rel_expr})
                 added_questions.add(q)
             append_row({"type": "end group"})
@@ -1589,6 +1548,7 @@ class OpenAIGuardedExtractor:
         outp.parent.mkdir(parents=True, exist_ok=True)
         wb.save(str(outp))
         return str(outp)
+
 
 
     # ---------------- Step 7: DMN → per-module CSVs -----------------
@@ -1614,42 +1574,30 @@ class OpenAIGuardedExtractor:
     
 
     def export_csvs_from_dmn(self, dmn_xml: str, out_dir: str) -> Dict[str, str]:
-    # --- normalize refs like 'p11-10, p 7 - 6 ; P15-P17' → 'p10-11, p6-7; p15-17'
+        # normalize refs like 'p11-10, p 7 - 6 ; P15-P17' → 'p10-11, p7-23; p15-17'
         def _normalize_page_ranges(ref: str) -> str:
-            """
-            Normalize page ranges in a string:
-            - 'p11-10' -> 'p10-11'
-            - 'P  23 -  7' -> 'p7-23'
-            - '15-17' -> 'p15-17'
-            Handles multiple refs separated by comma/semicolon and arbitrary whitespace.
-            Leaves single refs like 'p12' unchanged.
-            """
             s = _strip_quotes(ref or "")
 
             # add 'p' if a range lacks it entirely (e.g., "12-9")
             def _ensure_p_prefix(m):
                 a, b = m.group(1), m.group(2)
                 return f"p{a}-{b}"
-
             s = re.sub(r"\b(\d{1,4})\s*-\s*(\d{1,4})\b", _ensure_p_prefix, s)
 
-            # now normalize any pA - pB variants, preserving lower→higher
+            # normalize pA - pB variants, preserving low→high
             def _swap_if_needed(m):
-                a = int(m.group(1))
-                b = int(m.group(2))
+                a = int(m.group(1)); b = int(m.group(2))
                 lo, hi = sorted((a, b))
                 return f"p{lo}-{hi}"
-
             s = re.sub(r"[Pp]\s*(\d{1,4})\s*-\s*[Pp]?\s*(\d{1,4})", _swap_if_needed, s)
 
-            # squeeze spaces around separators and after commas/semicolons
+            # tidy separators
             s = re.sub(r"\s*([,;])\s*", r"\1 ", s)
             return s.strip()
 
         tables = self.parse_dmn_decision_tables(dmn_xml)
         out_map: Dict[str, str] = {}
-        outp = Path(out_dir)
-        outp.mkdir(parents=True, exist_ok=True)
+        outp = Path(out_dir); outp.mkdir(parents=True, exist_ok=True)
 
         def norm_out_val(col: str, val: str) -> str:
             v = _strip_quotes(val or "")
@@ -1661,19 +1609,18 @@ class OpenAIGuardedExtractor:
                 return _normalize_page_ranges(v)
             return v
 
-        # Fill defaults for any blank cells so we never crash on export
         DEFAULTS = {
             "triage": "home",
             "danger_sign": "false",
             "clinic_referral": "false",
             "reason": "",
             "ref": "p0",
-            "advice": ""
+            "advice": "",
         }
 
         for mod, t in tables.items():
             outs = [c for c in t["outputs"] if c] or ["triage", "danger_sign", "clinic_referral", "reason", "ref", "advice"]
-            fname = f"dmn_{mod}.csv"  # disk file is dmn_<mod>.csv; pulldata id is 'dmn_<mod>'
+            fname = f"dmn_{mod}.csv"  # disk name maps to pulldata id 'dmn_<mod>'
             fpath = outp / fname
             with open(fpath, "w", newline="", encoding="utf-8") as f:
                 w = csv.writer(f)
@@ -1682,50 +1629,15 @@ class OpenAIGuardedExtractor:
                     key = f"r{str(i).zfill(3)}"
                     raw_vals = row["outs"][: len(outs)]
                     raw_vals += [""] * (len(outs) - len(raw_vals))
-
                     filled = []
                     for col_name, cell in zip(outs, raw_vals):
                         v = cell if (cell is not None and str(cell).strip() != "") else DEFAULTS.get(col_name, "")
                         filled.append(norm_out_val(col_name, v))
-
                     w.writerow([key] + filled)
             out_map[mod] = str(fpath)
 
         return out_map
 
-
-
-        # Fill defaults for any blank cells so we never crash on export
-        DEFAULTS = {
-            "triage": "home",
-            "danger_sign": "false",
-            "clinic_referral": "false",
-            "reason": "",
-            "ref": "p0",
-            "advice": ""
-        }
-
-        for mod, t in tables.items():
-            outs = [c for c in t["outputs"] if c] or ["triage", "danger_sign", "clinic_referral", "reason", "ref", "advice"]
-            fname = f"dmn_{mod}.csv"  # single .csv on disk; pulldata id will be 'dmn_<mod>'
-            fpath = outp / fname
-            with open(fpath, "w", newline="", encoding="utf-8") as f:
-                w = csv.writer(f)
-                w.writerow(["key"] + outs)
-                for i, row in enumerate(t["rows"], start=1):
-                    key = f"r{str(i).zfill(3)}"
-                    raw_vals = row["outs"][: len(outs)]
-                    raw_vals += [""] * (len(outs) - len(raw_vals))
-
-                    # Fill blanks with defaults and normalize
-                    filled = []
-                    for col_name, val in zip(outs, raw_vals):
-                        v = val if (val is not None and str(val).strip() != "") else DEFAULTS.get(col_name, "")
-                        filled.append(norm_out_val(col_name, v))
-
-                    w.writerow([key] + filled)
-            out_map[mod] = str(fpath)
-        return out_map
 
     # ---------------- Step 8: Wire DMN outputs into XLSForm -----------------
     def wire_decisions_into_xlsx(self, xlsx_path: str, dmn_xml: str, merged_ir: Dict[str, Any], media_id_prefix: str = "dmn_") -> None:
@@ -1737,7 +1649,6 @@ class OpenAIGuardedExtractor:
         def hdrs():
             row1 = next(ws.iter_rows(min_row=1, max_row=1, values_only=True), None) or []
             return [c or "" for c in row1]
-
         hdr = hdrs()
 
         def col(name):
@@ -1747,7 +1658,6 @@ class OpenAIGuardedExtractor:
             ws.cell(row=1, column=len(hdr), value=name)
             return len(hdr) - 1
 
-        # Always get proper column indexes
         c_type = col("type")
         c_name = col("name")
         c_calc = col("calculation")
@@ -1755,7 +1665,6 @@ class OpenAIGuardedExtractor:
         c_rel  = col("relevant")
 
         def append_by_cols(values: dict):
-            """values is a dict like {'type': 'calculate', 'name': 'x', 'calculation': '...', 'label': '...', 'relevant': None}"""
             row = [None] * len(hdr)
             if "type" in values:         row[c_type] = values["type"]
             if "name" in values:         row[c_name] = values["name"]
@@ -1763,8 +1672,6 @@ class OpenAIGuardedExtractor:
             if "label" in values:        row[c_lab]  = values["label"]
             if "relevant" in values:     row[c_rel]  = values["relevant"]
             ws.append(row)
-
-        var_types = {(v.get("name") or "").strip(): (v.get("type") or "string") for v in (merged_ir.get("variables") or []) if isinstance(v, dict)}
 
         def map_var_token_to_xls(var_token: str) -> str:
             tok = (var_token or "").strip()
@@ -1797,7 +1704,7 @@ class OpenAIGuardedExtractor:
 
         tables = self.parse_dmn_decision_tables(dmn_xml)
         for mod, t in tables.items():
-            # Build row matchers (unchanged)
+            # Build DMN row matchers
             row_tests = []
             for i, row in enumerate(t["rows"], start=1):
                 conjuncts = []
@@ -1811,10 +1718,10 @@ class OpenAIGuardedExtractor:
             for key, test in reversed(row_tests):
                 expr = f"if({test}, '{key}', {expr})"
 
-            # spacer (pad to header length so we don’t shift columns)
+            # spacer to avoid shifting columns
             ws.append([None] * len(hdr))
 
-            # <module>_key calculate — write by column name
+            # <module>_key calculate
             append_by_cols({
                 "type": "calculate",
                 "name": f"{mod}_key",
@@ -1823,7 +1730,7 @@ class OpenAIGuardedExtractor:
                 "relevant": None
             })
 
-            # DMN output calculates — write by column name
+            # DMN output calculates
             outs = [c for c in t["outputs"] if c] or ["triage", "danger_sign", "clinic_referral", "reason", "ref", "advice"]
             for out_col in outs:
                 name = f"{media_id_prefix}{mod}_{out_col}"
@@ -1837,6 +1744,7 @@ class OpenAIGuardedExtractor:
                 })
 
         wb.save(xlsx_path)
+
 
 
     # ---------------- PDF sectioning wrapper -----------------
