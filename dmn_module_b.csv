@@ -1,0 +1,4 @@
+key,triage,danger_sign,clinic_referral,reason,ref,advice
+r001,home,false,false,No fever detected,p3,Monitor temperature regularly
+r002,clinic,true,true,High fever - potential emergency,p4,Seek immediate medical attention
+r003,clinic,false,true,Moderate fever - needs assessment,p5,Schedule clinic visit within 24 hours
