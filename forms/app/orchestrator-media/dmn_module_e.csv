@@ -1,0 +1,5 @@
+key,triage,danger_sign,clinic_referral,reason,ref,advice
+r001,home,false,false,uncomplicated_diarrhoea,p68,
+r002,home,false,false,malaria_test_negative,p60,
+r003,clinic,false,true,fast_breathing,p120,
+r004,home,false,false,no_danger_sign,p50,

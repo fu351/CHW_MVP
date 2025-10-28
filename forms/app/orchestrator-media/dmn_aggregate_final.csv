@@ -1,0 +1,4 @@
+key,triage,danger_sign,clinic_referral,reason,ref,advice
+r001,hospital,true,false,danger_sign_priority,p6-6,
+r002,clinic,false,true,clinic_referral,p48,
+r003,home,false,false,treat_at_home,p7,

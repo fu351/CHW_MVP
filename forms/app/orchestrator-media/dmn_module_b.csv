@@ -1,0 +1,9 @@
+key,triage,danger_sign,clinic_referral,reason,ref,advice
+r001,clinic,false,true,cough_14_days_or_more,p48,
+r002,clinic,false,true,diarrhoea_14_days_or_more,p48,
+r003,clinic,false,true,blood_in_stool,p50,
+r004,clinic,false,true,fever_7_days_or_more,p48,
+r005,home,false,false,diarrhoea_less_than_14_days_no_blood,p60,
+r006,home,false,false,fever_less_than_7_days_in_malaria_area,p7,
+r007,clinic,false,true,fast_breathing,p50,
+r008,clinic,false,true,yellow_on_muac_strap,p46,
