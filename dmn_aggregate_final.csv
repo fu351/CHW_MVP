@@ -1,0 +1,209 @@
+rule_id,conditions,triage_decision,flags,reasons,guideline_reference,priority,source_module
+MOD-01,cough = True AND cough_duration_days ge 14,hospital,danger_sign,cough_duration_exceeds_limit,WHO-IMCI-2014-MOD-01,100,dmn_module_a
+MOD-01,blood_in_stool = True,hospital,danger_sign,blood_in_stool,WHO-IMCI-2014-MOD-01,100,dmn_module_a
+MOD-01,chest_indrawing = True,hospital,danger.sign,severe_pneumonia,WHO-IMCI-2014-MOD-01,100,dmn_module_a
+MOD-01,cannot_drink_feed eq True,hospital,danger.sign,cannot_drink_feed,WHO-IMCI-2014-MOD-01,100,dmn_module_a
+MOD-01,danger_sign = True,hospital,danger.sign,child_has_danger_sign,WHO-IMCI-2014-MOD-01,100,dmn_module_a
+MOD-01,danger_sign eq True,hospital,danger_sign,urgent_referral,WHO-IMCI-2014-MOD-01,100,dmn_module_a
+MOD-01,chest_indrawing = True AND fast_breathing = True,hospital,danger_sign,chest_indrawing_or_fast_breathing,WHO-IMCI-2014-MOD-01,100,dmn_module_a
+MOD-01,danger_sign eq True,hospital,danger.sign,refer_urgently,WHO-IMCI-2014-MOD-01,100,dmn_module_a
+MOD-01,breath_rate ge 40 AND cough = True,hospital,danger.sign,fast_breathing,WHO-IMCI-2014-MOD-01,100,dmn_module_a
+MOD-01,temp ge 37.5,hospital,danger.sign,fever_high,WHO-IMCI-2014-MOD-01,100,dmn_module_a
+MOD-02,diarrhea = True AND diarrhea_duration_days ge 14,hospital,danger_sign,diarrhea_duration_exceeds_limit,WHO-IMCI-2014-MOD-02,100,dmn_module_a
+MOD-02,fever_days lt 7 AND in_malaria_area = True,hospital,danger_sign,fever_less_than_7_days_in_malaria_area,WHO-IMCI-2014-MOD-02,100,dmn_module_a
+MOD-02,temp ge 38 AND fever = True AND muac_mm lt 125,hospital,danger_sign,fever_high_muac_low,WHO-IMCI-2014-MOD-02,100,dmn_module_a
+MOD-02,diarrhea_days lt 14 AND blood_in_stool = True,hospital,danger.sign,diarrhea_with_blood,WHO-IMCI-2014-MOD-02,100,dmn_module_a
+MOD-02,becomes_sicker eq True,hospital,danger.sign,becomes_sicker,WHO-IMCI-2014-MOD-02,100,dmn_module_a
+MOD-02,convulsion = True,hospital,danger.sign,convulsion_present,WHO-IMCI-2014-MOD-02,100,dmn_module_a
+MOD-03,blood_in_stool = True,hospital,danger_sign,presence_of_blood_in_stool,WHO-IMCI-2014-MOD-03,100,dmn_module_a
+MOD-03,resp_rate gt 60,hospital,danger_sign,fast_breathing,WHO-IMCI-2014-MOD-03,100,dmn_module_a
+MOD-03,cough eq True AND resp_rate ge 50,hospital,danger.sign,fast_breathing_sign_of_pneumonia,WHO-IMCI-2014-MOD-03,100,dmn_module_a
+MOD-03,blood_in_stool eq True,hospital,danger.sign,blood_in_stool,WHO-IMCI-2014-MOD-03,100,dmn_module_a
+MOD-03,fever eq True AND convulsions = True,hospital,danger_sign,fever_with_convulsions,WHO-IMCI-2014-MOD-03,100,dmn_module_a
+MOD-03,diarrhea_days ge 3 AND blood_in_stool = True,hospital,danger_sign,diarrhea_with_blood_in_stool,WHO-IMCI-2014-MOD-03,100,dmn_module_a
+MOD-03,diarrhea_days ge 14 AND blood_in_stool = True,hospital,danger.sign,diarrhea_with_blood,WHO-IMCI-2014-MOD-03,100,dmn_module_a
+MOD-03,unusually_sleepy = True,hospital,danger.sign,unusually_sleepy,WHO-IMCI-2014-MOD-03,100,dmn_module_a
+MOD-04,fever_duration_days ge 7,hospital,danger_sign,fever_duration_exceeds_limit,WHO-IMCI-2014-MOD-04,100,dmn_module_a
+MOD-04,muac_mm lt 115,hospital,danger_sign,yellow_on_muac_strap,WHO-IMCI-2014-MOD-04,100,dmn_module_a
+MOD-04,cough ge 14,hospital,danger.sign,cough_for_14_days_or_more,WHO-IMCI-2014-MOD-04,100,dmn_module_a
+MOD-04,unusually_sleepy = True,hospital,danger.sign,unusually_sleepy_or_unconscious,WHO-IMCI-2014-MOD-04,100,dmn_module_a
+MOD-04,cough = True AND fast_breathing = True AND danger_sign = True,hospital,danger_sign,immediate_referral_needed,WHO-IMCI-2014-MOD-04,100,dmn_module_a
+MOD-04,fever eq True AND unusually_sleepy = True,hospital,danger_sign,fever_with_sleepiness,WHO-IMCI-2014-MOD-04,100,dmn_module_a
+MOD-04,muac_mm lt 125,hospital,danger_sign,muac_below_threshold,WHO-IMCI-2014-MOD-04,100,dmn_module_a
+MOD-04,fever_days ge 7 AND unusually_sleepy = True,hospital,danger.sign,fever_for_more_than_7_days,WHO-IMCI-2014-MOD-04,100,dmn_module_a
+MOD-04,not_able_to_drink = True,hospital,danger.sign,unable_to_drink,WHO-IMCI-2014-MOD-04,100,dmn_module_a
+MOD-05,convulsion = True,hospital,danger_sign,presence_of_convulsion,WHO-IMCI-2014-MOD-05,100,dmn_module_a
+MOD-05,feels_very_hot = True,hospital,danger_sign,feels_very_hot,WHO-IMCI-2014-MOD-05,100,dmn_module_a
+MOD-05,diarrhea_days ge 14,hospital,danger.sign,diarrhea_for_14_days_or_more,WHO-IMCI-2014-MOD-05,100,dmn_module_a
+MOD-05,unconscious = True,hospital,danger.sign,unconscious,WHO-IMCI-2014-MOD-05,100,dmn_module_a
+MOD-05,temp ge 38 AND cough = True AND diarrhea_days ge 3,hospital,danger_sign,fever_with_cough_and_diarrhea,WHO-IMCI-2014-MOD-05,100,dmn_module_a
+MOD-05,difficulty_breathing eq True,hospital,danger.sign,difficulty_breathing,WHO-IMCI-2014-MOD-05,100,dmn_module_a
+MOD-05,fever eq True AND not_able_to_drink = True,hospital,danger_sign,fever_with_drinking_issue,WHO-IMCI-2014-MOD-05,100,dmn_module_a
+MOD-05,vomits_everything = True,hospital,danger.sign,vomiting_everything,WHO-IMCI-2014-MOD-05,100,dmn_module_a
+MOD-06,not_able_to_drink_or_eat = True,hospital,danger_sign,unable_to_drink_or_eat,WHO-IMCI-2014-MOD-06,100,dmn_module_a
+MOD-06,convulsion = True,hospital,danger_sign,convulsion,WHO-IMCI-2014-MOD-06,100,dmn_module_a
+MOD-06,blood_in_stool eq True,hospital,danger.sign,diarrhea_with_blood_in_stool,WHO-IMCI-2014-MOD-06,100,dmn_module_a
+MOD-06,cannot_drink_or_feed = True,hospital,danger_sign,cannot_drink_or_feed,WHO-IMCI-2014-MOD-06,100,dmn_module_a
+MOD-06,temp ge 38.5 AND diarrhea_days ge 14,hospital,danger.sign,fever_duration,WHO-IMCI-2014-MOD-06,100,dmn_module_a
+MOD-06,weakness_sleepiness eq True,hospital,danger.sign,weakness_sleepiness,WHO-IMCI-2014-MOD-06,100,dmn_module_a
+MOD-06,fever eq True AND vomiting_everything = True,hospital,danger_sign,fever_with_vomiting,WHO-IMCI-2014-MOD-06,100,dmn_module_a
+MOD-06,chest_indrawing eq True AND breath_rate ge 40,hospital,danger.sign,chest_indrawing_and_fast_breathing,WHO-IMCI-2014-MOD-06,100,dmn_module_a
+MOD-06,diarrhea_days ge 14,hospital,danger.sign,diarrhea_14_days,WHO-IMCI-2014-MOD-06,100,dmn_module_a
+MOD-07,vomits_everything = True,hospital,danger_sign,vomiting_all,WHO-IMCI-2014-MOD-07,100,dmn_module_a
+MOD-07,edema_both_feet = True,hospital,danger_sign,edema_both_feet,WHO-IMCI-2014-MOD-07,100,dmn_module_a
+MOD-07,fever_days ge 7,hospital,danger.sign,fever_for_7_days_or_more,WHO-IMCI-2014-MOD-07,100,dmn_module_a
+MOD-07,becomes_sicker = True,hospital,danger_sign,becomes_sicker,WHO-IMCI-2014-MOD-07,100,dmn_module_a
+MOD-07,cannot_drink_or_feed = True AND becomes_sicker = True AND blood_in_stool = True,hospital,danger_sign,immediate_referral_needed,WHO-IMCI-2014-MOD-07,100,dmn_module_a
+MOD-07,muac_color eq red,hospital,danger.sign,muac_red,WHO-IMCI-2014-MOD-07,100,dmn_module_a
+MOD-07,cough_days ge 14,hospital,danger.sign,cough_14_days,WHO-IMCI-2014-MOD-07,100,dmn_module_a
+MOD-08,chest_indrawing = True,hospital,danger_sign,chest_indrawing_present,WHO-IMCI-2014-MOD-08,100,dmn_module_a
+MOD-08,convulsion eq True,hospital,danger.sign,convulsion_detected,WHO-IMCI-2014-MOD-08,100,dmn_module_a
+MOD-08,blood_in_stool = True,hospital,danger_sign,blood_in_stool,WHO-IMCI-2014-MOD-08,100,dmn_module_a
+MOD-08,temp ge 38 AND vomiting = True AND diarrhea_days ge 3,hospital,danger_sign,fever_with_vomiting_and_diarrhea,WHO-IMCI-2014-MOD-08,100,dmn_module_a
+MOD-08,swelling_both_feet eq True,hospital,danger.sign,swelling_of_both_feet,WHO-IMCI-2014-MOD-08,100,dmn_module_a
+MOD-08,fast_breathing ge 50,hospital,danger.sign,fast_breathing,WHO-IMCI-2014-MOD-08,100,dmn_module_a
+MOD-09,unusually_sleepy_or_unconscious = True,hospital,danger_sign,unusual_sleepiness_or_unconsciousness,WHO-IMCI-2014-MOD-09,100,dmn_module_a
+MOD-09,not_able_to_drink_or_feed eq True,hospital,danger.sign,unable_to_drink_or_feed,WHO-IMCI-2014-MOD-09,100,dmn_module_a
+MOD-09,diarrhea_days ge 6 AND muac_red eq True,hospital,danger_sign,severe_diarrhea,WHO-IMCI-2014-MOD-09,100,dmn_module_a
+MOD-09,vomiting eq True AND not_able_to_drink = True,hospital,danger.sign,vomiting_and_not_able_to_drink,WHO-IMCI-2014-MOD-09,100,dmn_module_a
+MOD-10,vomiting_everything eq True,hospital,danger.sign,vomiting_everything,WHO-IMCI-2014-MOD-10,100,dmn_module_a
+MOD-10,muac_color eq red,hospital,danger.sign,muac_red,WHO-IMCI-2014-MOD-10,100,dmn_module_a
+MOD-11,swelling_of_both_feet = True,hospital,danger_sign,swelling_of_both_feet,WHO-IMCI-2014-MOD-11,100,dmn_module_a
+MOD-11,unusually_sleepy_or_unconscious eq True,hospital,danger.sign,unusually_sleepy_or_unconscious,WHO-IMCI-2014-MOD-11,100,dmn_module_a
+MOD-11,temp ge 38.5 AND diarrhea_days ge 14,hospital,danger.sign,fever_long_duration,WHO-IMCI-2014-MOD-11,100,dmn_module_a
+MOD-12,muac_mm lt 115,hospital,danger.sign,malnutrition_red_result,WHO-IMCI-2014-MOD-12,100,dmn_module_a
+MOD-13,edema_both_feet = True,hospital,danger.sign,swelling_of_both_feet,WHO-IMCI-2014-MOD-13,100,dmn_module_a
+MOD-02,child_condition eq not_better,hospital,danger.sign,child_not_better,WHO-IMCI-2014-MOD-02,99,dmn_module_a
+MOD-02,danger_sign eq False,home,,treat_at_home,WHO-IMCI-2014-MOD-02,99,dmn_module_a
+MOD-03,child_condition eq better,home,,child_better,WHO-IMCI-2014-MOD-03,98,dmn_module_a
+MOD-04,temp ge 38 AND convulsion = True,hospital,danger.sign,fever_with_convulsion,WHO-IMCI-2014-MOD-04,97,dmn_module_a
+MOD-05,temp ge 38 AND unusually_sleepy = True,hospital,danger.sign,fever_with_sleepiness,WHO-IMCI-2014-MOD-05,96,dmn_module_a
+MOD-03,fever = True AND convulsion = True,hospital,danger.sign,fever_with_convulsion,WHO-IMCI-2014-MOD-03,95,dmn_module_a
+MOD-05,temp ge 38.5 AND diarrhea_days lt 14,hospital,danger.sign,fever_with_diarrhea,WHO-IMCI-2014-MOD-05,95,dmn_module_a
+MOD-06,temp ge 38 AND not_able_to_drink = True,hospital,danger.sign,fever_with_drinking_issue,WHO-IMCI-2014-MOD-06,95,dmn_module_a
+MOD-06,cannot_drink_or_feed = True,hospital,danger_sign,cannot_drink_or_feed,WHO-IMCI-2014-MOD-06,95,dmn_module_a
+MOD-07,becomes_sicker = True,hospital,danger_sign,becomes_sicker,WHO-IMCI-2014-MOD-07,95,dmn_module_a
+MOD-08,blood_in_stool = True,hospital,danger_sign,blood_in_stool,WHO-IMCI-2014-MOD-08,95,dmn_module_a
+MOD-04,difficulty_drinking = True,hospital,danger.sign,difficulty_drinking,WHO-IMCI-2014-MOD-04,94,dmn_module_a
+MOD-07,diarrhea_days ge 14,hospital,danger.sign,diarrhea_for_14_days,WHO-IMCI-2014-MOD-07,94,dmn_module_a
+MOD-05,temp ge 38.0,hospital,danger.sign,high_fever,WHO-IMCI-2014-MOD-05,93,dmn_module_a
+MOD-08,diarrhea_days ge 3 AND blood_in_stool = True,hospital,danger.sign,diarrhea_with_blood,WHO-IMCI-2014-MOD-08,93,dmn_module_a
+MOD-06,muac_mm eq red,hospital,danger.sign,malnutrition,WHO-IMCI-2014-MOD-06,92,dmn_module_a
+MOD-09,fast_breathing ge 50,hospital,danger.sign,fast_breathing,WHO-IMCI-2014-MOD-09,92,dmn_module_a
+MOD-07,diarrhea_days ge 14,hospital,danger.sign,prolonged_diarrhea,WHO-IMCI-2014-MOD-07,91,dmn_module_a
+MOD-01,fever eq 1,hospital,danger.sign,fever_present,WHO-IMCI-2014-MOD-01,90,dmn_module_a
+MOD-01,cough = True AND breaths_per_minute ge 50,hospital,danger.sign,fast_breathing,WHO-IMCI-2014-MOD-01,90,dmn_module_a
+MOD-01,fever eq 1 AND malaria_area eq True,clinic,clinic_referral,fever_in_malaria_area,WHO-IMCI-2014-MOD-01,90,dmn_module_c
+MOD-01,"fever = True AND {'all_of': [{'obs': 'days_with_fever', 'op': 'lt', 'value': 7}, {'obs': 'in_malaria_area', 'op': 'eq', 'value': True}]}",clinic,clinic_referral,fever_in_malaria_area,WHO-IMCI-2014-MOD-01,90,dmn_module_c
+MOD-01,diarrhea_days lt 14,home,,diarrhea_less_than_14_days,WHO-IMCI-2014-MOD-01,90,dmn_module_d
+MOD-01,diarrhea_days lt 14 AND blood_in_stool = False,home,,diarrhea_no_blood,WHO-IMCI-2014-MOD-01,90,dmn_module_d
+MOD-01,diarrhea_days le 14 AND blood_in_stool = False,home,,diarrhea_less_than_14_days_no_blood,WHO-IMCI-2014-MOD-01,90,dmn_module_d
+MOD-01,diarrhea_days lt 14 AND blood_in_stool = False,home,,diarrhea_no_blood,WHO-IMCI-2014-MOD-01,90,dmn_module_d
+MOD-01,fever_days lt 7 AND RDT_result = False AND lives_in_malaria_area = False,home,,follow_up_visit_in_3_days,WHO-IMCI-2014-MOD-01,90,dmn_module_d
+MOD-02,convulsions eq 1,hospital,danger.sign,convulsions_present,WHO-IMCI-2014-MOD-02,90,dmn_module_a
+MOD-02,breath_rate ge 50 AND age_months le 12,hospital,danger.sign,fast_breathing_under_12_months,WHO-IMCI-2014-MOD-02,90,dmn_module_a
+MOD-02,unusually_sleepy_or_unconscious = True,hospital,danger.sign,unusually_sleepy_or_unconscious,WHO-IMCI-2014-MOD-02,90,dmn_module_a
+MOD-02,diarrhea_days ge 1 AND can_drink eq True,clinic,clinic_referral,diarrhea_treatment,WHO-IMCI-2014-MOD-02,90,dmn_module_c
+MOD-02,fever_days ge 3 AND cough_days ge 14,clinic,clinic_referral,fever_for_3_days_and_cough_for_14_days,WHO-IMCI-2014-MOD-02,90,dmn_module_c
+MOD-02,fever_days lt 7,home,,fever_less_than_7_days,WHO-IMCI-2014-MOD-02,90,dmn_module_d
+MOD-02,fever_days lt 7 AND malaria_area = True,home,,fever_less_than_7_days,WHO-IMCI-2014-MOD-02,90,dmn_module_d
+MOD-02,fever_days lt 7 AND RDT_result = True,home,,treat_with_antimalarial,WHO-IMCI-2014-MOD-02,90,dmn_module_d
+MOD-02,diarrhea_days ge 14 AND blood_in_stool = False,home,,diarrhea_less_than_14_days_no_blood,WHO-IMCI-2014-MOD-02,90,dmn_module_d
+MOD-03,breath_rate ge 40 AND age_months gt 12 AND age_months le 60,hospital,danger.sign,fast_breathing_12_to_60_months,WHO-IMCI-2014-MOD-03,90,dmn_module_a
+MOD-03,muac_color eq red,hospital,danger.sign,red_on_muac_strap,WHO-IMCI-2014-MOD-03,90,dmn_module_a
+MOD-03,resp_rate ge 50,home,,fast_breathing,WHO-IMCI-2014-MOD-03,90,dmn_module_d
+MOD-04,swelling_of_both_feet = True,hospital,danger.sign,swelling_of_both_feet,WHO-IMCI-2014-MOD-04,90,dmn_module_a
+MOD-04,feels_very_hot eq True,clinic,clinic_referral,feels_very_hot,WHO-IMCI-2014-MOD-04,90,dmn_module_c
+MOD-04,"fever_days lt 7 AND malaria_area = True AND {'all_of': [{'obs': 'rdt_result', 'op': 'eq', 'value': 'positive'}]}",home,,malaria_positive,WHO-IMCI-2014-MOD-04,90,dmn_module_d
+MOD-05,vomits_everything = True,hospital,danger.sign,vomits_everything,WHO-IMCI-2014-MOD-05,90,dmn_module_a
+MOD-05,resp_rate ge 50 AND cough = True,home,,cough_with_fast_breathing,WHO-IMCI-2014-MOD-05,90,dmn_module_d
+MOD-06,blood_in_stool eq 1,hospital,danger.sign,blood_in_stool,WHO-IMCI-2014-MOD-06,90,dmn_module_a
+MOD-06,diarrhea_days ge 14,hospital,danger.sign,diarrhea_for_14_days_or_more,WHO-IMCI-2014-MOD-06,90,dmn_module_a
+MOD-07,chest_indrawing eq 1,hospital,danger.sign,chest_indrawing,WHO-IMCI-2014-MOD-07,90,dmn_module_a
+MOD-07,diarrhea_days lt 14 AND blood_in_stool = True,hospital,danger.sign,diarrhea_with_blood_in_stool,WHO-IMCI-2014-MOD-07,90,dmn_module_a
+MOD-07,chest_indrawing eq True AND can_drink eq True,clinic,clinic_referral,chest_indrawing,WHO-IMCI-2014-MOD-07,90,dmn_module_c
+MOD-07,fever_days ge 7 AND diarrhea_days lt 14,clinic,clinic_referral,fever_for_7_days,WHO-IMCI-2014-MOD-07,90,dmn_module_c
+MOD-08,fast_breathing eq 1,hospital,danger.sign,fast_breathing,WHO-IMCI-2014-MOD-08,90,dmn_module_a
+MOD-08,fever_days ge 7,hospital,danger.sign,fever_for_7_days_or_more,WHO-IMCI-2014-MOD-08,90,dmn_module_a
+MOD-08,cough_days ge 14,hospital,danger.sign,prolonged_cough,WHO-IMCI-2014-MOD-08,90,dmn_module_a
+MOD-08,diarrhea_days ge 3,clinic,clinic_referral,diarrhea_more_than_3_days,WHO-IMCI-2014-MOD-08,90,dmn_module_c
+MOD-08,fast_breathing eq True AND can_drink eq True,clinic,clinic_referral,fast_breathing,WHO-IMCI-2014-MOD-08,90,dmn_module_c
+MOD-09,unusually_sleepy eq 1,hospital,danger.sign,unusually_sleepy,WHO-IMCI-2014-MOD-09,90,dmn_module_a
+MOD-09,convulsions = True,hospital,danger.sign,convulsions,WHO-IMCI-2014-MOD-09,90,dmn_module_a
+MOD-09,temp ge 38.5,clinic,clinic_referral,high_fever,WHO-IMCI-2014-MOD-09,90,dmn_module_c
+MOD-10,not_able_to_drink_or_feed = True,hospital,danger.sign,not_able_to_drink_or_feed,WHO-IMCI-2014-MOD-10,90,dmn_module_a
+MOD-10,temp ge 38.5 AND diarrhea_days ge 3,hospital,danger.sign,fever_with_diarrhea,WHO-IMCI-2014-MOD-10,90,dmn_module_a
+MOD-10,other_problem eq True,hospital,,other_problem,WHO-IMCI-2014-MOD-10,90,dmn_module_b
+MOD-11,muac_color eq red,hospital,danger.sign,muac_red,WHO-IMCI-2014-MOD-11,90,dmn_module_a
+MOD-09,blood_in_stool = True,hospital,danger.sign,blood_in_stool,WHO-IMCI-2014-MOD-09,89,dmn_module_a
+MOD-10,unusually_sleepy = True,hospital,danger.sign,unusually_sleepy,WHO-IMCI-2014-MOD-10,88,dmn_module_a
+MOD-11,swelling_both_feet = True,hospital,danger.sign,swelling_of_both_feet,WHO-IMCI-2014-MOD-11,87,dmn_module_a
+MOD-12,resp_rate ge 50,hospital,danger.sign,fast_breathing,WHO-IMCI-2014-MOD-12,86,dmn_module_a
+MOD-15,fever_days lt 7 AND malaria_test eq positive,clinic,clinic_referral,malaria_positive,WHO-IMCI-2014-MOD-15,86,dmn_module_c
+MOD-02,rdt_result eq positive,clinic,,malaria_positive,WHO-IMCI-2014-MOD-02,85,dmn_module_c
+MOD-03,cough = True AND fast_breathing = True AND danger_sign = False,home,clinic_referral,treat_with_amoxicillin,WHO-IMCI-2014-MOD-03,85,dmn_module_d
+MOD-04,rdt_result eq invalid,clinic,clinic_referral,rdt_invalid,WHO-IMCI-2014-MOD-04,85,dmn_module_c
+MOD-04,fast_breathing eq True,clinic,clinic_referral,fast_breathing,WHO-IMCI-2014-MOD-04,85,dmn_module_c
+MOD-05,yellow_on_muac eq True,clinic,clinic_referral,yellow_on_muac,WHO-IMCI-2014-MOD-05,85,dmn_module_c
+MOD-07,temp lt 38.5 AND diarrhea_days ge 10,clinic,clinic_referral,diarrhea_long_duration,WHO-IMCI-2014-MOD-07,85,dmn_module_c
+MOD-12,temp lt 38.5 AND diarrhea_days ge 7,clinic,clinic_referral,diarrhea_long_duration,WHO-IMCI-2014-MOD-12,85,dmn_module_c
+MOD-13,resp_rate ge 40,hospital,danger.sign,fast_breathing,WHO-IMCI-2014-MOD-13,85,dmn_module_a
+MOD-16,fever_days lt 7 AND malaria_test eq negative,home,,malaria_negative,WHO-IMCI-2014-MOD-16,85,dmn_module_d
+MOD-02,rdt_result eq positive,home,,rdt_positive,WHO-IMCI-2014-MOD-02,80,dmn_module_d
+MOD-03,difficulty_drinking eq 1,clinic,clinic_referral,difficulty_drinking,WHO-IMCI-2014-MOD-03,80,dmn_module_c
+MOD-03,temp ge 38 AND fever = True AND muac_mm ge 125,clinic,clinic_referral,fever_high_muac_normal,WHO-IMCI-2014-MOD-03,80,dmn_module_c
+MOD-03,temp ge 38.5,clinic,clinic_referral,fever_high,WHO-IMCI-2014-MOD-03,80,dmn_module_c
+MOD-03,rdt_result eq negative,home,,malaria_negative,WHO-IMCI-2014-MOD-03,80,dmn_module_d
+MOD-04,vomiting eq 1,clinic,clinic_referral,vomiting_present,WHO-IMCI-2014-MOD-04,80,dmn_module_c
+MOD-05,diarrhea eq 1,clinic,clinic_referral,diarrhea_present,WHO-IMCI-2014-MOD-05,80,dmn_module_c
+MOD-05,fever_days lt 7 AND in_malaria_area = True,clinic,clinic_referral,fever_less_than_7_days_in_malaria_area,WHO-IMCI-2014-MOD-05,80,dmn_module_c
+MOD-05,child_age_months ge 2 AND child_age_months lt 12,home,,give_1_tablet_amoxicillin_twice_daily_for_5_days,WHO-IMCI-2014-MOD-05,80,dmn_module_d
+MOD-06,temp ge 38 AND cough = True AND diarrhea_days lt 3,clinic,clinic_referral,fever_with_cough_less_than_3_days,WHO-IMCI-2014-MOD-06,80,dmn_module_c
+MOD-06,child_age_months ge 12 AND child_age_months lt 60,home,,give_2_tablets_amoxicillin_twice_daily_for_5_days,WHO-IMCI-2014-MOD-06,80,dmn_module_d
+MOD-07,not_getting_better eq True,clinic,clinic_referral,not_getting_better,WHO-IMCI-2014-MOD-07,80,dmn_module_c
+MOD-10,fast_breathing eq True,clinic,clinic_referral,fast_breathing,WHO-IMCI-2014-MOD-10,80,dmn_module_c
+MOD-10,temp lt 38.5,home,,fever_controlled,WHO-IMCI-2014-MOD-10,80,dmn_module_d
+MOD-11,cough_days ge 14,clinic,,cough_for_14_days_or_more,WHO-IMCI-2014-MOD-11,80,dmn_module_c
+MOD-12,diarrhea_days ge 14,clinic,,diarrhea_for_14_days_or_more,WHO-IMCI-2014-MOD-12,80,dmn_module_c
+MOD-13,diarrhea_days lt 14 AND blood_in_stool = False,clinic,,diarrhea_less_than_14_days_no_blood,WHO-IMCI-2014-MOD-13,80,dmn_module_c
+MOD-14,fever_days = True,clinic,,fever_less_than_7_days_in_malaria_area,WHO-IMCI-2014-MOD-14,80,dmn_module_c
+MOD-15,breaths_per_minute ge 50 AND age_months le 12,clinic,,fast_breathing_age_2_to_12_months,WHO-IMCI-2014-MOD-15,80,dmn_module_c
+MOD-16,breaths_per_minute ge 40 AND age_months gt 12,clinic,,fast_breathing_age_12_months_to_5_years,WHO-IMCI-2014-MOD-16,80,dmn_module_c
+MOD-17,muac_color eq yellow,clinic,,yellow_on_muac_strap,WHO-IMCI-2014-MOD-17,80,dmn_module_c
+MOD-05,age ge 2 AND age lt 3 AND rdt_result eq positive,home,,treatment_for_age_2_to_3,WHO-IMCI-2014-MOD-05,75,dmn_module_c
+MOD-06,age ge 3 AND age lt 5 AND rdt_result eq positive,home,,treatment_for_age_3_to_5,WHO-IMCI-2014-MOD-06,75,dmn_module_c
+MOD-03,rdt_result eq negative,home,,rdt_negative,WHO-IMCI-2014-MOD-03,70,dmn_module_c
+MOD-04,temp lt 38 AND diarrhea_days = True,home,,diarrhea_3_days_no_fever,WHO-IMCI-2014-MOD-04,70,dmn_module_c
+MOD-04,temp lt 38.5 AND diarrhea_days ge 3,home,,diarrhea_duration,WHO-IMCI-2014-MOD-04,70,dmn_module_c
+MOD-08,vaccines_up_to_date eq False,clinic,clinic_referral,vaccines_up_to_date,WHO-IMCI-2014-MOD-08,70,dmn_module_c
+MOD-09,follow_up_needed eq True,home,,follow_up_needed,WHO-IMCI-2014-MOD-09,70,dmn_module_c
+MOD-18,danger_signs_present eq False,home,,no_danger_signs,WHO-IMCI-2014-MOD-18,70,dmn_module_c
+MOD-07,temp lt 38 AND cough = True AND diarrhea_days lt 3,home,,cough_less_than_3_days_no_fever,WHO-IMCI-2014-MOD-07,60,dmn_module_c
+MOD-08,temp lt 38.5 AND diarrhea_days ge 5,home,,diarrhea_moderate_duration,WHO-IMCI-2014-MOD-08,60,dmn_module_c
+MOD-09,temp lt 38 AND vomiting = True AND diarrhea_days lt 3,home,,vomiting_less_than_3_days_no_fever,WHO-IMCI-2014-MOD-09,50,dmn_module_d
+MOD-09,temp ge 38.5 AND diarrhea_days lt 3,home,,fever_short_duration,WHO-IMCI-2014-MOD-09,50,dmn_module_d
+MOD-12,diarrhea_duration_days lt 14,clinic,clinic_referral,diarrhea_duration_under_limit,WHO-IMCI-2014-MOD-12,50,dmn_module_c
+MOD-12,"{'all_of': [{'obs': 'temp', 'op': 'lt', 'value': 37.5}, {'obs': 'diarrhea_days', 'op': 'lt', 'value': 14}, {'sym': 'blood_in_stool', 'eq': False}]}",home,,diarrhea_less_than_14_days_no_blood,WHO-IMCI-2014-MOD-12,50,dmn_module_d
+MOD-13,temp lt 37.5,home,,no_danger_sign,WHO-IMCI-2014-MOD-13,50,dmn_module_d
+MOD-06,breath_rate lt 50 AND breath_rate lt 40 AND chest_indrawing = False AND unusually_sleepy = False AND unconscious = False,home,,no_severe_signs,WHO-IMCI-2014-MOD-06,10,dmn_module_e
+WHO_CHW-01,convulsion = True,home,,,WHO-IMCI-2014-WHO_CHW-01,10,dmn_module_e
+MOD-05,diarrhea_days lt 14 AND blood_in_stool = False,home,,diarrhea_less_than_14_days_no_blood,WHO-IMCI-2014-MOD-05,2,dmn_module_e
+MOD-06,fever_days lt 7 AND in_malaria_area = True,home,,fever_less_than_7_days_in_malaria_area,WHO-IMCI-2014-MOD-06,2,dmn_module_e
+MOD-07,fast_breathing ge 50 AND chest_indrawing = False,home,,fast_breathing_no_chest_indrawing,WHO-IMCI-2014-MOD-07,2,dmn_module_e
+MOD-13,muac_yellow eq 1,clinic,clinic_referral,muac_yellow,WHO-IMCI-2014-MOD-13,2,dmn_module_c
+MOD-01,muac_mm lt 115,hospital,danger.sign,severe_malnutrition_muac,WHO-IMCI-2014-MOD-01,1,dmn_module_a
+MOD-01,unusually_sleepy = True,hospital,danger.sign,unusually_sleepy,WHO-IMCI-2014-MOD-01,1,dmn_module_a
+MOD-02,swelling_both_feet = True,hospital,danger.sign,severe_malnutrition_oedema,WHO-IMCI-2014-MOD-02,1,dmn_module_a
+MOD-02,unconscious = True,hospital,danger.sign,unconscious,WHO-IMCI-2014-MOD-02,1,dmn_module_a
+MOD-03,cough_duration_days ge 14,hospital,danger.sign,cough_for_14_days,WHO-IMCI-2014-MOD-03,1,dmn_module_a
+MOD-03,muac_red eq 1,hospital,danger.sign,muac_red,WHO-IMCI-2014-MOD-03,1,dmn_module_a
+MOD-04,diarrhea_duration_days ge 14,hospital,danger.sign,diarrhea_for_14_days,WHO-IMCI-2014-MOD-04,1,dmn_module_a
+MOD-04,swelling_both_feet = True,hospital,danger.sign,swelling_both_feet,WHO-IMCI-2014-MOD-04,1,dmn_module_a
+MOD-05,blood_in_stool = True,hospital,danger.sign,blood_in_stool,WHO-IMCI-2014-MOD-05,1,dmn_module_a
+MOD-06,fever_duration_days ge 7,hospital,danger.sign,fever_for_7_days,WHO-IMCI-2014-MOD-06,1,dmn_module_a
+MOD-07,convulsions = True,hospital,danger.sign,convulsions,WHO-IMCI-2014-MOD-07,1,dmn_module_a
+MOD-08,not_able_to_drink_or_eat = True,hospital,danger.sign,not_able_to_drink_or_eat,WHO-IMCI-2014-MOD-08,1,dmn_module_a
+MOD-09,vomits_everything = True,hospital,danger.sign,vomits_everything,WHO-IMCI-2014-MOD-09,1,dmn_module_a
+MOD-10,chest_indrawing = True,hospital,danger.sign,chest_indrawing,WHO-IMCI-2014-MOD-10,1,dmn_module_a
+MOD-11,diarrhea_days ge 14,hospital,danger.sign,diarrhea_ge_14_days,WHO-IMCI-2014-MOD-11,1,dmn_module_a
+MOD-12,fever_days ge 7,hospital,danger.sign,fever_ge_7_days,WHO-IMCI-2014-MOD-12,1,dmn_module_a
