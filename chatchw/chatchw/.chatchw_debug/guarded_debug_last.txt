@@ -1,158 +1,23 @@
 SYSTEM:
-You extract structured decision rules from a technical manual. Return ONLY JSON.
-
-IMPORTANT OUTPUT POLICY
-- Preserve original clinical/medical terms EXACTLY as written in the source text wherever they appear.
-- Any examples below are generic; do NOT copy their wording.
-- No prose outside the JSON object.
-
-SCHEMA
-{
-  "variables":[{"name":snake,"type":"number|boolean|string","unit":null|unit,"allowed":null|[...],                "synonyms":[snake...],"prompt":short,"refs":[page_or_section]}],
-  "rules":[{"rule_id":str,
-            "when":[ {"obs":var,"op":"lt|le|gt|ge|eq|ne","value":num|bool|string} |
-                     {"sym":var,"eq":true|false} |
-                     {"all_of":[COND...]} | {"any_of":[COND...]} ],
-            "then":{"triage":"hospital|clinic|home",
-                    "flags":[snake...],
-                    "reasons":[snake...],
-                    "actions":[{"id":snake,"if_available":bool}],
-                    "advice":[],
-                    "guideline_ref":str,"priority":int}}],
-  "canonical_map":{},
-  "qa":{"notes":[]}
-}
-
+Merge this FACT_SHEET (pre-extracted variables and rules) into one comprehensive IR. Return ONLY JSON with the same schema as step 1 plus:
+- canonical_map filled for all variables
+- qa.unmapped_vars
+- qa.dedup_dropped
+- qa.overlap_fixed
 RULES
-- Use canonical names if present: symptom1, symptom1_duration_days, symptom2, symptom2_duration_days, sign1_present, sign2_present, sign3_present, measurement1_rate, measurement2_temp_c, measurement3_mm, age_months, area1_flag (examples; prefer the source's medical terms).
-- Do NOT invent thresholds; encode only literal thresholds.
-- No derived outputs in conditions (ban keys: danger_sign, clinic_referral, triage).
-- Every rule gets guideline_ref like "p41" or a section id.
-OUTPUT: only JSON for THIS section.
+- Preserve original clinical terms; do NOT replace with generic placeholders.
+- Normalize labels to snake_case where needed; keep medical meaning.
+- Rewrite rules to canonical names.
+- Force then.advice to [].
+- Keep every literal threshold.
+INPUT
+FACT_SHEET:
+<COMPACT VARIABLES + RULES>
 
-USER (len=2368):
-SECTION_ID: p137-137
+USER (len=228021):
+FACT_SHEET
+{"variables": [{"name": "cough_present", "type": "boolean", "unit": null, "allowed": null, "synonyms": ["Cough", "Cough?", "IF COUGH", "cough", "coughing", "has had cough"], "refs": ["p103", "p11-11", "p120", "p125", "p136", "p138", "p16", "p17", "p20-20", "p21", "p44", "p48", "p5-5", "p51", "p53-53", "p62"]}, {"name": "diarrhoea_present", "type": "boolean", "unit": null, "allowed": null, "synonyms": ["Diarrhoea", "Diarrhoea (3 or more loose stools in 24 hours)", "Diarrhoea (3 or more loose stools in 24 hours)?", "diarrhea", "diarrhea_present", "diarrhoea", "loose stools", "watery stools"], "refs": ["p103", "p11-11", "p120", "p125", "p136", "p17", "p20-20", "p21", "p44-44", "p45", "p48", "p5-5", "p51", "p63", "p68", "p72", "p9", "p92"]}, {"name": "diarrhoea_loose_stools_24h_count", "type": "number", "unit": "stools/24h", "allowed": null, "synonyms": ["3 or more loose stools in 24 hours"], "refs": ["p5-5"]}, {"name": "blood_in_stool_present", "type": "boolean", "unit": null, "allowed": null, "synonyms": ["Blood in stool", "If DIARRHOEA, blood in stool?", "blood_in_stool", "diarrhoea_with_blood_in_stool"], "refs": ["p120", "p16", "p20-20", "p21", "p5-5"]}, {"name": "fever_now_or_last_3_days_present", "type": "boolean", "unit": null, "allowed": null, "synonyms": ["Fever (now or in the last 3 days)"], "refs": ["p5-5"]}, {"name": "convulsions_present", "type": "boolean", "unit": null, "allowed": null, "synonyms": ["Convulsions", "Convulsions?", "convulsions", "fits", "spasms"], "refs": ["p103", "p120", "p125", "p136", "p16", "p17", "p20-20", "p21", "p48", "p5-5", "p51", "p6-6"]}, {"name": "difficult_drinking_or_feeding_present", "type": "boolean", "unit": null, "allowed": null, "synonyms": ["Difficult drinking or feeding", "difficulty drinking", "difficulty feeding"], "refs": ["p17", "p5-5"]}, {"name": "vomiting_present", "type": "boolean", "unit": null, "allowed": null, "synonyms": ["Vomiting", "Vomiting?", "vomiting", "vomiting (not everything)"], "refs": ["p103", "p125", "p136", "p20-20", "p21", "p44-44", "p48", "p5-5", "p51", "p63"]}, {"name": "any_other_problem_notes", "type": "string", "unit": null, "allowed": null, "synonyms": ["Any other problem"], "refs": ["p5-5"]}, {"name": "chest_indrawing_present", "type": "boolean", "unit": null, "allowed": null, "synonyms": ["Chest indrawing", "Chest indrawing?", "Chest indrawing? (FOR ALL CHILDREN)", "chest indrawing", "chest_indrawing", "lower chest wall goes IN when the child breathes IN"], "refs": ["p125", "p136", "p16", "p25", "p48", "p5-5", "p51"]}, {"name": "fast_breathing_present", "type": "boolean", "unit": null, "allowed": null, "synonyms": ["Fast breathing", "fast breathing", "fast_breathing"], "refs": ["p11-11", "p125", "p136", "p16", "p48", "p5-5", "p51", "p53-53", "p6-6", "p60"]}, {"name": "unusually_sleepy_or_unconscious_present", "type": "boolean", "unit": null, "allowed": null, "synonyms": ["Unusually sleepy or unconscious"], "refs": ["p5-5"]}, {"name": "cough_duration_days", "type": "number", "unit": "days", "allowed": null, "synonyms": ["Cough duration", "Cough for 14 days or more", "If YES, for how long?", "cough for 14 days or more", "days of cough", "duration of cough", "duration of coughing", "for how long", "for how long?", "for how long? days", "has been coughing for", "how long cough"], "refs": ["p103", "p120", "p122", "p125", "p136", "p16", "p17", "p19-19", "p20-20", "p21", "p22", "p23", "p40-39", "p43", "p44-44", "p48", "p51", "p52", "p53-53", "p6-6", "p62", "p63"]}, {"name": "diarrhoea_duration_days", "type": "number", "unit": "days", "allowed": null, "synonyms": ["Diarrhoea duration", "Diarrhoea for 14 days or more", "IF YES, for how long?", "IF YES, for how long? days.", "days of diarrhoea", "diarrhea duration", "diarrhea_duration_days", "diarrhoea for", "diarrhoea for 14 days or more", "diarrhoea less than 14 days", "duration of diarrhoea", "has had diarrhoea for", "how long diarrhoea"], "refs": ["p103", "p120", "p122", "p125", "p136", "p16", "p17", "p19-19", "p20", "p20-20", "p21", "p22", "p23", "p43", "p44-44", "p45", "p48", "p51", "p52", "p6-6", "p60", "p63", "p68", "p72"]}, {"name": "blood_in_stool", "type": "boolean", "unit": null, "allowed": null, "synonyms": ["Blood in stool", "If DIARRHOEA, blood in stool", "If DIARRHOEA, blood in stool?", "blood in her stool", "blood in her stools", "blood in stool", "blood in stool present", "blood_in_stools", "bloody stool", "diarrhoea with blood in the stool", "dysentery"], "refs": ["p103", "p122", "p125", "p136", "p138", "p17", "p19-19", "p20", "p22", "p23", "p43", "p44-44", "p45", "p48", "p51", "p52", "p6-6", "p60", "p68", "p72", "p9"]}, {"name": "fever_duration_days", "type": "number", "unit": "days", "allowed": null, "synonyms": ["Fever (less than 7 days)", "Fever (less than7 days)", "Fever duration", "Fever for last 7 days", "Fever for last 7 days or more", "IF YES, started", "duration of fever", "fever duration", "fever for", "fever for last 7 days or more", "fever for less than 7 days", "fever for the last 7 days or more", "fever less than 7 days", "has had a low fever for", "less than7 days", "started days ago"], "refs": ["p103", "p105", "p120", "p121", "p122", "p125", "p138", "p16", "p43", "p44-44", "p45", "p48", "p51", "p52", "p53-53", "p6-6", "p60", "p62", "p63", "p76", "p85"]}, {"name": "not_able_to_drink_or_eat_anything", "type": "boolean", "unit": null, "allowed": null, "synonyms": ["not able to drink or eat anything"], "refs": ["p43", "p6-6"]}, {"name": "vomits_everything", "type": "boolean", "unit": null, "allowed": null, "synonyms": ["Vomits everything", "not able to hold anything down at all", "vomits everything", "vomits everything?", "who everything"], "refs": ["p103", "p110", "p120", "p122", "p125", "p136", "p138", "p18", "p19-19", "p22", "p23", "p41", "p43", "p48", "p49", "p51", "p52", "p6-6"]}, {"name": "chest_indrawing", "type": "boolean", "unit": null, "allowed": null, "synonyms": ["Chest Indrawing", "Chest indrawing", "Chest indrawing?", "chest indrawing", "has chest indrawing"], "refs": ["p103", "p106", "p110", "p111", "p120", "p122", "p138", "p43", "p44", "p52", "p6-6"]}, {"name": "unusually_sleepy_or_unconscious", "type": "boolean", "unit": null, "allowed": null, "synonyms": ["Unusually sleepy or unconscious", "Unusually sleepy or unconscious?", "is unusually sleepy or unconscious", "lethargic_or_unconscious", "unusually sleepy or unconscious"], "refs": ["p103", "p110", "p120", "p122", "p125", "p136", "p138", "p16", "p43", "p48", "p51", "p52", "p6-6"]}, {"name": "muac_color", "type": "string", "unit": null, "allowed": ["red", "yellow"], "synonyms": ["MUAC strap", "Red on MUAC strap", "Yellow on MUAC strap", "red on the MUAC strap", "yellow on the MUAC strap"], "refs": ["p121", "p52", "p6-6"]}, {"name": "swelling_of_both_feet", "type": "boolean", "unit": null, "allowed": null, "synonyms": ["Swelling of both feet", "Swelling of both feet?", "bilateral pedal oedema", "bilateral pitting oedema", "bilateral_pitting_oedema", "oedema of both feet", "swelling (oedema) of both feet", "swelling of both feet"], "refs": ["p103", "p120", "p122", "p125", "p136", "p138", "p16", "p34", "p35", "p38", "p43", "p44", "p48", "p49", "p51", "p52", "p6-6"]}, {"name": "malaria_area", "type": "boolean", "unit": null, "allowed": null, "synonyms": ["area with malaria", "falciparum malaria area", "in a malaria area", "malaria area"], "refs": ["p103", "p121", "p125", "p136", "p16", "p44-44", "p45", "p48", "p51", "p52", "p6-6", "p60", "p76", "p85"]}, {"name": "thirst_interest_drinking", "type": "string", "unit": null, "allowed": ["eagerly drinks", "no longer seems thirsty and is not interested in drinking"], "synonyms": ["eagerly drinks the ORS solution", "no longer seems thirsty and is not interested in drinking"], "refs": ["p9"]}, {"name": "weak", "type": "boolean", "unit": null, "allowed": null, "synonyms": ["weak"], "refs": ["p9"]}, {"name": "common_childhood_illnesses_list", "type": "string", "unit": null, "allowed": null, "synonyms": ["common illnesses", "common childhood illnesses"], "refs": ["p10"]}, {"name": "cause_of_deaths_under5_list", "type": "string", "unit": null, "allowed": null, "synonyms": ["cause of deaths", "causes of death under 5"], "refs": ["p10"]}, {"name": "where_families_seek_care_first", "type": "string", "unit": null, "allowed": ["Neighbour or another family member", "Traditional healer", "Community health worker", "Private doctor", "Hospital", "Health facility", "Drug seller", "Other"], "synonyms": ["first point of care", "first seek care location"], "refs": ["p10"]}, {"name": "reason_for_first_care_choice", "type": "string", "unit": null, "allowed": null, "synonyms": ["reason", "reason for first care"], "refs": ["p10"]}, {"name": "determinants_for_hospital_care", "type": "string", "unit": null, "allowed": null, "synonyms": ["what determines hospital care", "hospital care determinants"], "refs": ["p10"]}, {"name": "time_to_hospital_minutes", "type": "number", "unit": "minutes", "allowed": null, "synonyms": ["time to hospital"], "refs": ["p10"]}, {"name": "transport_to_hospital_mode", "type": "string", "unit": null, "allowed": ["foot", "transportation"], "synonyms": ["how to hospital", "mode to hospital"], "refs": ["p10"]}, {"name": "time_to_outpatient_health_facility_minutes", "type": "number", "unit": "minutes", "allowed": null, "synonyms": ["time to outpatient health facility", "time to clinic"], "refs": ["p10"]}, {"name": "transport_to_outpatient_health_facility_mode", "type": "string", "unit": null, "allowed": ["foot", "transportation"], "synonyms": ["how to clinic", "mode to outpatient health facility"], "refs": ["p10"]}, {"name": "age_months", "type": "number", "unit": "months", "allowed": null, "synonyms": ["3 and a half years old", "Age", "Age 12 months up to 5 years", "Age 2 months up to 12 months", "Age 2 months up to 3 years", "Age 3 years up to 5 years", "Age Months", "Age: 2 Years 2 Months", "Age: Years Months", "age", "age 6 months up to 5 years", "age in months", "age_in_months", "child 6 months up to 5 years", "child age", "child age (months)", "child_age_months"], "refs": ["p101-101", "p103", "p104", "p11", "p110", "p111", "p115", "p120", "p121", "p122", "p125", "p136", "p138", "p14-14", "p19-19", "p20-20", "p21", "p30-30", "p31-31", "p35", "p36", "p44", "p44-44", "p45", "p48", "p49", "p51", "p53-53", "p62", "p63", "p68-69", "p72", "p73-73", "p76", "p85", "p88-88", "p89", "p89-89", "p91", "p92", "p96", "p98", "p99"]}, {"name": "fever_present", "type": "boolean", "unit": null, "allowed": null, "synonyms": ["Fever (reported or now)", "fever", "fever (reported or now)", "fever_reported_or_now", "low fever (not very hot)"], "refs": ["p103", "p11-11", "p120", "p125", "p138", "p20-20", "p21", "p44-44", "p45", "p48", "p51", "p53-53", "p62"]}, {"name": "malaria_test_result", "type": "string", "unit": null, "allowed": ["positive", "negative", "not_done"], "synonyms": ["mRDT_result", "malaria_result"], "refs": ["p11-11"]}, {"name": "referred_to_health_facility", "type": "boolean", "unit": null, "allowed": null, "synonyms": ["refer_to_health_facility"], "refs": ["p11-11"]}, {"name": "date_day", "type": "number", "unit": null, "allowed": null, "synonyms": ["Date (Day)"], "refs": ["p13", "p14"]}, {"name": "date_month", "type": "number", "unit": null, "allowed": null, "synonyms": ["Date (Month)"], "refs": ["p13", "p14"]}, {"name": "date_year", "type": "number", "unit": null, "allowed": null, "synonyms": ["Date (Year)"], "refs": ["p13", "p14"]}, {"name": "chw", "type": "string", "unit": null, "allowed": null, "synonyms": ["CHW", "community_health_worker"], "refs": ["p14", "p21"]}, {"name": "child_first_name", "type": "string", "unit": null, "allowed": null, "synonyms": ["Child’s name (First)", "Child’s name First"], "refs": ["p14", "p14-14", "p21"]}, {"name": "child_family_name", "type": "string", "unit": null, "allowed": null, "synonyms": ["Child’s name (Family)", "Child’s name Family", "surname"], "refs": ["p1
+...<TRUNCATED>...
+"priority": 1, "advice": []}}, {"rule_id": "p138_fast_breathing_threshold_u12m", "when": [{"all_of": [{"obs": "age_months", "op": "ge", "value": 2}, {"obs": "age_months", "op": "lt", "value": 12}, {"obs": "breaths_per_minute", "op": "ge", "value": 50}]}], "then": {"triage": "clinic", "flags": ["Fast breathing"], "reasons": ["Fast breathing"], "actions": [], "guideline_ref": "p138", "priority": 5, "advice": []}}, {"rule_id": "p138_fast_breathing_threshold_12m_to_5y", "when": [{"all_of": [{"obs": "age_months", "op": "ge", "value": 12}, {"obs": "age_months", "op": "lt", "value": 60}, {"obs": "breaths_per_minute", "op": "ge", "value": 40}]}], "then": {"triage": "clinic", "flags": ["Fast breathing"], "reasons": ["Fast breathing"], "actions": [], "guideline_ref": "p138", "priority": 5, "advice": []}}, {"rule_id": "p138_refer_any_danger_sign", "when": [{"any_of": [{"sym": "convulsions", "eq": true}, {"sym": "not_able_to_drink_or_feed_anything", "eq": true}, {"sym": "vomits_everything", "eq": true}, {"sym": "chest_indrawing", "eq": true}, {"sym": "unusually_sleepy_or_unconscious", "eq": true}, {"sym": "swelling_of_both_feet", "eq": true}, {"sym": "blood_in_stool", "eq": true}]}], "then": {"triage": "hospital", "flags": ["If ANY Danger Sign"], "reasons": ["Convulsions", "Not able to drink or feed anything", "Vomits everything", "Chest indrawing", "Unusually sleepy or unconscious", "Swelling of both feet", "Blood in stool"], "actions": [{"id": "REFER URGENTLY to health facility", "if_available": true}], "guideline_ref": "p138-p139", "priority": 10, "advice": []}}, {"rule_id": "p138_no_danger_sign_home_treat", "when": [{"all_of": [{"sym": "convulsions", "eq": false}, {"sym": "not_able_to_drink_or_feed_anything", "eq": false}, {"sym": "vomits_everything", "eq": false}, {"sym": "chest_indrawing", "eq": false}, {"sym": "unusually_sleepy_or_unconscious", "eq": false}, {"sym": "swelling_of_both_feet", "eq": false}, {"sym": "blood_in_stool", "eq": false}]}], "then": {"triage": "home", "flags": ["If NO Danger Sign"], "reasons": [], "actions": [{"id": "treat at home and advise caregiver", "if_available": true}], "guideline_ref": "p138", "priority": 1, "advice": []}}, {"rule_id": "p139_follow_up_home", "when": [{"sym": "child_better_on_follow_up", "eq": true}], "then": {"triage": "home", "flags": [], "reasons": ["improvement_on_follow_up"], "actions": [{"id": "continue_to_treat_at_home", "if_available": true}], "guideline_ref": "p139", "priority": 5, "advice": []}}, {"rule_id": "p139_follow_up_urgent_referral_not_better", "when": [{"sym": "child_not_better_on_follow_up", "eq": true}], "then": {"triage": "hospital", "flags": ["urgent_referral"], "reasons": ["no_improvement_on_follow_up"], "actions": [{"id": "refer_urgently_to_health_facility", "if_available": true}], "guideline_ref": "p139", "priority": 9, "advice": []}}, {"rule_id": "p139_follow_up_urgent_referral_danger_sign", "when": [{"sym": "child_has_danger_sign", "eq": true}], "then": {"triage": "hospital", "flags": ["danger_sign", "urgent_referral"], "reasons": ["danger_sign_present"], "actions": [{"id": "refer_urgently_to_health_facility", "if_available": true}], "guideline_ref": "p139", "priority": 10, "advice": []}}, {"rule_id": "p139_other_problem_refer", "when": [{"sym": "other_problem_cannot_treat", "eq": true}], "then": {"triage": "hospital", "flags": ["needs_referral"], "reasons": ["other_problem_or_condition_cannot_treat"], "actions": [{"id": "refer_child_to_health_facility", "if_available": true}, {"id": "write_referral_note", "if_available": true}], "guideline_ref": "p139", "priority": 8, "advice": []}}, {"rule_id": "p139_vaccine_counsel_when_where", "when": [{"sym": "next_vaccine_due", "eq": true}], "then": {"triage": "clinic", "flags": ["vaccination_counselling"], "reasons": ["next_vaccine_due"], "actions": [{"id": "advise_when_and_where_next_vaccine", "if_available": true}], "guideline_ref": "p139", "priority": 4, "advice": []}}], "qa": {"notes": ["from_fact_sheet_builder"]}}
 
-TEXT:
-[PAGE 137]
-children
-[PAGE 137]
-treated at
-[PAGE 137]
-home,
-[PAGE 137]
-advise on
-[PAGE 137]
-home care
-[PAGE 137]
- Advise caregiver to give more fluids and
-[PAGE 137]
-continue feeding.
-[PAGE 137]
- Advise on when to return. Go to nearest health
-[PAGE 137]
-facility immediately, or if not possible, return to
-[PAGE 137]
-CHW if child:
-[PAGE 137]
- Cannot drink or feed
-[PAGE 137]
- Becomes sicker
-[PAGE 137]
- Has blood in the stool
-[PAGE 137]
-
-[PAGE 137]
- Advise caregiver on sleeping under a bednet (ITN)
-[PAGE 137]
- Follow up child in 3 days (schedule appointment in
-[PAGE 137]
-item 6 below)
-[PAGE 137]
-4. CHECK VACCINES RECEIVED
-[PAGE 137]
-(Tick  vaccines completed)
-[PAGE 137]
-Advise caregiver, if needed:
-[PAGE 137]
-WHEN and WHERE is the next vaccine to be given?
-[PAGE 137]
-
-[PAGE 137]
-
-[PAGE 137]
-5. If any OTHER PROBLEM or condition you
-[PAGE 137]
-cannot treat, refer child to health facility, write
-[PAGE 137]
-referral note.
-[PAGE 137]
-Describe problem:
-[PAGE 137]
-6. When to return for FOLLOW up: (Circle one) Monday Tuesday Wednesday Thursday Friday Saturday Sunday
-[PAGE 137]
-7. Note on follow up:  Child is better - continue to treat at home. Day of next follow up: _____
-[PAGE 137]
- Child is not better - refer URGENTLY to health facility.
-[PAGE 137]
- Child has danger sign - refer URGENTLY to health facility.
-[PAGE 137]
-A g e Date given
-[PAGE 137]
-Birth  BCG + Hep Birth  OPV0
-[PAGE 137]
-6 weeks  DTP-Hib1 + Hep B1  OPV1  RTV1  PCV1
-[PAGE 137]
-10 weeks  DTP-Hib2 + Hep B2  OPV2  RTV2  PCV2
-[PAGE 137]
-14 weeks  DTP-Hib3 + Hep B3  OPV3  RTV3  PCV3
-[PAGE 137]
-9 months  MCV1
-[PAGE 137]
-18 months  DTP + MCV 2
-[PAGE 137]
-Vaccine
-[PAGE 138]
-1. Identify Problems
-[PAGE 138]
-ASK and LOOK Any DANGER SIGN
-[PAGE 138]
-
-[PAGE 138]
-
-[PAGE 138]
-2. DECIDE: Refer or treat child
-[PAGE 138]
-(Tick  decision)
-[PAGE 138]
-
-[PAGE 138]
-
-[PAGE 138]
-SICK but NO danger sign
-[PAGE 138]
-ASK: What are the child’s problems?
-[PAGE 138]
-If not reported, then ask to be sure
-[PAGE 138]
-YES, sign present  Tick  No sign  Circle 
-[PAGE 138]
-
-[PAGE 138]
-
-[PAGE 138]
-  Cough? If YES, for how long? days  Cough for 14 days or more
-[PAGE 138]
-  Diarrhoea (3 or more loose stools in 24 hours)?
-[PAGE 138]
-IF YES, for how long? days.
-[PAGE 138]
- Diarrhoea for 14 days
-[PAGE 138]
-or more  Diarrhoea (less than 14
-
-
-ERR:1 validation error for IR
-rules.0.when
-  List should have at least 1 item after validation, not 0 [type=too_short, input_value=[], input_type=list]
-    For further information visit https://errors.pydantic.dev/2.7/v/too_short
+ERR:Expecting value: line 1 column 1 (char 0)
