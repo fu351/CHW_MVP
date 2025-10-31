@@ -1,13 +1,43 @@
 #!/usr/bin/env python3
+"""
+run_guarded.py -- orchestrates the ChatCHW extraction pipeline and produces
+an orchestrator folder with all logic embedded in an XLSForm.
+
+This script mirrors the behaviour of the old CSV‑based pipeline but uses
+the updated functions in `guarded_extractor.py` to embed decision logic
+directly in the Excel file and to produce a complete orchestrator
+directory (XLSX, placeholder XML, properties JSON, and media logo).
+
+Usage examples:
+
+  # run the full pipeline from a PDF guideline
+  python run_guarded.py --pdf path/to/guide.pdf --out out_dir
+
+  # reuse preexisting DMN and merged IR files
+  python run_guarded.py --dmn path/to/decisions.dmn --merged path/to/merged_ir.json --out out_dir
+
+The resulting orchestrator folder will be written to a directory named
+`forms/app/orchestrator` by default (derived from --xlsx-out).  You can
+override this by passing a different --xlsx-out value (the .xlsx suffix
+is removed to determine the folder name).
+"""
+
 from __future__ import annotations
-import argparse, json, os, sys, time
-from pathlib import Path
+import argparse
+import json
+import os
+import sys
+import time
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List
 
 import guarded_extractor as ge
 from guarded_extractor import OpenAIGuardedExtractor
 
+# List of intermediate artifacts written to the --out directory.  The
+# orchestrator folder itself is created based on --xlsx-out and is not
+# necessarily inside the --out directory.
 ARTIFACTS = [
     "sections.json",
     "fact_sheet.json",
@@ -16,15 +46,16 @@ ARTIFACTS = [
     "ask_plan.json",
     "workflow.bpmn",
     "coverage.json",
-    # orchestrator.xlsx is written where you ask (not always in out/)
 ]
 
 # ---------- tiny logging helpers ----------
 def _ts() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+
 def make_logger(log_path: Path):
     log_path.parent.mkdir(parents=True, exist_ok=True)
+
     def log(msg: str):
         line = f"[{_ts()}] {msg}"
         print(line, flush=True)
@@ -33,7 +64,9 @@ def make_logger(log_path: Path):
                 fh.write(line + "\n")
         except Exception:
             pass
+
     return log
+
 
 def _safe_read_json(p: Path, log=None):
     try:
@@ -42,6 +75,7 @@ def _safe_read_json(p: Path, log=None):
         if log:
             log(f"❌ Failed to read JSON {p}: {e}")
         raise
+
 
 def write_json(p: Path, obj, log=None):
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -53,9 +87,11 @@ def write_json(p: Path, obj, log=None):
             size = 0
         log(f"created: {p}  ({size} bytes)")
 
+
 # ---------- optional fact sheet ----------
 def _flatten_rule_conditions(rule: Dict[str, Any]) -> List[str]:
     out = []
+
     def one(c):
         if isinstance(c, dict):
             if "sym" in c:
@@ -63,6 +99,7 @@ def _flatten_rule_conditions(rule: Dict[str, Any]) -> List[str]:
             if "obs" in c:
                 return f"{c['obs']} {c['op']} {json.dumps(c['value'])}"
         return None
+
     for c in rule.get("when", []) or []:
         if isinstance(c, dict) and ("all_of" in c or "any_of" in c):
             k = "all_of" if "all_of" in c else "any_of"
@@ -76,74 +113,121 @@ def _flatten_rule_conditions(rule: Dict[str, Any]) -> List[str]:
                 out.append(s)
     return out
 
+
 def build_fact_sheet_from_sections(sections: List[Dict[str, Any]]) -> Dict[str, Any]:
     facts: List[Dict[str, Any]] = []
     for idx, sec in enumerate(sections, start=1):
         sid = f"section_{idx:03d}"
         for v in (sec.get("variables") or []):
-            if not isinstance(v, dict): continue
-            facts.append({
-                "topic": "variable",
-                "name": v.get("name"),
-                "type": v.get("type"),
-                "unit": v.get("unit"),
-                "allowed": v.get("allowed"),
-                "synonyms": v.get("synonyms"),
-                "refs": v.get("refs"),
-                "section": sid,
-            })
+            if not isinstance(v, dict):
+                continue
+            facts.append(
+                {
+                    "topic": "variable",
+                    "name": v.get("name"),
+                    "type": v.get("type"),
+                    "unit": v.get("unit"),
+                    "allowed": v.get("allowed"),
+                    "synonyms": v.get("synonyms"),
+                    "refs": v.get("refs"),
+                    "section": sid,
+                }
+            )
         for r in (sec.get("rules") or []):
-            if not isinstance(r, dict): continue
+            if not isinstance(r, dict):
+                continue
             conds = _flatten_rule_conditions(r)
             th = r.get("then") or {}
-            facts.append({
-                "topic": "criterion",
-                "rule_id": r.get("rule_id"),
-                "conditions": conds,
-                "triage": th.get("triage"),
-                "flags": th.get("flags"),
-                "reasons": th.get("reasons"),
-                "actions": th.get("actions"),
-                "guideline_ref": th.get("guideline_ref"),
-                "section": sid,
-            })
+            facts.append(
+                {
+                    "topic": "criterion",
+                    "rule_id": r.get("rule_id"),
+                    "conditions": conds,
+                    "triage": th.get("triage"),
+                    "flags": th.get("flags"),
+                    "reasons": th.get("reasons"),
+                    "actions": th.get("actions"),
+                    "guideline_ref": th.get("guideline_ref"),
+                    "section": sid,
+                }
+            )
     return {"facts": facts, "qa": {"notes": []}}
+
 
 # ---------- main ----------
 def main():
-    ap = argparse.ArgumentParser(description="Extract → DMN → CSVs → XLSForm → wire pulldata()")
-    ap.add_argument("--pdf", required=False, help="Path to guideline PDF (required for steps 1–5; optional for --run 6)")
-    ap.add_argument("--out", default="out", help="Output directory for intermediate artifacts (default: out)")
-    ap.add_argument("--log", default=None, help="Optional log file path (default: <out>/pipeline.log)")
+    ap = argparse.ArgumentParser(
+        description="Extract → DMN → XLSForm → build orchestrator folder"
+    )
+    ap.add_argument(
+        "--pdf",
+        required=False,
+        help="Path to guideline PDF (required for steps 1–5; optional for --run 6)",
+    )
+    ap.add_argument(
+        "--out",
+        default="out",
+        help="Output directory for intermediate artifacts (default: out)",
+    )
+    ap.add_argument(
+        "--log", default=None, help="Optional log file path (default: <out>/pipeline.log)"
+    )
     # Simple one-flag model override
-    ap.add_argument("--model", default="gpt-5", help="Model id to use for all stages (default: gpt-5)")
+    ap.add_argument(
+        "--model", default="gpt-5", help="Model id to use for all stages (default: gpt-5)"
+    )
     # Per-stage overrides
     ap.add_argument("--model-section", default=None)
-    ap.add_argument("--model-merge",   default=None)
-    ap.add_argument("--model-dmn",     default=None)
-    ap.add_argument("--model-bpmn",    default=None)
-    ap.add_argument("--model-audit",   default=None)
-    ap.add_argument("--canonical-config", default="chatchw/config/canonical_config.json")
-    ap.add_argument("--no-strict-merge", action="store_true",
-                    help="Disable strict model-merge (use deterministic local fallback). Default is strict ON.")
-    ap.add_argument("--no-merge-fallback", action="store_true",
-                    help="Do not auto-fallback to local merge if strict merge fails.")
-    ap.add_argument("--run", choices=["all","1","2","3","4","5","6"], default="all",
-                    help="Which step to run: all (default) or a single step number.")
-    ap.add_argument("--write-per-section", action="store_true",
-                    help="Also write each section JSON to out/sections/section_###.json with logs.")
+    ap.add_argument("--model-merge", default=None)
+    ap.add_argument("--model-dmn", default=None)
+    ap.add_argument("--model-bpmn", default=None)
+    ap.add_argument("--model-audit", default=None)
+    ap.add_argument(
+        "--canonical-config",
+        default="chatchw/config/canonical_config.json",
+    )
+    ap.add_argument(
+        "--no-strict-merge",
+        action="store_true",
+        help="Disable strict model-merge (use deterministic local fallback). Default is strict ON.",
+    )
+    ap.add_argument(
+        "--no-merge-fallback",
+        action="store_true",
+        help="Do not auto-fallback to local merge if strict merge fails.",
+    )
+    ap.add_argument(
+        "--run",
+        choices=["all", "1", "2", "3", "4", "5", "6"],
+        default="all",
+        help="Which step to run: all (default) or a single step number.",
+    )
+    ap.add_argument(
+        "--write-per-section",
+        action="store_true",
+        help="Also write each section JSON to out/sections/section_###.json with logs.",
+    )
 
     # deployment-oriented outputs
-    ap.add_argument("--media-dir", default="forms/app/orchestrator-media",
-                    help="Where to write modular CSVs (default: forms/app/orchestrator-media)")
-    ap.add_argument("--xlsx-out", default="forms/app/orchestrator.xlsx",
-                    help="Where to write the XLSForm (default: forms/app/orchestrator.xlsx)")
-    ap.add_argument("--xlsx-template", default=None,
-                    help="Optional path to an XLSX template to fill")
-
+    ap.add_argument(
+        "--media-dir",
+        default="forms/app/orchestrator-media",
+        help="Where to write modular CSVs (legacy; no longer used for orchestration)",
+    )
+    ap.add_argument(
+        "--xlsx-out",
+        default="forms/app/orchestrator.xlsx",
+        help="Where to write the XLSForm.  The .xlsx suffix is removed to create the orchestrator directory.",
+    )
+    ap.add_argument(
+        "--xlsx-template",
+        default=None,
+        help="Optional path to an XLSX template to fill",
+    )
     args = ap.parse_args()
 
-    out_dir = Path(args.out); out_dir.mkdir(parents=True, exist_ok=True)
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
     log_path = Path(args.log) if args.log else (out_dir / "pipeline.log")
     log = make_logger(log_path)
 
@@ -160,7 +244,7 @@ def main():
         log("❌ --pdf is required for steps 1–5.")
         sys.exit(1)
     if pdf:
-        if os.name == "posix" and (":\\" in args.pdf or ":\\\\\\" in args.pdf):
+        if os.name == "posix" and (":\\" in args.pdf or ":\\\\" in args.pdf):
             log("⚠️  Detected Windows-style path on Linux/WSL. Use /mnt/c/... form.")
         if not pdf.exists():
             if args.run == "6":
@@ -174,10 +258,10 @@ def main():
     # Models
     m_all = args.model or "gpt-5"
     m_section = args.model_section or m_all
-    m_merge   = args.model_merge   or m_all
-    m_dmn     = args.model_dmn     or m_all
-    m_bpmn    = args.model_bpmn    or m_all
-    m_audit   = args.model_audit   or m_all
+    m_merge = args.model_merge or m_all
+    m_dmn = args.model_dmn or m_all
+    m_bpmn = args.model_bpmn or m_all
+    m_audit = args.model_audit or m_all
 
     log(f"Models: section={m_section}, merge={m_merge}, dmn={m_dmn}, bpmn={m_bpmn}, audit={m_audit}")
     log(f"Strict merge: {ge.STRICT_MERGE}")
@@ -200,13 +284,13 @@ def main():
     log(f"init.ok in {time.time()-t0:.2f}s")
 
     # Paths for intermediates
-    sec_path  = out_dir / "sections.json"
-    facts_path= out_dir / "fact_sheet.json"
-    mir_path  = out_dir / "merged_ir.json"
-    dmn_path  = out_dir / "decisions.dmn"
-    ask_path  = out_dir / "ask_plan.json"
+    sec_path = out_dir / "sections.json"
+    facts_path = out_dir / "fact_sheet.json"
+    mir_path = out_dir / "merged_ir.json"
+    dmn_path = out_dir / "decisions.dmn"
+    ask_path = out_dir / "ask_plan.json"
     bpmn_path = out_dir / "workflow.bpmn"
-    cov_path  = out_dir / "coverage.json"
+    cov_path = out_dir / "coverage.json"
 
     # XLS/CSV destinations (not necessarily in out/)
     media_dir = Path(args.media_dir)
@@ -252,7 +336,9 @@ def main():
         try:
             u = getattr(gx, "get_usage_summary", lambda: None)()
             if u:
-                log(f"usage.cumulative: prompt={u['prompt']} completion={u['completion']} total={u['total']}")
+                log(
+                    f"usage.cumulative: prompt={u['prompt']} completion={u['completion']} total={u['total']}"
+                )
         except Exception:
             pass
 
@@ -261,7 +347,7 @@ def main():
             log("🎉 Done (step 1 only).")
             return
     else:
-        if args.run in ("2","3","4","5"):
+        if args.run in ("2", "3", "4", "5"):
             if not sec_path.exists():
                 log(f"❌ Missing {sec_path}. Run step 1 first (--run 1 or --run all).")
                 sys.exit(1)
@@ -272,7 +358,7 @@ def main():
             else:
                 log("ⓘ No fact_sheet.json found; continuing without it.")
 
-    if ge.STRICT_MERGE and 'sections' in locals() and not sections and args.run in ("all","2","3"):
+    if ge.STRICT_MERGE and 'sections' in locals() and not sections and args.run in ("all", "2", "3"):
         log("❌ Strict merge is ON and there are zero sections to merge. Aborting before step 2.")
         sys.exit(1)
 
@@ -284,7 +370,9 @@ def main():
             merged_ir = gx.merge_sections(sections)
         except Exception as e:
             if ge.STRICT_MERGE and not args.no_merge_fallback:
-                log(f"step2.warn: strict merge failed ({e.__class__.__name__}: {e}). Retrying with local fallback …")
+                log(
+                    f"step2.warn: strict merge failed ({e.__class__.__name__}: {e}). Retrying with local fallback …"
+                )
                 ge.STRICT_MERGE = False
                 merged_ir = gx.merge_sections(sections)
                 log("step2.info: local merge succeeded after fallback.")
@@ -298,7 +386,9 @@ def main():
         try:
             u = getattr(gx, "get_usage_summary", lambda: None)()
             if u:
-                log(f"usage.cumulative: prompt={u['prompt']} completion={u['completion']} total={u['total']}")
+                log(
+                    f"usage.cumulative: prompt={u['prompt']} completion={u['completion']} total={u['total']}"
+                )
         except Exception:
             pass
         ran_any = True
@@ -306,12 +396,14 @@ def main():
             log("🎉 Done (step 2 only).")
             return
     else:
-        if args.run in ("3","4","5","6"):
+        if args.run in ("3", "4", "5", "6"):
             if not mir_path.exists():
                 log(f"❌ Missing {mir_path}. Run step 2 first (--run 2 or --run all).")
                 sys.exit(1)
             merged_ir = _safe_read_json(mir_path, log=log)
-            log(f"loaded: {mir_path} (variables={len(merged_ir.get('variables', []))}, rules={len(merged_ir.get('rules', []))})")
+            log(
+                f"loaded: {mir_path} (variables={len(merged_ir.get('variables', []))}, rules={len(merged_ir.get('rules', []))})"
+            )
 
     # ---------------- Step 3 ----------------
     if args.run in ("all", "3"):
@@ -326,12 +418,18 @@ def main():
             dmn_size = 0
         log(f"created: {dmn_path}  ({dmn_size} bytes)")
         write_json(ask_path, ask_plan, log=log)
-        ap_len = len(ask_plan if isinstance(ask_plan, list) else (ask_plan.get("ASK_PLAN", []) if isinstance(ask_plan, dict) else []))
+        ap_len = len(
+            ask_plan
+            if isinstance(ask_plan, list)
+            else (ask_plan.get("ASK_PLAN", []) if isinstance(ask_plan, dict) else [])
+        )
         log(f"step3.summary: ask_plan_blocks={ap_len} → {ask_path}")
         try:
             u = getattr(gx, "get_usage_summary", lambda: None)()
             if u:
-                log(f"usage.cumulative: prompt={u['prompt']} completion={u['completion']} total={u['total']}")
+                log(
+                    f"usage.cumulative: prompt={u['prompt']} completion={u['completion']} total={u['total']}"
+                )
         except Exception:
             pass
         ran_any = True
@@ -339,13 +437,17 @@ def main():
             log("🎉 Done (step 3 only).")
             return
     else:
-        if args.run in ("4","5","6"):
+        if args.run in ("4", "5", "6"):
             if not dmn_path.exists() or not ask_path.exists():
-                log(f"❌ Missing {dmn_path} and/or {ask_path}. Run step 3 first (--run 3 or --run all).")
+                log(
+                    f"❌ Missing {dmn_path} and/or {ask_path}. Run step 3 first (--run 3 or --run all)."
+                )
                 sys.exit(1)
             dmn_xml = dmn_path.read_text(encoding="utf-8")
             ask_raw = _safe_read_json(ask_path, log=log)
-            ask_plan = ask_raw.get("ASK_PLAN") if isinstance(ask_raw, dict) and "ASK_PLAN" in ask_raw else ask_raw
+            ask_plan = (
+                ask_raw.get("ASK_PLAN") if isinstance(ask_raw, dict) and "ASK_PLAN" in ask_raw else ask_raw
+            )
             ap_len = len(ask_plan if isinstance(ask_plan, list) else [])
             log(f"loaded: {dmn_path}, {ask_path} (ask_plan_blocks={ap_len})")
 
@@ -364,7 +466,9 @@ def main():
         try:
             u = getattr(gx, "get_usage_summary", lambda: None)()
             if u:
-                log(f"usage.cumulative: prompt={u['prompt']} completion={u['completion']} total={u['total']}")
+                log(
+                    f"usage.cumulative: prompt={u['prompt']} completion={u['completion']} total={u['total']}"
+                )
         except Exception:
             pass
         ran_any = True
@@ -374,7 +478,9 @@ def main():
     else:
         if args.run == "5":
             if not bpmn_path.exists():
-                log("ⓘ No BPMN found. Continuing; coverage step does not require BPMN.")
+                log(
+                    "ⓘ No BPMN found. Continuing; coverage step does not require BPMN."
+                )
 
     # ---------------- Step 5 ----------------
     if args.run in ("all", "5"):
@@ -389,7 +495,9 @@ def main():
         try:
             u = getattr(gx, "get_usage_summary", lambda: None)()
             if u:
-                log(f"usage.cumulative: prompt={u['prompt']} completion={u['completion']} total={u['total']}")
+                log(
+                    f"usage.cumulative: prompt={u['prompt']} completion={u['completion']} total={u['total']}"
+                )
         except Exception:
             pass
         ran_any = True
@@ -399,14 +507,16 @@ def main():
 
     # ---------------- Step 6 ----------------
     if args.run in ("all", "6"):
-        log("STEP 6/6: Exporting XLSX + media CSVs + wiring pulldata() …")
+        log("STEP 6/6: Building orchestrator folder (no CSVs) …")
 
         # collect inputs if missing from scope
         missing = []
         if 'merged_ir' not in locals():
             if mir_path.exists():
                 merged_ir = _safe_read_json(mir_path, log=log)
-                log(f"loaded: {mir_path} (variables={len(merged_ir.get('variables', []))}, rules={len(merged_ir.get('rules', []))})")
+                log(
+                    f"loaded: {mir_path} (variables={len(merged_ir.get('variables', []))}, rules={len(merged_ir.get('rules', []))})"
+                )
             else:
                 missing.append(str(mir_path))
         if 'dmn_xml' not in locals():
@@ -418,7 +528,9 @@ def main():
         if 'ask_plan' not in locals():
             if ask_path.exists():
                 ask_raw = _safe_read_json(ask_path, log=log)
-                ask_plan = ask_raw.get("ASK_PLAN") if isinstance(ask_raw, dict) and "ASK_PLAN" in ask_raw else ask_raw
+                ask_plan = (
+                    ask_raw.get("ASK_PLAN") if isinstance(ask_raw, dict) and "ASK_PLAN" in ask_raw else ask_raw
+                )
                 log(f"loaded: {ask_path}")
             else:
                 missing.append(str(ask_path))
@@ -426,40 +538,21 @@ def main():
             log("❌ Missing required inputs for XLSX export: " + ", ".join(missing))
             sys.exit(1)
 
-        # deps
-        try:
-            import openpyxl  # noqa: F401
-        except Exception:
-            log("❌ openpyxl not installed. Try:  python -m pip install openpyxl")
-            sys.exit(3)
-
-        # 6a) DMN → per-module CSVs (for jr://file-csv/)
-        media_dir.mkdir(parents=True, exist_ok=True)
-        csv_map = gx.export_csvs_from_dmn(dmn_xml, str(media_dir))
-        for mod, path in csv_map.items():
-            try:
-                size = Path(path).stat().st_size
-            except Exception:
-                size = 0
-            log(f"media.csv[{mod}]: {path}  ({size} bytes)")
-
-        # 6b) Build XLSForm (questions) at the requested path
-        xlsx_path.parent.mkdir(parents=True, exist_ok=True)
-        outp = gx.export_xlsx_from_dmn(
+        # Determine orchestrator root from xlsx_out
+        orchestrator_root = xlsx_path.with_suffix("")
+        orchestrator_root.parent.mkdir(parents=True, exist_ok=True)
+        # Build orchestrator folder using the new helper (no CSVs)
+        gx.build_orchestrator_folder(
+            dmn_xml=dmn_xml,
+            ask_plan=ask_plan if isinstance(ask_plan, list) else (
+                ask_plan.get("ASK_PLAN") if isinstance(ask_plan, dict) and "ASK_PLAN" in ask_plan else []
+            ),
             merged_ir=merged_ir,
-            ask_plan=ask_plan if isinstance(ask_plan, list) else (ask_plan.get("ASK_PLAN", []) if isinstance(ask_plan, dict) else []),
-            out_xlsx_path=str(xlsx_path),
-            template_xlsx_path=template_abs
+            output_dir=orchestrator_root,
+            template_xlsx_path=template_abs,
+            logo_path=None,
         )
-        try:
-            size = Path(outp).stat().st_size
-        except Exception:
-            size = 0
-        log(f"xlsx.created: {outp}  ({size} bytes)")
-
-        # 6c) Wire calculates that reproduce the DMN (module_key + pulldata())
-        gx.wire_decisions_into_xlsx(str(xlsx_path), dmn_xml, merged_ir)
-        log("xlsx.wired: added <module>_key and pulldata('dmn_<module>.csv', ...) calculations")
+        log(f"orchestrator.created: {orchestrator_root}")
 
         ran_any = True
         if args.run == "6":
@@ -478,8 +571,9 @@ def main():
                 log(f"   • {dst}  ({size} bytes)")
             else:
                 log(f"   • {dst}  (missing)")
-        log(f"➡ XLSForm: {xlsx_path}")
-        log(f"➡ Media CSVs: {media_dir}")
+        log(f"➡ Orchestrator directory: {xlsx_path.with_suffix('')}")
+        log("   (contains orchestrator.xlsx, orchestrator.xml, orchestrator.properties.json, media/logo.png)")
+
 
 if __name__ == "__main__":
     try:

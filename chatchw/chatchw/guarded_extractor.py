@@ -867,7 +867,8 @@ def _and_join(parts: List[str]) -> str:
         return "true()"
     if len(parts) == 1:
         return parts[0]
-    return f"({'') and ('".join(parts)})"
+    # Join multiple parts with logical AND inside parentheses
+    return "(" + ") and (".join(parts) + ")"
 
 # ---------- DMN output validator (fail fast on blanks or invalids) ----------
 def _validate_dmn_outputs_or_die(xml: str) -> None:
@@ -1122,8 +1123,8 @@ class OpenAIGuardedExtractor:
 
         self.rules_system = (
             "Given a FACT_SHEET (variables + rules), consolidate overlaps into RULES.\n"
-            "Return ONLY JSON: { \"rules\": [ {\"rule_id\": str, \"when\": [...], \"then\": {\"triage\": \"hospital|clinic|home\","\n"
-            " \"flags\":[], \"reasons\":[], \"actions\":[{\"id\":snake,\"if_available\":bool}], \"advice\":[], \"guideline_ref\": str, \"priority\": int } } ] }\n"
+            "Return ONLY JSON: { \"rules\": [ {\"rule_id\": str, \"when\": [...], \"then\": {\"triage\": \"hospital|clinic|home\", "
+            "\"flags\":[], \"reasons\":[], \"actions\":[{\"id\":snake,\"if_available\":bool}], \"advice\":[], \"guideline_ref\": str, \"priority\": int } } ] }\n"
             "HARD RULES: preserve terms, resolve overlaps, ban derived fields in conditions, advice must be [], each rule has guideline_ref.\n"
         )
 
@@ -1782,6 +1783,13 @@ class OpenAIGuardedExtractor:
 
     # ---------------- Step 8: Wire DMN outputs into XLSForm -----------------
     def wire_decisions_into_xlsx(self, xlsx_path: str, dmn_xml: str, merged_ir: Dict[str, Any], media_id_prefix: str = "dmn_") -> None:
+        """
+        Embed all DMN decision logic directly into the XLSForm.  This implementation
+        no longer relies on per-module CSVs or pulldata() calls; instead each
+        decision table's outputs are produced using nested if() expressions
+        referencing the user's answers.  The media directory is reserved for
+        images only.
+        """
         from openpyxl import load_workbook
 
         wb = load_workbook(xlsx_path)
@@ -1800,6 +1808,7 @@ class OpenAIGuardedExtractor:
             ws.cell(row=1, column=len(hdr), value=name)
             return len(hdr) - 1
 
+        # column indices for survey sheet
         c_type = col("type")
         c_name = col("name")
         c_calc = col("calculation")
@@ -1807,6 +1816,7 @@ class OpenAIGuardedExtractor:
         c_rel = col("relevant")
 
         def append_by_cols(values: dict):
+            """Append a row to the survey sheet given a mapping of field names."""
             row = [None] * len(hdr)
             if "type" in values:
                 row[c_type] = values["type"]
@@ -1821,7 +1831,9 @@ class OpenAIGuardedExtractor:
             ws.append(row)
 
         def map_var_token_to_xls(var_token: str) -> str:
+            """Translate a DMN variable token to the corresponding XLSForm variable name."""
             tok = (var_token or "").strip()
+            # for tokens like decide_module_a.danger_sign → dmn_module_a_danger_sign
             if "." in tok:
                 left, right = tok.rsplit(".", 1)
                 mod = re.sub(r"^decide[_\-:]+", "", left)
@@ -1829,9 +1841,11 @@ class OpenAIGuardedExtractor:
             return tok
 
         def feel_to_xls_test(expr: str) -> Optional[str]:
+            """Convert a simple FEEL expression into an XLSForm boolean test."""
             s = (expr or "").strip()
             if s in ("", "-", "otherwise"):
                 return None
+            # basic comparison parsing
             m = re.match(r"^\s*([A-Za-z_][A-Za-z0-9_\.\-:]*)\s*(=|==|!=|<=|>=|<|>)\s*(.+?)\s*$", s)
             if not m:
                 return None
@@ -1841,6 +1855,7 @@ class OpenAIGuardedExtractor:
             xls_var = map_var_token_to_xls(var_tok)
             lhs_is_calc = xls_var.startswith(media_id_prefix)
             val = (rhs or "").strip()
+            # boolean literal mapping: if left side is a calculate field (prefixed), remain 'true'/'false', else map to yes/no
             if val.lower() in ("true", "false"):
                 rhs_x = "'true'" if lhs_is_calc else ("'yes'" if val.lower() == "true" else "'no'")
             elif re.match(r"^-?\d+(\.\d+)?$", val):
@@ -1849,48 +1864,178 @@ class OpenAIGuardedExtractor:
                 rhs_x = f"'{_strip_quotes(val)}'"
             return f"${{{xls_var}}} {op} {rhs_x}"
 
+        # parse all decision tables from the DMN
         tables = self.parse_dmn_decision_tables(dmn_xml)
         for mod, t in tables.items():
-            # Build DMN row matchers
-            row_tests = []
+            # Build DMN row matchers (conjunction of conditions per rule)
+            row_tests: List[str] = []
             for i, row in enumerate(t["rows"], start=1):
-                conjuncts = []
-                for inp, feel in zip(t["inputs"], row["conds"]):
+                conjuncts: List[str] = []
+                for feel in row["conds"]:
                     xp = feel_to_xls_test(feel)
                     if xp:
                         conjuncts.append(xp)
-                row_tests.append((f"r{str(i).zfill(3)}", _and_join(conjuncts)))
+                # join all conjuncts with and; if none, true()
+                row_tests.append(_and_join(conjuncts))
 
-            expr = "''"
-            for key, test in reversed(row_tests):
-                expr = f"if({test}, '{key}', {expr})"
-
-            # spacer to avoid shifting columns
-            ws.append([None] * len(hdr))
-
-            # <module>_key calculate
-            append_by_cols({
-                "type": "calculate",
-                "name": f"{mod}_key",
-                "calculation": expr,
-                "label": f"{mod} key",
-                "relevant": None
-            })
-
-            # DMN output calculates
+            # Determine output columns (triage, danger_sign, etc.)
             outs = [c for c in t["outputs"] if c] or ["triage", "danger_sign", "clinic_referral", "reason", "ref", "advice"]
-            for out_col in outs:
-                name = f"{media_id_prefix}{mod}_{out_col}"
-                calc = f"pulldata('{media_id_prefix}{mod}','{out_col}','key', ${{{mod}_key}})"
+
+            # For each output column, build nested if expression selecting the row's output value
+            for col_idx, out_col in enumerate(outs):
+                # Gather the value for this output column from each rule
+                values: List[str] = []
+                for row in t["rows"]:
+                    raw_val = row["outs"][col_idx] if col_idx < len(row["outs"]) else ""
+                    # If value is missing or blank, keep as empty string
+                    v = (raw_val or "").strip()
+                    values.append(v)
+                # Build nested ifs from bottom to top
+                expr_out = "''"
+                # iterate reversed to produce inner-most default first
+                for test, val in reversed(list(zip(row_tests, values))):
+                    # determine the literal representation
+                    if val == "":
+                        lit = "''"
+                    else:
+                        vv = _strip_quotes(val)
+                        # booleans remain literal (true/false) for calculate fields
+                        if vv.lower() in ("true", "false"):
+                            lit = f"'{vv.lower()}'"
+                        else:
+                            lit = f"'{vv}'"
+                    expr_out = f"if({test}, {lit}, {expr_out})"
+
+                # Append calculate row for this output
                 append_by_cols({
                     "type": "calculate",
-                    "name": name,
-                    "calculation": calc,
+                    "name": f"{media_id_prefix}{mod}_{out_col}",
+                    "calculation": expr_out,
                     "label": f"{mod} {out_col}".replace("_", " "),
                     "relevant": None
                 })
 
         wb.save(xlsx_path)
+
+    def build_orchestrator_folder(
+        self,
+        dmn_xml: str,
+        ask_plan: List[Dict[str, Any]],
+        merged_ir: Dict[str, Any],
+        output_dir: Union[str, Path],
+        template_xlsx_path: Optional[str] = None,
+        logo_path: Optional[str] = None,
+    ) -> str:
+        """
+        Create a complete orchestrator folder containing an XLSForm with embedded
+        decision logic, a placeholder XML file, a properties file, and a media
+        directory with a logo image.  This helper wraps the existing XLSX
+        creation and wiring functions and adds the additional files expected by
+        the Community Health Toolkit (CHT).  The DMN decision tables are
+        compiled directly into the XLSForm (no CSVs are produced).
+
+        Parameters
+        ----------
+        dmn_xml: str
+            The DMN XML generated from the model.
+        ask_plan: list
+            Ask plan describing the ordering of questions for each module.
+        merged_ir: dict
+            The merged intermediate representation containing variables and rules.
+        output_dir: str or Path
+            Directory into which the orchestrator folder structure should be
+            created.  If the directory does not exist it will be created.
+            The final orchestrator files (XLSX, XML, properties) and the media
+            folder will reside directly inside this directory.
+        template_xlsx_path: Optional[str]
+            Optional path to an XLSX file to use as a template for the
+            orchestrator.  If provided and exists, the template will be used
+            as the base workbook for export_xlsx_from_dmn.
+        logo_path: Optional[str]
+            Optional path to a PNG image to use as the logo.  If not provided
+            or the path does not exist, a default logo will be used when
+            available.  If no default is available a blank PNG will be
+            generated.
+
+        Returns
+        -------
+        str
+            The path to the orchestrator directory on disk.
+        """
+        out_root = Path(output_dir)
+        # Ensure base orchestrator directory exists
+        out_root.mkdir(parents=True, exist_ok=True)
+
+        # Paths for individual files
+        xlsx_path = out_root / "orchestrator.xlsx"
+        xml_path = out_root / "orchestrator.xml"
+        props_path = out_root / "orchestrator.properties.json"
+        media_dir = out_root / "media"
+
+        # Create media directory
+        media_dir.mkdir(exist_ok=True)
+
+        # Step 1: build xlsx using merged IR and ask plan
+        # Use the provided template if supplied
+        self.export_xlsx_from_dmn(merged_ir, ask_plan, str(xlsx_path), template_xlsx_path)
+
+        # Step 2: embed DMN logic directly into xlsx
+        self.wire_decisions_into_xlsx(str(xlsx_path), dmn_xml, merged_ir)
+
+        # Step 3: generate placeholder XML
+        xml_placeholder = (
+            "<?xml version=\"1.0\"?>\n"
+            "<orchestrator>\n"
+            "  <!-- Placeholder XML form: logic embedded in orchestrator.xlsx -->\n"
+            "</orchestrator>\n"
+        )
+        with xml_path.open("w", encoding="utf-8") as f_xml:
+            f_xml.write(xml_placeholder)
+
+        # Step 4: handle logo
+        logo_dest = media_dir / "logo.png"
+        # Use provided logo if available
+        from shutil import copyfile
+        if logo_path and Path(logo_path).exists():
+            try:
+                copyfile(logo_path, logo_dest)
+            except Exception:
+                pass
+        else:
+            # Try to copy a default logo from the current directory if present
+            default_logo = Path(__file__).with_name("205a491d-21bb-46eb-be6e-6e5279e4156b.png")
+            if default_logo.exists():
+                try:
+                    copyfile(default_logo, logo_dest)
+                except Exception:
+                    pass
+            else:
+                # Generate a 1x1 transparent PNG as fallback
+                try:
+                    from PIL import Image
+
+                    img = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
+                    img.save(logo_dest, "PNG")
+                except Exception:
+                    # If PIL is not available, write an empty file
+                    logo_dest.touch()
+
+        # Step 5: write properties file
+        properties = {
+            "title": "Orchestrator",
+            "icon": "icon-healthcare",
+            "context": {
+                "person": False,
+                "place": False,
+            },
+            "internalId": "orchestrator",
+            "xmlFormId": "orchestrator",
+            "media": ["logo.png"],
+        }
+        with props_path.open("w", encoding="utf-8") as f_props:
+            json.dump(properties, f_props, indent=2)
+
+        return str(out_root)
 
     # ---------------- PDF sectioning wrapper -----------------
     def extract_sections_from_pdf(self, pdf_path: str, max_chars: int = 4000) -> List[Tuple[str, str]]:
@@ -2002,15 +2147,21 @@ if __name__ == "__main__":
         print("Supply either --pdf OR both --dmn and --merged", file=sys.stderr)
         sys.exit(2)
 
-    # 1) CSVs per module (for jr://file-csv/)
-    Path(args.media_dir).mkdir(parents=True, exist_ok=True)
-    gx.export_csvs_from_dmn(dmn_xml, args.media_dir)
+    # Create an orchestrator folder containing the XLSForm with embedded logic,
+    # a placeholder XML, a properties file, and a media directory.  The
+    # orchestrator folder name is derived from the --xlsx-out argument by
+    # removing the .xlsx suffix.  For example, if --xlsx-out is
+    # 'forms/app/orchestrator.xlsx', the resulting orchestrator directory
+    # will be 'forms/app/orchestrator'.  CSVs are not generated.
+    orchestrator_root = Path(args.xlsx_out).with_suffix("")
+    orchestrator_root.parent.mkdir(parents=True, exist_ok=True)
+    gx.build_orchestrator_folder(
+        dmn_xml=dmn_xml,
+        ask_plan=ask_plan,
+        merged_ir=merged,
+        output_dir=orchestrator_root,
+        template_xlsx_path=args.template,
+        logo_path=None,
+    )
 
-    # 2) Build a working XLSForm (questions)
-    gx.export_xlsx_from_dmn(merged, ask_plan, args.xlsx_out, template_xlsx_path=args.template)
-
-    # 3) Wire decision outputs via pulldata() (id without .csv; files are dmn_<mod>.csv)
-    gx.wire_decisions_into_xlsx(args.xlsx_out, dmn_xml, merged)
-
-    print("XLSForm:", args.xlsx_out)
-    print("Media CSVs:", args.media_dir)
+    print("Orchestrator directory:", orchestrator_root)
