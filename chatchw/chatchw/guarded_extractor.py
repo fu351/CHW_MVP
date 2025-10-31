@@ -907,6 +907,54 @@ def _is_valid_condition(cond: Any) -> bool:
     # Otherwise invalid
     return False
 
+# Helper to prune invalid condition structures recursively
+def _prune_condition(cond: Any) -> Optional[Dict[str, Any]]:
+    """
+    Recursively prune invalid subconditions from a condition dictionary.
+
+    If the condition is a valid observation or symptom condition it is returned
+    unchanged. If it is an all_of or any_of, then each subcondition is
+    recursively pruned; only valid subconditions are kept. If after pruning
+    there are no valid subconditions, None is returned, indicating the
+    condition should be discarded. Any other structure returns None.
+    """
+    if not isinstance(cond, dict):
+        return None
+    # Symptom condition
+    if "sym" in cond and "eq" in cond:
+        return cond
+    # Observation condition
+    if "obs" in cond and "op" in cond and "value" in cond:
+        return cond
+    # all_of condition: prune each subcondition
+    if "all_of" in cond:
+        seq = cond.get("all_of")
+        if not isinstance(seq, list):
+            return None
+        pruned = []
+        for sub in seq:
+            sub_pruned = _prune_condition(sub)
+            if sub_pruned:
+                pruned.append(sub_pruned)
+        if pruned:
+            return {"all_of": pruned}
+        return None
+    # any_of condition: prune each subcondition
+    if "any_of" in cond:
+        seq = cond.get("any_of")
+        if not isinstance(seq, list):
+            return None
+        pruned = []
+        for sub in seq:
+            sub_pruned = _prune_condition(sub)
+            if sub_pruned:
+                pruned.append(sub_pruned)
+        if pruned:
+            return {"any_of": pruned}
+        return None
+    # Unknown structure
+    return None
+
 # ---------- DMN output validator (fail fast on blanks or invalids) ----------
 def _validate_dmn_outputs_or_die(xml: str) -> None:
     root = ET.fromstring(xml)
@@ -1383,20 +1431,27 @@ class OpenAIGuardedExtractor:
             when_list = rule_copy.get("when") or []
             if not isinstance(when_list, list):
                 when_list = []
-            valid_conds: List[Dict[str, Any]] = []
+            pruned_conds: List[Dict[str, Any]] = []
+            trimmed_count = 0
             for cond in when_list:
-                if _is_valid_condition(cond):
-                    valid_conds.append(cond)
-            # If some conditions were trimmed, record a note
-            trimmed_count = len(when_list) - len(valid_conds)
+                pruned = _prune_condition(cond)
+                if pruned is None:
+                    trimmed_count += 1
+                else:
+                    pruned_conds.append(pruned)
+            # Record trimming note if any conditions were removed
             if trimmed_count > 0:
-                cleaning_notes.append(f"rule {rule_copy.get('rule_id')} trimmed_invalid_conds:{trimmed_count}")
+                cleaning_notes.append(
+                    f"rule {rule_copy.get('rule_id')} trimmed_invalid_conds:{trimmed_count}"
+                )
             # If no valid conditions remain, drop the entire rule
-            if not valid_conds:
-                cleaning_notes.append(f"rule {rule_copy.get('rule_id')} dropped_due_no_valid_conds")
+            if not pruned_conds:
+                cleaning_notes.append(
+                    f"rule {rule_copy.get('rule_id')} dropped_due_no_valid_conds"
+                )
                 continue
             # Otherwise update the rule's conditions and keep it
-            rule_copy["when"] = valid_conds
+            rule_copy["when"] = pruned_conds
             cleaned_rules.append(rule_copy)
 
         payload = json.dumps(fact_sheet, ensure_ascii=False)

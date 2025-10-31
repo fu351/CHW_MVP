@@ -30,99 +30,92 @@ RULES
 - Every rule gets guideline_ref like "p41" or a section id.
 OUTPUT: only JSON for THIS section.
 
-USER (len=2848):
-SECTION_ID: p64-65
+USER (len=2471):
+SECTION_ID: p17-18
 
 TEXT:
-[PAGE 64]
- Follow up child in 3 days
-[PAGE 64]
+[PAGE 17]
+TIP: If you are unsure whether the child can drink, ask the caregiver to offer a
+[PAGE 17]
+drink to the child.
+[PAGE 17]
+For a child who is breastfed, see if the child can breastfeed or take breast milk from a cup.
+[PAGE 18]
+Participant Manual: Caring for the sick child in the community 16
+[PAGE 18]
 
-[PAGE 64]
-Take-home messages for this section:
-[PAGE 64]
- Each illness has its own treatment:
-[PAGE 64]
-o ORS and zinc for diarrhoea for less than 14 days
-[PAGE 64]
-o Amoxicillin for cough (for less than 14 days) with fast breathing (pneumonia)
-[PAGE 64]
-o Antimalarial AL for fever for less than 7 days and confirmed malaria
-[PAGE 64]
- Caregivers of all sick children should be advised on home care.
-[PAGE 64]
- This section, If No Danger Sign, Treat the Child at Home, is summarized on page 7 of
-[PAGE 64]
-the Chart Booklet.
-[PAGE 65]
-Participant Manual: Caring for the sick child in the community 63
-[PAGE 65]
-
-[PAGE 65]
-GIVE ORAL MEDICINE AND ADVISE THE
-[PAGE 65]
-CAREGIVER
-[PAGE 65]
-Sick children need treatment quickly. Begin treatment before the child leaves, if the child can
-[PAGE 65]
-drink.
-[PAGE 65]
-Help the caregiver give the first dose in front of you. This way you can be sure that the
-[PAGE 65]
-treatment starts as soon as possible, and that the caregiver knows how to give it correctly.
-[PAGE 65]
-Then ask the caregiver to give the child the rest of the medicine at home.
-[PAGE 65]
-The child you refer to a health facility should also receive the first dose, if the child can drink.
-[PAGE 65]
-It takes time to go to the health facility. The child may have to wait to receive treatment there.
-[PAGE 65]
-In the meantime, the first dose of the medicine starts to work.
-[PAGE 65]
-This section presents:
-[PAGE 65]
- The treatment for diarrhoea (ORS solution and a zinc supplement)
-[PAGE 65]
- The treatment for malaria (an oral antimalarial) plus advice on sleeping under a
-[PAGE 65]
-bednet.
-[PAGE 65]
- The treatment for cough with fast breathing (amoxicillin).
-[PAGE 65]
- Home care for all sick children treated at home.
-[PAGE 65]
-
-[PAGE 65]
-You will be able to:
-[PAGE 65]
- Select the dose of the antimalarial AL, the antibiotic amoxicillin, and/or zinc t o give a
-[PAGE 65]
-child, based on the child’s age, including the amount, how many times a day, and for
-[PAGE 65]
-how many days.
-[PAGE 65]
- Demonstrate with ORS, zinc, antimalarial AL and antibiotic (amoxicillin), how to give
-[PAGE 65]
-the child one dose, and help the mother to do this.
-[PAGE 65]
- Follow correct procedures to do the Rapid Diagnostic Test (RDT) for malaria.
-[PAGE 65]
- Read and interpret the results of the RDT.
-[PAGE 65]
- Identify, by the expiration date, the medicines and RDT kits that have expired.
-[PAGE 65]
- Advise caregivers of all sick children on home care: more fluids, continued feeding,
-[PAGE 65]
-when to return, and sleeping under a bednet.
-[PAGE 65]
- Identify and record the vaccines a child has received.
-[PAGE 65]
- Identify where the caregiver should take a child for the next vaccination (e.g. health
-[PAGE 65]
-facility, village health day, mobile clinic).
+[PAGE 18]
+ Vomiting
+[PAGE 18]
+If the child is vomiting, ask: “Is the child vomiting everything?” A child who is not able to hold
+[PAGE 18]
+anything down at all has the sign “vomits everything”. Ask the caregiver how often t he child
+[PAGE 18]
+vomits. Is it every time the child swallows food or fluids, or only some times? A child who
+[PAGE 18]
+vomits several times but can hold down some fluids does not “vomit everything”. The child
+[PAGE 18]
+who vomits everything will not be able to use the oral medicine you have in your medicine kit.
+[PAGE 18]
+ Any other problem
+[PAGE 18]
+There is a small space on the back of the recording form, item 5, to write any other problem to
+[PAGE 18]
+refer because you cannot treat it. For example, a child may have a problem in breastfeeding,
+[PAGE 18]
+a skin or eye infection, or a burn or other injury.
+[PAGE 18]
+On the other hand, some other problems you may be able to treat. For example, you may
+[PAGE 18]
+have learned how to advise caregivers on how to feed their children. If the caregiver might
+[PAGE 18]
+have a question about feeding the child, you would be able to help overcome a feeding
+[PAGE 18]
+problem. The child may not need to be referred.
+[PAGE 18]
+Record the child’s problems
+[PAGE 18]
+As the caregiver lists the problems, listen carefully and record them on the Sick Child
+[PAGE 18]
+Recording Form. The caregiver may mention more than one problem. For example, the child
+[PAGE 18]
+may have cough and fever.
+[PAGE 18]
+If the caregiver reports any of the listed problems, tick [] the small empty box  next to the
+[PAGE 18]
+problem.
+[PAGE 18]
+Some items ask you to add brief answers. For example, write how many days the child has
+[PAGE 18]
+been sick.
+[PAGE 18]
+Ask about all the problems on the list, even if the caregiver does not mention them. Perhaps
+[PAGE 18]
+the caregiver is only worried about one problem. If you ask, however, the caregiver may tell
+[PAGE 18]
+you about other problems. Record (tick or write) any problems you find.
+[PAGE 18]
+If the caregiver says the child does NOT have a problem, circle the solid box  next to
+[PAGE 18]
+the listed problem, i.e.  .
 
 
-ERR:1 validation error for IR
-rules.0.when
-  List should have at least 1 item after validation, not 0 [type=too_short, input_value=[], input_type=list]
-    For further information visit https://errors.pydantic.dev/2.7/v/too_short
+ERR:6 validation errors for IR
+variables.0.allowed.0
+  Input should be a valid string [type=string_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.7/v/string_type
+variables.0.allowed.1
+  Input should be a valid string [type=string_type, input_value=False, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.7/v/string_type
+variables.1.allowed.0
+  Input should be a valid string [type=string_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.7/v/string_type
+variables.1.allowed.1
+  Input should be a valid string [type=string_type, input_value=False, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.7/v/string_type
+variables.3.allowed.0
+  Input should be a valid string [type=string_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.7/v/string_type
+variables.3.allowed.1
+  Input should be a valid string [type=string_type, input_value=False, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.7/v/string_type
