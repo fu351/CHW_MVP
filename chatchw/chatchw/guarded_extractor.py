@@ -870,6 +870,43 @@ def _and_join(parts: List[str]) -> str:
     # Join multiple parts with logical AND inside parentheses
     return "(" + ") and (".join(parts) + ")"
 
+# ---------- Helper: validate condition structures ----------
+def _is_valid_condition(cond: Any) -> bool:
+    """
+    Recursively validate a condition dictionary against the allowed IR schema.
+
+    A valid condition is one of:
+    - an observation condition with keys "obs", "op", and "value";
+    - a symptom condition with keys "sym" and "eq";
+    - an all_of block containing a list of valid conditions;
+    - an any_of block containing a list of valid conditions.
+
+    Anything else (missing keys, wrong types) is considered invalid.
+    """
+    if not isinstance(cond, dict):
+        return False
+    # Symptom condition
+    if "sym" in cond and "eq" in cond:
+        # Ensure no extraneous nested keys override validity
+        return True
+    # Observation condition
+    if "obs" in cond and "op" in cond and "value" in cond:
+        return True
+    # all_of condition: all subconditions must be valid
+    if "all_of" in cond:
+        seq = cond.get("all_of")
+        if not isinstance(seq, list):
+            return False
+        return all(_is_valid_condition(sub) for sub in seq)
+    # any_of condition: all subconditions must be valid
+    if "any_of" in cond:
+        seq = cond.get("any_of")
+        if not isinstance(seq, list):
+            return False
+        return all(_is_valid_condition(sub) for sub in seq)
+    # Otherwise invalid
+    return False
+
 # ---------- DMN output validator (fail fast on blanks or invalids) ----------
 def _validate_dmn_outputs_or_die(xml: str) -> None:
     root = ET.fromstring(xml)
@@ -1329,15 +1366,58 @@ class OpenAIGuardedExtractor:
 
         consolidated_rules = self.generate_rules_from_fact_sheet(fact_sheet)
 
+        # -------- Clean invalid conditions from consolidated rules --------
+        # Pydantic validation in STRICT_MERGE expects each condition in "when"
+        # to conform exactly to the allowed schemas.  Some extracted rules may
+        # include malformed nested structures (e.g., an any_of containing an
+        # all_of without explicit obs/sym keys).  To avoid validation errors
+        # while preserving as many rules as possible, we filter out invalid
+        # conditions before invoking the model merge.  If all conditions in a
+        # rule are invalid, we drop that rule entirely and record a QA note.
+        cleaned_rules: List[Dict[str, Any]] = []
+        # Collect notes about trimmed or dropped rules for later QA
+        cleaning_notes: List[str] = []
+        for rule in consolidated_rules:
+            # Work on a copy to avoid modifying original object inadvertently
+            rule_copy = dict(rule)
+            when_list = rule_copy.get("when") or []
+            if not isinstance(when_list, list):
+                when_list = []
+            valid_conds: List[Dict[str, Any]] = []
+            for cond in when_list:
+                if _is_valid_condition(cond):
+                    valid_conds.append(cond)
+            # If some conditions were trimmed, record a note
+            trimmed_count = len(when_list) - len(valid_conds)
+            if trimmed_count > 0:
+                cleaning_notes.append(f"rule {rule_copy.get('rule_id')} trimmed_invalid_conds:{trimmed_count}")
+            # If no valid conditions remain, drop the entire rule
+            if not valid_conds:
+                cleaning_notes.append(f"rule {rule_copy.get('rule_id')} dropped_due_no_valid_conds")
+                continue
+            # Otherwise update the rule's conditions and keep it
+            rule_copy["when"] = valid_conds
+            cleaned_rules.append(rule_copy)
+
         payload = json.dumps(fact_sheet, ensure_ascii=False)
         user = f"FACT_SHEET\n{payload}"
 
         if STRICT_MERGE:
-            merged = self._chat_json(self.merge_system, user, max_out=8000, model_key="merge", schema_model=IR if PydanticAvailable else None)
-            merged["rules"] = consolidated_rules
+            # Perform model-guided merge
+            merged = self._chat_json(
+                self.merge_system,
+                user,
+                max_out=8000,
+                model_key="merge",
+                schema_model=IR if PydanticAvailable else None,
+            )
+            # Override rules with our cleaned version
+            merged["rules"] = cleaned_rules
+            # If the model did not provide variables, fall back to those from the fact sheet
             if not merged.get("variables"):
                 merged["variables"] = fact_sheet.get("variables", [])
         else:
+            # Deterministic local merge: combine variables and cleaned rules
             variables: Dict[str, Dict[str, Any]] = {}
             qa_notes: List[str] = ["fallback_merge_used", "source=fact_sheet"]
             for v in (fact_sheet.get("variables") or []):
@@ -1361,11 +1441,21 @@ class OpenAIGuardedExtractor:
                     cur["refs"] = sorted(list(refs))
             merged = {
                 "variables": list(variables.values()),
-                "rules": consolidated_rules,
+                "rules": cleaned_rules,
                 "canonical_map": {},
                 "qa": {"notes": qa_notes, "unmapped_vars": [], "dedup_dropped": 0, "overlap_fixed": []},
             }
 
+        # Append notes about cleaning invalid conditions to the QA notes on merged
+        try:
+            notes_list = merged.setdefault("qa", {}).setdefault("notes", [])
+            # Ensure we do not modify the original list while iterating
+            for note in cleaning_notes:
+                notes_list.append(note)
+        except Exception:
+            # If QA does not exist or is not a dict, create it
+            merged["qa"] = merged.get("qa", {}) or {}
+            merged["qa"].setdefault("notes", []).extend(cleaning_notes)
         merged = _resolve_variables_snake_and_rewrite_rules(merged)
 
         canon = _build_canonical_map(self.config, merged.get("variables", []))
@@ -1494,7 +1584,8 @@ class OpenAIGuardedExtractor:
 
     # ---------------- Step 4: BPMN -----------------
     def generate_bpmn(self, dmn_xml: str, ask_plan: Any) -> str:
-        user = "DMN:\n```xml\n" + dmn_xml + "\n`````\n\n" + "ASK_PLAN:\n" + json.dumps(ask_plan, ensure_ascii=False)
+        # Compose the prompt for BPMN generation with properly fenced DMN and ASK_PLAN blocks
+        user = "DMN:\n```xml\n" + dmn_xml + "\n```\n\n" + "ASK_PLAN:\n" + json.dumps(ask_plan, ensure_ascii=False)
         text = self._chat_text(self.bpmn_system, user, max_out=12000, model_key="bpmn")
         blocks = _extract_fenced_blocks(text)
         for _lang, body in blocks:
