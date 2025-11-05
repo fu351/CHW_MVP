@@ -1,0 +1,6 @@
+key,triage,danger_sign,clinic_referral,reason,ref,advice
+r001,home,false,false,rdt_positive_malaria,p7,
+r002,clinic,false,true,no_improvement,p45,
+r003,home,false,false,simple_cough_or_cold,p45,
+r004,clinic,false,true,sign_of_pneumonia,p45,
+r005,home,false,false,follow_up_in_3_days,p45,

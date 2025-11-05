@@ -1,0 +1,9 @@
+key,triage,danger_sign,clinic_referral,reason,ref,advice
+r001,hospital,true,false,any_danger_sign,p6-6,
+r002,hospital,true,false,convulsions,p43,
+r003,hospital,true,false,chest_indrawing,p24,
+r004,hospital,true,false,unusually_sleepy_or_unconscious,p33,
+r005,hospital,true,false,vomits_everything,p41,
+r006,hospital,true,false,not_able_to_drink_or_feed_anything,p50,
+r007,hospital,true,false,severe_malnutrition,p43,
+r008,home,false,false,no_danger_sign,p7,
