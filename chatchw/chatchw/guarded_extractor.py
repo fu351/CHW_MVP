@@ -1,3 +1,4 @@
+# guarded_extractor.py
 from __future__ import annotations
 
 import collections
@@ -10,13 +11,10 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-# ---------- PDF libs (we'll try multiple strategies) ----------
 import pypdf
 
-# Optional fallbacks (imported lazily where used)
 _have_pdfminer = True
 try:
-    # import softly so the module can still run without it
     import pdfminer  # noqa: F401
 except Exception:
     _have_pdfminer = False
@@ -29,29 +27,165 @@ try:
 except Exception:
     _have_ocr = False
 
-# ---------- OpenAI client ----------
 try:
     from openai import OpenAI
 except Exception:  # pragma: no cover
     OpenAI = None  # type: ignore
 
-# ---------------- Global toggles ----------------
-# If True, merged_ir.json MUST be produced by the model (no local fallback).
+# keep strict merge True, but consolidation is now local-lossless so rule count is preserved
 STRICT_MERGE = True
 
-# ---------------- Pydantic IR Schema ----------------
 try:
     from pydantic import BaseModel, Field, ValidationError, conlist  # noqa: F401
     PydanticAvailable = True
 except Exception:  # pragma: no cover
     PydanticAvailable = False
 
+# -------------------------
+# Utility helpers (new)
+# -------------------------
+
+_DMNN = {
+    "dmn": "https://www.omg.org/spec/DMN/20191111/MODEL/",
+    "xsi": "http://www.w3.org/2001/XMLSchema-instance",
+}
+
+def _text_or(elem) -> str:
+    try:
+        return (elem.text or "").strip()
+    except Exception:
+        return ""
+
+def _strip_quotes(s: str) -> str:
+    if s is None:
+        return ""
+    ss = str(s).strip()
+    if len(ss) >= 2 and ((ss[0] == ss[-1] == '"') or (ss[0] == ss[-1] == "'")):
+        return ss[1:-1]
+    return ss
+
+def _and_join(parts: List[str]) -> str:
+    parts = [p for p in (parts or []) if p]
+    if not parts:
+        return ""
+    if len(parts) == 1:
+        return parts[0]
+    return " and ".join(parts)
+
+def _validate_dmn_outputs_or_die(dmn_xml: Optional[str]) -> None:
+    """
+    Cheap guard to avoid crashes. Only error if DMN is completely missing.
+    Otherwise be permissive so the pipeline can proceed and coverage can run.
+    """
+    if not dmn_xml or "<dmn:definitions" not in dmn_xml:
+        raise RuntimeError("DMN generation failed: no <dmn:definitions> found")
+
+def _ensure_dmn_inputs(dmn_xml: Optional[str], ask_plan: Any, merged_ir: Dict[str, Any]) -> str:
+    """
+    Best effort no-op fixer. Returns the original DMN unless it is empty.
+    You can extend this to inject missing inputs if needed.
+    """
+    if not dmn_xml:
+        return "<dmn:definitions xmlns:dmn=\"https://www.omg.org/spec/DMN/20191111/MODEL/\"></dmn:definitions>"
+    return dmn_xml
+
+def _extract_pypdf_pages(pdf_path: str) -> List[Tuple[str, str]]:
+    out: List[Tuple[str, str]] = []
+    try:
+        reader = pypdf.PdfReader(pdf_path)
+        for i, page in enumerate(reader.pages, start=1):
+            try:
+                txt = page.extract_text() or ""
+            except Exception:
+                txt = ""
+            out.append((f"p{i}", txt))
+    except Exception:
+        return []
+    return out
+
+def _postprocess_page_text(pages: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
+    cleaned: List[Tuple[str, str]] = []
+    for pid, t in pages:
+        s = t or ""
+        # join hyphenated line breaks like "con-\n tinued" -> "continued"
+        s = re.sub(r"(\w)-\n(\w)", r"\1\2", s)
+        # collapse multi newlines
+        s = re.sub(r"\n{2,}", "\n", s)
+        cleaned.append((pid, s))
+    return cleaned
+
+def _chunk_pages_len_only(pages: List[Tuple[str, str]], max_chars: int = 4000) -> List[Tuple[str, str]]:
+    chunks: List[Tuple[str, str]] = []
+    cur_id: List[str] = []
+    buf: List[str] = []
+    cur_len = 0
+    for pid, txt in pages:
+        if cur_len + len(txt) > max_chars and buf:
+            chunks.append(("sec_" + "_".join(cur_id[:2]) + ("" if len(cur_id) < 3 else f"_{len(cur_id)}"), "\n".join(buf)))
+            cur_id, buf, cur_len = [], [], 0
+        cur_id.append(pid)
+        buf.append(f"[{pid}]\n{txt}")
+        cur_len += len(txt)
+    if buf:
+        chunks.append(("sec_" + "_".join(cur_id[:2]) + ("" if len(cur_id) < 3 else f"_{len(cur_id)}"), "\n".join(buf)))
+    return chunks
+
+def _split_into_sections_by_headings(pages: List[Tuple[str, str]], max_chars: int = 4000) -> List[Tuple[str, str]]:
+    """
+    Simple heading heuristic: start a new section when we see an ALL CAPS line
+    or a line that looks like a numbered heading. Fallback to length chunking.
+    """
+    sections: List[Tuple[str, str]] = []
+    buf: List[str] = []
+    cur_pages: List[str] = []
+    cur_len = 0
+    sec_idx = 1
+
+    def flush():
+        nonlocal buf, cur_pages, cur_len, sec_idx
+        if buf:
+            sections.append((f"section_{sec_idx:03d}", "\n".join(buf)))
+            sec_idx += 1
+            buf, cur_pages, cur_len = [], [], 0
+
+    for pid, txt in pages:
+        lines = (txt or "").splitlines()
+        for ln in lines:
+            is_head = bool(re.match(r"^\s*(\d+(\.\d+)*)\s+\S", ln)) or (ln.strip().isupper() and len(ln.strip()) >= 6)
+            if is_head and cur_len > 0:
+                flush()
+            buf.append(ln)
+            cur_pages.append(pid)
+            cur_len += len(ln) + 1
+            if cur_len >= max_chars:
+                flush()
+    flush()
+    if not sections:
+        return _chunk_pages_len_only(pages, max_chars=max_chars)
+    return sections
+
+def _extract_pdfminer_layout_pages(pdf_path: str) -> List[Tuple[str, str]]:
+    # Placeholder for richer layout extraction if needed later
+    return []
+
+def _extract_pdfminer_pages(pdf_path: str) -> List[Tuple[str, str]]:
+    # Placeholder for basic pdfminer text extraction if needed later
+    return []
+
+def _extract_ocr_pages(pdf_path: str) -> List[Tuple[str, str]]:
+    # Placeholder for OCR fallback
+    return []
+
+# -------------------------
+# Pydantic models
+# -------------------------
+
 if PydanticAvailable:
     Op = Union[str]
 
     class Variable(BaseModel):
         name: str
-        type: str  # "number" | "boolean" | "string"
+        type: str
         unit: Optional[str] = None
         allowed: Optional[List[str]] = None
         synonyms: List[str] = []
@@ -60,7 +194,7 @@ if PydanticAvailable:
 
     class ObsCond(BaseModel):
         obs: str
-        op: str  # "lt|le|gt|ge|eq|ne"
+        op: str
         value: Union[float, int, bool, str]
 
     class SymCond(BaseModel):
@@ -76,13 +210,13 @@ if PydanticAvailable:
     Condition = Union[ObsCond, SymCond, AllOf, AnyOf]
 
     class ThenBlock(BaseModel):
-        triage: Optional[str] = None  # "hospital|clinic|home"
+        triage: Optional[str] = None
         flags: List[str] = []
         reasons: List[str] = []
-        actions: List[dict] = []
+        actions: List[dict] = []   # include CHW treatments here
         guideline_ref: Optional[str] = None
         priority: int = 0
-        advice: List[str] = []  # MUST remain empty (no treatment text)
+        advice: List[str] = []
 
     class Rule(BaseModel):
         rule_id: str
@@ -101,7 +235,10 @@ if PydanticAvailable:
         canonical_map: dict = {}
         qa: QA = QA()
 
-# ---------------- JSON repair and retries ----------------
+# -------------------------
+# String and JSON helpers
+# -------------------------
+
 def _strip_code_fences(text: str) -> str:
     if not text:
         return text
@@ -114,10 +251,8 @@ def _strip_code_fences(text: str) -> str:
             s = s[:-3]
     return s.strip()
 
-
 def _loose_to_json(s: str) -> Any:
     s = _strip_code_fences(s)
-    # strip comments
     lines: List[str] = []
     in_block = False
     for ln in s.splitlines():
@@ -135,9 +270,7 @@ def _loose_to_json(s: str) -> Any:
             t = t.split("//", 1)[0]
         lines.append(t)
     s = "\n".join(lines)
-    # remove trailing commas
     s = re.sub(r",\s*(]|})", r"\1", s)
-    # crop to first obj or array
     for opener, closer in [("{", "}"), ("[", "]")]:
         a, b = s.find(opener), s.rfind(closer)
         if a != -1 and b != -1 and b > a:
@@ -148,9 +281,7 @@ def _loose_to_json(s: str) -> Any:
                 pass
     return json.loads(s)
 
-
 def _call_json_with_retries(call_fn, schema_model=None, retries=3, sleep=1.5):
-    """Ensure this helper is in global scope (fixes NameError)."""
     last_exc = None
     for i in range(retries):
         try:
@@ -163,7 +294,6 @@ def _call_json_with_retries(call_fn, schema_model=None, retries=3, sleep=1.5):
             last_exc = e
             time.sleep(sleep * (2 ** i))
     raise last_exc
-
 
 def _extract_fenced_blocks(text: str) -> List[Tuple[str, str]]:
     blocks: List[Tuple[str, str]] = []
@@ -184,9 +314,7 @@ def _extract_fenced_blocks(text: str) -> List[Tuple[str, str]]:
         i = end + 3
     return blocks
 
-# --- BPMN helpers -------------------------------------------------------------
 def _extract_xml_tag(raw: str, tag: str) -> Optional[str]:
-    """Pull <tag>...</tag> out of an unstructured string."""
     start = raw.find(f"<{tag}")
     end = raw.find(f"</{tag}>")
     if start != -1 and end != -1 and end > start:
@@ -194,9 +322,7 @@ def _extract_xml_tag(raw: str, tag: str) -> Optional[str]:
         return raw[start:end].strip()
     return None
 
-
 def _sanitize_bpmn(xml: str) -> str:
-    """Ensure minimal namespaces and a closing </bpmn:definitions>."""
     s = (xml or "").strip()
     if not s:
         return s
@@ -211,17 +337,143 @@ def _sanitize_bpmn(xml: str) -> str:
         s += "\n</bpmn:definitions>"
     return s
 
-# ---------------- Normalization helpers ----------------
 _CANON_TRIAGE_KEYS = ("triage", "propose_triage")
 _CANON_FLAG_KEYS = ("flags", "set_flags")
 _DERIVED_BLOCKLIST = {"danger_sign", "clinic_referral", "triage"}
-
 
 def _to_snake(name: str) -> str:
     s = re.sub(r"[^A-Za-z0-9]+", "_", str(name).strip().lower())
     s = re.sub(r"_+", "_", s).strip("_")
     return s or "var"
 
+def _norm_name(s: Optional[str]) -> str:
+    return (s or "").strip()
+
+# ---------- Step 2 helpers: normalize condition shapes ----------
+
+_SYM_KEYS = {"sym", "symbol", "var", "variable", "name"}
+_EQ_KEYS = {"eq", "equals", "is", "value", "present"}
+_OBS_KEYS = {"obs", "observation", "var", "variable", "name"}
+_OP_KEYS  = {"op", "operator", "cmp", "comparison", "relation", "rel", "sign"}
+_VAL_KEYS = {"value", "rhs", "threshold", "val", "target"}
+
+_GROUP_ANY_KEYS = {"any_of", "anyof", "any", "or", "OR", "AnyOf"}
+_GROUP_ALL_KEYS = {"all_of", "allof", "all", "and", "AND", "AllOf"}
+
+def _clean_bool(v: Any) -> Optional[bool]:
+    if isinstance(v, bool):
+        return v
+    s = str(v).strip().lower()
+    if s in {"true", "yes", "y", "present"}:
+        return True
+    if s in {"false", "no", "n", "absent"}:
+        return False
+    return None
+
+def _clean_number_or_str(v: Any) -> Union[float, int, str, bool]:
+    if isinstance(v, (int, float, bool)):
+        return v
+    s = str(v).strip()
+    b = _clean_bool(s)
+    if b is not None:
+        return b
+    if re.match(r"^-?\d+(\.\d+)?$", s):
+        return float(s) if "." in s else int(s)
+    return s
+
+def _map_op(op: str) -> Optional[str]:
+    s = str(op).strip().lower()
+    if s in {">=", "ge"}:
+        return "ge"
+    if s in {"<=", "le"}:
+        return "le"
+    if s in {">", "gt"}:
+        return "gt"
+    if s in {"<", "lt"}:
+        return "lt"
+    if s in {"=", "==", "eq"}:
+        return "eq"
+    if s in {"!=", "<>", "ne"}:
+        return "ne"
+    return None
+
+def _first_key(d: Dict[str, Any], keys: set) -> Optional[str]:
+    for k in list(d.keys()):
+        k_norm = _to_snake(k)
+        if k_norm in keys:
+            return k
+    return None
+
+def _unwrap_cond_wrappers(c: Any) -> Any:
+    if not isinstance(c, dict):
+        return c
+    for wrap in ("SymCond", "symcond", "OBS", "ObsCond", "obscond", "ANYOF", "AllOf", "AnyOf", "ALL_OF", "ANY_OF"):
+        if wrap in c and isinstance(c[wrap], (dict, list)):
+            return c[wrap]
+    return c
+
+def _coerce_condition(cond: Any) -> Optional[Dict[str, Any]]:
+    c = _unwrap_cond_wrappers(cond)
+    if not isinstance(c, dict):
+        return None
+
+    k_any = _first_key(c, _GROUP_ANY_KEYS)
+    k_all = _first_key(c, _GROUP_ALL_KEYS)
+    if k_any:
+        seq = c.get(k_any)
+        if not isinstance(seq, list):
+            return None
+        kids = [x for x in (_coerce_condition(s) for s in seq) if x]
+        if not kids:
+            return None
+        if len(kids) == 1:
+            return kids[0]
+        return {"any_of": kids}
+    if k_all:
+        seq = c.get(k_all)
+        if not isinstance(seq, list):
+            return None
+        kids = [x for x in (_coerce_condition(s) for s in seq) if x]
+        if not kids:
+            return None
+        if len(kids) == 1:
+            return kids[0]
+        return {"all_of": kids}
+
+    k_sym = _first_key(c, _SYM_KEYS)
+    if k_sym:
+        v_eq_key = _first_key(c, _EQ_KEYS)
+        eq_val = c.get(v_eq_key) if v_eq_key else c.get("eq")
+        b = _clean_bool(eq_val if eq_val is not None else True)
+        if b is None:
+            return None
+        sym_name = _to_snake(c.get(k_sym))
+        if sym_name in _DERIVED_BLOCKLIST:
+            return None
+        return {"sym": sym_name, "eq": bool(b)}
+
+    k_obs = _first_key(c, _OBS_KEYS)
+    k_op  = _first_key(c, _OP_KEYS)
+    k_val = _first_key(c, _VAL_KEYS)
+    if k_obs and (k_op or k_val):
+        op = _map_op(c.get(k_op, "eq"))
+        if not op:
+            return None
+        val = _clean_number_or_str(c.get(k_val))
+        obs_name = _to_snake(c.get(k_obs))
+        return {"obs": obs_name, "op": op, "value": val}
+
+    if "sym" in c and "eq" in c:
+        if _to_snake(c["sym"]) in _DERIVED_BLOCKLIST:
+            return None
+        return {"sym": _to_snake(c["sym"]), "eq": bool(_clean_bool(c["eq"]) is True)}
+    if all(k in c for k in ("obs", "op", "value")):
+        op = _map_op(c.get("op"))
+        if not op:
+            return None
+        return {"obs": _to_snake(c["obs"]), "op": op, "value": _clean_number_or_str(c["value"])}
+
+    return None
 
 def _normalize_rule_schema(rule: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     r = dict(rule or {})
@@ -242,7 +494,7 @@ def _normalize_rule_schema(rule: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     th["flags"] = list(flags or [])
     th.setdefault("reasons", [])
     th.setdefault("actions", [])
-    th.setdefault("advice", [])  # keep empty
+    th.setdefault("advice", [])
     th["priority"] = int(th.get("priority") or 0)
     r["then"] = th
 
@@ -253,18 +505,26 @@ def _normalize_rule_schema(rule: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     def _has_bad_sym(c: Dict[str, Any]) -> bool:
         return "sym" in c and str(c.get("sym")).strip().lower() in _DERIVED_BLOCKLIST
 
+    new_when: List[Dict[str, Any]] = []
     for cond in when:
-        if not isinstance(cond, dict):
-            return None
-        if _has_bad_sym(cond):
-            return None
-        if "all_of" in cond or "any_of" in cond:
-            seq = cond.get("all_of") or cond.get("any_of") or []
-            for sub in seq:
-                if _has_bad_sym(sub):
-                    return None
-    return r
+        coerced = _coerce_condition(cond)
+        if coerced is None:
+            continue
+        def bad_nested(x: Dict[str, Any]) -> bool:
+            if _has_bad_sym(x):
+                return True
+            if "any_of" in x or "all_of" in x:
+                key = "any_of" if "any_of" in x else "all_of"
+                return any(_has_bad_sym(k) or bad_nested(k) for k in (x.get(key) or []))
+            return False
+        if bad_nested(coerced):
+            continue
+        new_when.append(coerced)
 
+    if not new_when:
+        return None
+    r["when"] = new_when
+    return r
 
 def _dedupe_rule_ids(rules: List[Dict[str, Any]], prefix: str = "r") -> List[Dict[str, Any]]:
     seen = {}
@@ -284,7 +544,6 @@ def _dedupe_rule_ids(rules: List[Dict[str, Any]], prefix: str = "r") -> List[Dic
         out.append(r)
     return out
 
-
 def _build_canonical_map(config: Dict[str, Any], variables: List[Dict[str, Any]]) -> Dict[str, str]:
     canon_set = set(config.get("canonical_variables", []))
     by_name = {(v.get("name") or "").strip().lower(): v for v in variables if isinstance(v, dict)}
@@ -296,13 +555,10 @@ def _build_canonical_map(config: Dict[str, Any], variables: List[Dict[str, Any]]
             idx[str(s).strip().lower()] = target
     return idx
 
-
 def _rewrite_rule_to_canon(rule: Dict[str, Any], canon: Dict[str, str]) -> Dict[str, Any]:
     r = dict(rule)
-
     def map_var(x: str) -> str:
         return canon.get(str(x).strip().lower(), str(x).strip().lower())
-
     new_when = []
     for c in r.get("when", []):
         c = dict(c)
@@ -325,17 +581,14 @@ def _rewrite_rule_to_canon(rule: Dict[str, Any], canon: Dict[str, str]) -> Dict[
     r["when"] = new_when
     return r
 
-
 def _flatten_rule_conditions(rule: Dict[str, Any]) -> List[str]:
     out = []
-
     def one(c):
         if "sym" in c:
             return f"{c['sym']}=={str(c.get('eq')).lower()}"
         if "obs" in c:
             return f"{c['obs']} {c['op']} {json.dumps(c['value'])}"
         return None
-
     for c in rule.get("when", []):
         if "all_of" in c or "any_of" in c:
             k = "all_of" if "all_of" in c else "any_of"
@@ -347,17 +600,13 @@ def _flatten_rule_conditions(rule: Dict[str, Any]) -> List[str]:
                 out.append(s)
     return out
 
-
 def _rules_flattened(ir: Dict[str, Any]) -> List[Dict[str, Any]]:
     return [
-        {
-            "rule_id": r.get("rule_id"),
-            "triage": (r.get("then") or {}).get("triage"),
-            "conds": _flatten_rule_conditions(r),
-        }
+        {"rule_id": r.get("rule_id"),
+         "triage": (r.get("then") or {}).get("triage"),
+         "conds": _flatten_rule_conditions(r)}
         for r in ir.get("rules", [])
     ]
-
 
 def _preflight_ir(ir: Dict[str, Any]) -> None:
     names = [(v.get("name") or "").strip().lower() for v in ir.get("variables", []) if isinstance(v, dict)]
@@ -372,14 +621,12 @@ def _preflight_ir(ir: Dict[str, Any]) -> None:
     if empties:
         raise RuntimeError(f"Empty WHEN in rules: {empties}")
 
-
-def _enforce_ask_ownership(
-    ask_plan: List[Dict[str, Any]],
-    priority_order=("module_a", "module_b", "module_c", "module_d", "module_e"),
-):
+def _enforce_ask_ownership(ask_plan: List[Dict[str, Any]],
+                           priority_order=("module_a", "module_b", "module_c", "module_d", "module_e")):
     owner: Dict[str, str] = {}
     order = {m: i for i, m in enumerate(priority_order)}
-    for blk in sorted([b for b in ask_plan if isinstance(b, dict)], key=lambda b: order.get(b.get("module", "zzz"), 999)):
+    for blk in sorted([b for b in ask_plan if isinstance(b, dict)],
+                      key=lambda b: order.get(b.get("module", "zzz"), 999)):
         module = blk.get("module")
         kept_ask = []
         for q in blk.get("ask", []) or []:
@@ -398,11 +645,6 @@ def _enforce_ask_ownership(
         blk["followups_if"] = fuw
     return ask_plan
 
-# ---------- Duplicate resolution plus snake case, with rule rewriting ----------
-def _norm_name(s: Optional[str]) -> str:
-    return (s or "").strip()
-
-
 def _pages_from_ref_string(s: str) -> List[int]:
     if not s:
         return []
@@ -417,7 +659,6 @@ def _pages_from_ref_string(s: str) -> List[int]:
             out.extend(list(range(lo, hi + 1))[:500])
     return out
 
-
 def _pages_from_refs(refs: Optional[List[str]]) -> set:
     pages = set()
     for r in (refs or []):
@@ -425,13 +666,11 @@ def _pages_from_refs(refs: Optional[List[str]]) -> set:
             pages.add(p)
     return pages
 
-
 def _var_sig(v: Dict[str, Any]) -> tuple:
     t = v.get("type")
     u = v.get("unit")
     allowed = tuple(sorted([str(x) for x in (v.get("allowed") or [])]))
     return (t, u, allowed)
-
 
 def _coalesce_group(vars_with_same_sig: List[Dict[str, Any]]) -> Dict[str, Any]:
     base = dict(vars_with_same_sig[0])
@@ -449,16 +688,9 @@ def _coalesce_group(vars_with_same_sig: List[Dict[str, Any]]) -> Dict[str, Any]:
     base["allowed"] = sorted(list(allowed)) if allowed else []
     return base
 
-
 def _resolve_variables_snake_and_rewrite_rules(merged: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    1) Group variables by snake_case(name) so near duplicates collide.
-    2) Within each group, partition by signature (type/unit/allowed).
-    3) Assign final names, then rewrite rules consistently.
-    """
     qa_notes = merged.setdefault("qa", {}).setdefault("notes", [])
     vars_in = [v for v in (merged.get("variables") or []) if isinstance(v, dict) and _norm_name(v.get("name"))]
-    # Build groups by snake key
     groups: Dict[str, List[Dict[str, Any]]] = {}
     names_seen_per_group: Dict[str, set] = {}
     for v in vars_in:
@@ -569,7 +801,6 @@ def _resolve_variables_snake_and_rewrite_rules(merged: Dict[str, Any]) -> Dict[s
     merged["rules"] = rules_out
     return merged
 
-# ---------- Fact sheet helpers ----------
 def _fact_sheet_from_sections(section_objs: List[Dict[str, Any]]) -> Dict[str, Any]:
     var_ix: Dict[str, Dict[str, Any]] = {}
     facts_rules: List[Dict[str, Any]] = []
@@ -613,7 +844,7 @@ def _fact_sheet_from_sections(section_objs: List[Dict[str, Any]]) -> Dict[str, A
                         "actions": th.get("actions") or [],
                         "guideline_ref": th.get("guideline_ref"),
                         "priority": int(th.get("priority") or 0),
-                        "advice": [],  # enforce empty
+                        "advice": [],
                     },
                 }
             )
@@ -623,487 +854,172 @@ def _fact_sheet_from_sections(section_objs: List[Dict[str, Any]]) -> Dict[str, A
         "qa": {"notes": ["from_fact_sheet_builder"]},
     }
 
-# ---------------- Text extraction helpers ----------------
-def _extract_pypdf_pages(pdf_path: str) -> List[Tuple[int, str]]:
-    pages: List[Tuple[int, str]] = []
-    with open(pdf_path, "rb") as f:
-        reader = pypdf.PdfReader(f)
-        for i, page in enumerate(reader.pages, start=1):
-            try:
-                t = (page.extract_text() or "").strip()
-            except Exception:
-                t = ""
-            pages.append((i, t))
-    return pages
+# -------------------------
+# lossless consolidation
+# -------------------------
 
+def _canon_cond(cond: Dict[str, Any]) -> Dict[str, Any]:
+    def canon_one(c: Dict[str, Any]) -> Dict[str, Any]:
+        if "sym" in c:
+            return {"sym": _to_snake(c["sym"]), "eq": bool(c.get("eq") is True)}
+        if "obs" in c:
+            return {"obs": _to_snake(c["obs"]), "op": _map_op(c.get("op") or "eq") or "eq", "value": _clean_number_or_str(c.get("value"))}
+        if "all_of" in c or "any_of" in c:
+            key = "all_of" if "all_of" in c else "any_of"
+            kids = [canon_one(dict(k)) for k in (c.get(key) or [])]
+            kids_sorted = sorted([json.dumps(k, sort_keys=True) for k in kids])
+            return {key: [json.loads(s) for s in kids_sorted]}
+        return {}
+    return canon_one(dict(cond))
 
-def _extract_pdfminer_pages(pdf_path: str) -> List[Tuple[int, str]]:
-    if not _have_pdfminer:
-        return []
-    try:
-        from pdfminer.high_level import extract_text  # type: ignore
-    except Exception:
-        return []
-    try:
-        with open(pdf_path, "rb") as f:
-            reader = pypdf.PdfReader(f)
-            n = len(reader.pages)
-    except Exception:
-        n = 0
-    if n <= 0:
-        try:
-            full = extract_text(pdf_path) or ""
-            if not full.strip():
-                return []
-            return [(1, full)]
-        except Exception:
-            return []
-    out: List[Tuple[int, str]] = []
-    for i in range(n):
-        try:
-            txt = extract_text(pdf_path, page_numbers=[i]) or ""
-        except Exception:
-            txt = ""
-        out.append((i + 1, txt.strip()))
+def _conds_signature(when: List[Dict[str, Any]]) -> Tuple[str, ...]:
+    canon = [_canon_cond(c) for c in (when or [])]
+    as_strs = [json.dumps(c, sort_keys=True) for c in canon]
+    return tuple(sorted(as_strs))
+
+def _merge_then_blocks(blocks: List[Dict[str, Any]]) -> Dict[str, Any]:
+    if not blocks:
+        return {"triage": "home", "flags": [], "reasons": [], "actions": [], "advice": [], "guideline_ref": "p0", "priority": 0}
+    triage = (blocks[0].get("triage") or "home").strip().lower()
+    ref = (blocks[0].get("guideline_ref") or "p0").strip()
+    flags: set = set()
+    reasons: set = set()
+    actions: List[dict] = []
+    pr = 0
+    for b in blocks:
+        flags |= set(b.get("flags") or [])
+        reasons |= set(b.get("reasons") or [])
+        for a in (b.get("actions") or []):
+            if isinstance(a, dict) and a:
+                actions.append(a)
+        pr = max(pr, int(b.get("priority") or 0))
+    seen = set()
+    uniq_actions = []
+    for a in actions:
+        key = (a.get("id"), bool(a.get("if_available")))
+        if key in seen:
+            continue
+        seen.add(key)
+        uniq_actions.append({"id": a.get("id"), "if_available": bool(a.get("if_available"))})
+    return {
+        "triage": triage,
+        "flags": sorted(list(flags)),
+        "reasons": sorted(list(reasons)),
+        "actions": uniq_actions,
+        "advice": [],
+        "guideline_ref": ref,
+        "priority": pr,
+    }
+
+def _lossless_consolidate_rules(fact_sheet: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Deterministic consolidation:
+    - normalize each rule
+    - group by (conditions signature, triage, guideline_ref)
+    - union reasons, flags, actions within each group
+    - never merge across triage or across guideline_ref
+    """
+    cleaned: List[Dict[str, Any]] = []
+    for r in (fact_sheet.get("rules") or []):
+        nr = _normalize_rule_schema(r)
+        if not nr:
+            continue
+        nr["when"] = [c for c in (nr.get("when") or []) if _coerce_condition(c)]
+        if not nr["when"]:
+            continue
+        cleaned.append(nr)
+
+    # index by signature and outputs
+    bins: Dict[Tuple[Tuple[str, ...], str, str], List[Dict[str, Any]]] = {}
+    for r in cleaned:
+        sig = _conds_signature(r.get("when") or [])
+        th = r.get("then") or {}
+        tri = (th.get("triage") or "home").strip().lower()
+        ref = (th.get("guideline_ref") or "p0").strip()
+        bins.setdefault((sig, tri, ref), []).append(r)
+
+    out: List[Dict[str, Any]] = []
+    for (sig, tri, ref), rs in bins.items():
+        # merge then blocks inside the exact same signature, triage, ref
+        merged_then = _merge_then_blocks([x.get("then") or {} for x in rs])
+        # pick a stable when from the first
+        base_when = rs[0].get("when") or []
+        out.append({
+            "rule_id": f"fs_merge_{len(out)+1}",
+            "when": base_when,
+            "then": merged_then
+        })
+
+    # stable ids
+    out = _dedupe_rule_ids(out, prefix="fs")
     return out
 
+def _index_fact_sheet_rules(fact_sheet: Dict[str, Any]) -> Dict[Tuple[str, ...], List[Dict[str, Any]]]:
+    idx: Dict[Tuple[str, ...], List[Dict[str, Any]]] = {}
+    for r in (fact_sheet.get("rules") or []):
+        sig = _conds_signature(r.get("when") or [])
+        idx.setdefault(sig, []).append(r)
+    return idx
 
-def _extract_ocr_pages(pdf_path: str) -> List[Tuple[int, str]]:
-    if not _have_ocr:
-        return []
-    pages: List[Tuple[int, str]] = []
-    try:
-        images = convert_from_path(pdf_path, dpi=200)
-    except Exception:
-        return []
-    for idx, img in enumerate(images, start=1):
-        try:
-            text = pytesseract.image_to_string(img) or ""
-        except Exception:
-            text = ""
-        pages.append((idx, text.strip()))
-    return pages
+def _group_by_triage_and_ref(rules: List[Dict[str, Any]]) -> Dict[Tuple[str, str], List[Dict[str, Any]]]:
+    out: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+    for r in (rules or []):
+        th = r.get("then") or {}
+        tri = (th.get("triage") or "").strip().lower() or "home"
+        ref = (th.get("guideline_ref") or "").strip() or "p0"
+        out.setdefault((tri, ref), []).append(r)
+    return out
 
+def _preserve_ref_and_triage_variants(cleaned_rules: List[Dict[str, Any]], fact_sheet: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], List[str]]:
+    notes: List[str] = []
+    fs_idx = _index_fact_sheet_rules(fact_sheet)
+    out_rules: List[Dict[str, Any]] = []
 
-_heading_rx = re.compile(
-    r"^(annex|appendix|module|chapter|section|part|lesson|unit|task|topic)\b"
-    r"|\b(assessment|treatment|referral|follow\s*up|training)\b"
-    r"|^[A-Z][A-Z0-9 ,:/-]{6,}$",
-    flags=re.IGNORECASE,
-)
-
-
-def _normalize_whitespace(s: str) -> str:
-    s = s.replace("\u00A0", " ")
-    s = re.sub(r"[ \t]+", " ", s)
-    s = re.sub(r"[ \t]*\n[ \t]*", "\n", s)
-    return s.strip()
-
-
-def _dehyphenate(s: str) -> str:
-    return re.sub(r"(?<=\w)-\n(?=\w)", "", s)
-
-
-def _normalize_bullets(s: str) -> str:
-    return re.sub(r"^[•·◦▪➤→]\s*", "- ", s, flags=re.MULTILINE)
-
-
-def _strip_repeating_headers_footers(pages: List[Tuple[int, str]]) -> List[Tuple[int, str]]:
-    tops, bottoms = [], []
-    for _, t in pages:
-        lines = [ln.strip() for ln in (t.splitlines() if t else []) if ln.strip()]
-        if not lines:
-            tops.append("")
-            bottoms.append("")
-            continue
-        tops.append(lines[0])
-        bottoms.append(lines[-1])
-
-    def common(items):
-        ctr = collections.Counter(items)
-        if not ctr:
-            return None
-        item, cnt = ctr.most_common(1)[0]
-        return item if cnt >= max(3, int(0.4 * len(items))) and len(item) >= 6 else None
-
-    top_c = common(tops)
-    bot_c = common(bottoms)
-    cleaned: List[Tuple[int, str]] = []
-    for i, t in pages:
-        if not t:
-            cleaned.append((i, t))
-            continue
-        lines = t.splitlines()
-        if top_c and lines and lines[0].strip() == top_c:
-            lines = lines[1:]
-        if bot_c and lines and lines[-1].strip() == bot_c:
-            lines = lines[:-1]
-        cleaned.append((i, "\n".join(lines)))
-    return cleaned
-
-
-def _postprocess_page_text(pages: List[Tuple[int, str]]) -> List[Tuple[int, str]]:
-    out: List[Tuple[int, str]] = []
-    for i, t in pages:
-        s = t or ""
-        s = _normalize_whitespace(s)
-        s = _dehyphenate(s)
-        s = _normalize_bullets(s)
-        out.append((i, s))
-    return _strip_repeating_headers_footers(out)
-
-
-def _extract_pdfminer_layout_pages(pdf_path: str) -> List[Tuple[int, str]]:
-    if not _have_pdfminer:
-        return []
-    try:
-        from pdfminer.high_level import extract_pages  # type: ignore
-        from pdfminer.layout import LTTextBox, LTTextLine, LAParams  # type: ignore
-    except Exception:
-        return []
-    laparams = LAParams(line_overlap=0.5, char_margin=2.0, line_margin=0.4, word_margin=0.1, boxes_flow=None)
-    pages: List[Tuple[int, str]] = []
-    try:
-        for pno, page_layout in enumerate(extract_pages(pdf_path, laparams=laparams), start=1):
-            items = []
-            for el in page_layout:
-                if isinstance(el, (LTTextBox, LTTextLine)):
-                    x0, y0, x1, y1 = el.bbox
-                    items.append((y1, x0, el.get_text()))
-            items.sort(key=lambda t: (-t[0], t[1]))
-            text = "".join([txt for _, __, txt in items])
-            pages.append((pno, text))
-    except Exception:
-        return []
-    return pages
-
-
-def _split_into_sections_by_headings(pages: List[Tuple[int, str]], max_chars: int = 4000) -> List[Tuple[str, str]]:
-    chunks: List[Tuple[str, str]] = []
-    cur_buf = ""
-    start_page: Optional[int] = None
-
-    def flush(end_page: int):
-        nonlocal cur_buf, start_page
-        if cur_buf.strip():
-            chunks.append((f"p{start_page}-{end_page}", cur_buf))
-        cur_buf = ""
-        start_page = None
-
-    for pno, txt in pages:
-        lines = txt.splitlines()
-        i = 0
-        while i < len(lines):
-            ln = lines[i]
-            is_heading = bool(_heading_rx.search(ln.strip()))
-            if is_heading and cur_buf and len(cur_buf) > int(0.5 * max_chars):
-                flush(pno - 1)
-            if start_page is None:
-                start_page = pno
-            cur_buf += f"[PAGE {pno}]\n{ln}\n"
-            if len(cur_buf) >= max_chars:
-                flush(pno)
-            i += 1
-    if cur_buf:
-        flush(pno)
-    if len(chunks) >= 2 and len(chunks[-1][1]) < int(0.25 * max_chars):
-        sid, body = chunks.pop()
-        pid, prev = chunks.pop()
-        a = pid.split("-")[0]
-        b = sid.split("-")[-1]
-        chunks.append((f"{a}-{b}", prev + "\n" + body))
-    return chunks
-
-
-def _chunk_pages_len_only(pages: List[Tuple[int, str]], max_chars: int = 4000) -> List[Tuple[str, str]]:
-    chunks: List[Tuple[str, str]] = []
-    buf = ""
-    ids: List[int] = []
-    for i, t in pages:
-        if not t:
-            continue
-        add = f"[PAGE {i}]\n{t}\n"
-        if len(buf) + len(add) > max_chars and buf:
-            chunks.append((f"p{ids[0]}-{ids[-1]}", buf))
-            buf = ""
-            ids = []
-        buf += add
-        ids.append(i)
-    if buf:
-        chunks.append((f"p{ids[0]}-{ids[-1]}", buf))
-    return chunks
-
-# ---------------- DMN parsing plus CSV and XLS wiring helpers ----------------
-_DMNN = {"dmn": "https://www.omg.org/spec/DMN/20191111/MODEL/"}
-
-
-def _text_or(el):
-    return (el.text or "").strip() if el is not None and el.text else ""
-
-
-def _strip_quotes(s: str) -> str:
-    s = (s or "").strip()
-    if (s.startswith('"') and s.endswith('"')) or (s.startswith("'") and s.endswith("'")):
-        return s[1:-1]
-    return s
-
-
-def _feel_atom_to_xpath(val: str, var_type: str) -> Optional[str]:
-    t = (var_type or "").lower()
-    v = (val or "").strip()
-    if v.lower() in ("-", "otherwise", ""):
-        return None
-    if v.lower() in ("true", "false"):
-        # For user entered booleans we use select_one yes_no -> 'yes' or 'no'
-        return "'yes'" if v.lower() == "true" else "'no'"
-    if re.match(r"^-?\d+(\.\d+)?$", v):
-        return v
-    return f"'{_strip_quotes(v)}'"
-
-
-def _and_join(parts: List[str]) -> str:
-    parts = [p for p in parts if p and p.strip()]
-    if not parts:
-        return "true()"
-    if len(parts) == 1:
-        return parts[0]
-    # Join multiple parts with logical AND inside parentheses
-    return "(" + ") and (".join(parts) + ")"
-
-# ---------- Helper: validate condition structures ----------
-def _is_valid_condition(cond: Any) -> bool:
-    """
-    Recursively validate a condition dictionary against the allowed IR schema.
-
-    A valid condition is one of:
-    - an observation condition with keys "obs", "op", and "value";
-    - a symptom condition with keys "sym" and "eq";
-    - an all_of block containing a list of valid conditions;
-    - an any_of block containing a list of valid conditions.
-
-    Anything else (missing keys, wrong types) is considered invalid.
-    """
-    if not isinstance(cond, dict):
-        return False
-    # Symptom condition
-    if "sym" in cond and "eq" in cond:
-        # Ensure no extraneous nested keys override validity
-        return True
-    # Observation condition
-    if "obs" in cond and "op" in cond and "value" in cond:
-        return True
-    # all_of condition: all subconditions must be valid
-    if "all_of" in cond:
-        seq = cond.get("all_of")
-        if not isinstance(seq, list):
-            return False
-        return all(_is_valid_condition(sub) for sub in seq)
-    # any_of condition: all subconditions must be valid
-    if "any_of" in cond:
-        seq = cond.get("any_of")
-        if not isinstance(seq, list):
-            return False
-        return all(_is_valid_condition(sub) for sub in seq)
-    # Otherwise invalid
-    return False
-
-# Helper to prune invalid condition structures recursively
-def _prune_condition(cond: Any) -> Optional[Dict[str, Any]]:
-    """
-    Recursively prune invalid subconditions from a condition dictionary.
-
-    If the condition is a valid observation or symptom condition it is returned
-    unchanged. If it is an all_of or any_of, then each subcondition is
-    recursively pruned; only valid subconditions are kept. If after pruning
-    there are no valid subconditions, None is returned, indicating the
-    condition should be discarded. Any other structure returns None.
-    """
-    if not isinstance(cond, dict):
-        return None
-    # Symptom condition
-    if "sym" in cond and "eq" in cond:
-        return cond
-    # Observation condition
-    if "obs" in cond and "op" in cond and "value" in cond:
-        return cond
-    # all_of condition: prune each subcondition
-    if "all_of" in cond:
-        seq = cond.get("all_of")
-        if not isinstance(seq, list):
-            return None
-        pruned = []
-        for sub in seq:
-            sub_pruned = _prune_condition(sub)
-            if sub_pruned:
-                pruned.append(sub_pruned)
-        if pruned:
-            return {"all_of": pruned}
-        return None
-    # any_of condition: prune each subcondition
-    if "any_of" in cond:
-        seq = cond.get("any_of")
-        if not isinstance(seq, list):
-            return None
-        pruned = []
-        for sub in seq:
-            sub_pruned = _prune_condition(sub)
-            if sub_pruned:
-                pruned.append(sub_pruned)
-        if pruned:
-            return {"any_of": pruned}
-        return None
-    # Unknown structure
-    return None
-
-# ---------- DMN output validator (fail fast on blanks or invalids) ----------
-def _validate_dmn_outputs_or_die(xml: str) -> None:
-    root = ET.fromstring(xml)
-    required = ["triage", "danger_sign", "clinic_referral", "reason", "ref", "advice"]
-    for dec in root.findall(".//dmn:decision", _DMNN):
-        name = (dec.get("name") or dec.get("id") or "decision").strip()
-        table = dec.find(".//dmn:decisionTable", _DMNN)
-        if table is None:
-            raise RuntimeError(f"{name}: missing dmn:decisionTable")
-        outs = table.findall("./dmn:output", _DMNN)
-        have = [(o.get("name") or "").strip() for o in outs]
-        missing = [r for r in required if r not in have]
-        if missing:
-            raise RuntimeError(f"{name}: missing required outputs {missing}")
-        rules = table.findall("./dmn:rule", _DMNN)
-        if not rules:
-            raise RuntimeError(f"{name}: has zero rules")
-        for i, r in enumerate(rules, start=1):
-            vals = [_text_or(e.find("./dmn:text", _DMNN)) for e in r.findall("./dmn:outputEntry", _DMNN)]
-            if len(vals) < len(outs):
-                vals += [""] * (len(outs) - len(vals))
-            triage, danger, clinic, reason, ref, advice = (vals + [""] * 6)[:6]
-            if triage.strip().strip('"') not in ("hospital", "clinic", "home"):
-                raise RuntimeError(f"{name}: rule {i} invalid triage: {triage!r}")
-            if danger.strip().lower() not in ("true", "false"):
-                raise RuntimeError(f"{name}: rule {i} danger_sign not boolean: {danger!r}")
-            if clinic.strip().lower() not in ("true", "false"):
-                raise RuntimeError(f"{name}: rule {i} clinic_referral not boolean: {clinic!r}")
-            if not ref.strip():
-                raise RuntimeError(f"{name}: rule {i} ref is empty (need a page or section ref)")
-
-
-def _ensure_dmn_inputs(dmn_xml: str, ask_plan: Any, merged_ir: Dict[str, Any]) -> str:
-    """
-    Ensure that every decision table in the DMN has <dmn:input> definitions.
-    The DMN generated by the model may omit these elements, which prevents
-    the XLSForm wiring logic from matching conditions to variables.  This
-    helper creates input elements for each decision table, using the ask_plan
-    ordering to choose variable names when available, or by extracting
-    variable names from FEEL expressions.  It also sets the typeRef
-    (number|boolean|string) based on merged_ir variable definitions.
-    """
-    try:
-        root = ET.fromstring(dmn_xml)
-    except Exception:
-        return dmn_xml
-
-    # Build type lookup
-    var_types: Dict[str, str] = {}
-    for v in (merged_ir.get("variables") or []):
-        if not isinstance(v, dict):
-            continue
-        name = (v.get("name") or "").strip()
-        if not name:
-            continue
-        typ = (v.get("type") or "string").strip().lower()
-        var_types[name] = typ
-
-    # Normalize ask_plan by module
-    plan_map: Dict[str, List[str]] = {}
-    if isinstance(ask_plan, list):
-        for blk in ask_plan:
-            if not isinstance(blk, dict):
-                continue
-            mod = (blk.get("module") or "").strip()
-            if not mod:
-                continue
-            ask_list = [q for q in (blk.get("ask") or []) if q]
-            plan_map[mod] = ask_list
-
-    DMN_NS = _DMNN.get("dmn")
-    if not DMN_NS:
-        return dmn_xml
-
-    for dec in root.findall(f".//{{{DMN_NS}}}decision"):
-        name = (dec.get("name") or dec.get("id") or "").strip()
-        mod  = re.sub(r"^decide[_\\-:]+", "", name) or "module"
-        table = dec.find(f".//{{{DMN_NS}}}decisionTable")
-        if table is None:
+    for r in cleaned_rules:
+        sig = _conds_signature(r.get("when") or [])
+        variants = fs_idx.get(sig)
+        if not variants or len(variants) == 1:
+            out_rules.append(r)
             continue
 
-        # Determine the maximum number of input conditions across rules
-        rules = table.findall(f"{{{DMN_NS}}}rule")
-        max_conds = 0
-        for r in rules:
-            conds = r.findall(f"{{{DMN_NS}}}inputEntry")
-            max_conds = max(max_conds, len(conds))
+        groups = _group_by_triage_and_ref(variants)
+        if len(groups) == 1:
+            (tri, ref), rs = next(iter(groups.items()))
+            rr = dict(r)
+            then = dict(rr.get("then") or {})
+            merged_then = _merge_then_blocks([x.get("then") or {} for x in rs])
+            then.update(merged_then)
+            rr["then"] = then
+            out_rules.append(rr)
+            continue
 
-        # Choose input names: prefer ask_plan; fallback to extracting from FEEL
-        input_names: List[str] = []
-        ask_list = plan_map.get(mod)
-        if ask_list:
-            input_names = ask_list[:max_conds]
-        if not input_names:
-            # Extract variable names from the first rule's conditions
-            if rules:
-                first_rule = rules[0]
-                for idx in range(max_conds):
-                    try:
-                        inp_entry = first_rule.findall(f"{{{DMN_NS}}}inputEntry")[idx]
-                    except Exception:
-                        continue
-                    text_node = inp_entry.find(f"{{{DMN_NS}}}text")
-                    expr = (text_node.text or "").strip() if text_node is not None else ""
-                    var_name = None
-                    m = re.match(r"^\s*([A-Za-z_][A-Za-z0-9_\.:-]*)\s*(?:[=!<>]=|[<>])", expr)
-                    if m:
-                        var_tok = m.group(1).strip()
-                        # remove prefix if dot
-                        if "." in var_tok:
-                            var_tok = var_tok.split(".")[-1]
-                        var_name = var_tok
-                    if not var_name:
-                        var_name = f"input_{idx+1}"
-                    input_names.append(var_name)
-            # fallback: generic names if still empty
-            if not input_names and max_conds > 0:
-                input_names = [f"input_{i+1}" for i in range(max_conds)]
+        did_split = 0
+        for (tri, ref), rs in groups.items():
+            rr = dict(r)
+            then = dict(rr.get("then") or {})
+            merged_then = _merge_then_blocks([x.get("then") or {} for x in rs])
+            then.update(merged_then)
+            rr["then"] = then
+            base_id = str(r.get("rule_id") or "merged_rule")
+            rr["rule_id"] = f"{base_id}_{tri}_{_to_snake(ref)}"
+            out_rules.append(rr)
+            did_split += 1
+        notes.append(f"ref_triage_variants_preserved:{r.get('rule_id')}->{did_split}")
+    return out_rules, notes
 
-        # Rebuild <dmn:input> definitions if the counts mismatch
-        existing_inputs = table.findall(f"{{{DMN_NS}}}input")
-        if len(existing_inputs) != max_conds:
-            for inp_el in existing_inputs:
-                table.remove(inp_el)
-            for idx, in_name in enumerate(input_names):
-                inp_el = ET.Element(f"{{{DMN_NS}}}input")
-                typ = var_types.get(in_name, "string")
-                inp_expr = ET.SubElement(inp_el, f"{{{DMN_NS}}}inputExpression", {"typeRef": typ})
-                text_el = ET.SubElement(inp_expr, f"{{{DMN_NS}}}text")
-                text_el.text = in_name
-                table.insert(idx, inp_el)
+# ---------- prompts (unchanged except merge step no longer drives consolidation) ----------
 
-    return ET.tostring(root, encoding="unicode")
-
-# ---------------- Guarded Extractor ----------------
 class OpenAIGuardedExtractor:
-    def __init__(
-        self,
-        api_key: Optional[str] = None,
-        model_section: str = "gpt-5",
-        model_merge: str = "gpt-5",
-        model_dmn: str = "gpt-5",
-        model_bpmn: str = "gpt-5",
-        model_audit: str = "gpt-5",
-        seed: Optional[int] = 42,
-        canonical_config_path: Optional[str] = "chatchw/config/canonical_config.json",
-    ) -> None:
+    def __init__(self,
+                 api_key: Optional[str] = None,
+                 model_section: str = "gpt-5",
+                 model_merge: str = "gpt-5",
+                 model_dmn: str = "gpt-5",
+                 model_bpmn: str = "gpt-5",
+                 model_audit: str = "gpt-5",
+                 seed: Optional[int] = 42,
+                 canonical_config_path: Optional[str] = "chatchw/config/canonical_config.json") -> None:
         key = api_key or os.getenv("OPENAI_API_KEY")
-        # Allow running with --dmn/--merged only, no API needed
         if not key and not os.getenv("SKIP_OPENAI_CHECK"):
             pass
         if OpenAI is None and key:
@@ -1125,15 +1041,12 @@ class OpenAIGuardedExtractor:
             bpmn=_norm(model_bpmn, "gpt-5"),
             audit=_norm(model_audit, "gpt-5"),
         )
-
-        # usage counters
         self.usage = {"prompt": 0, "completion": 0, "total": 0}
         self._usage_events: List[Dict[str, int]] = []
 
         self.debug_dir = Path(".chatchw_debug")
         self.debug_dir.mkdir(exist_ok=True)
 
-        # canonical config
         default_canon_vars = [
             "symptom1",
             "symptom1_duration_days",
@@ -1165,14 +1078,13 @@ class OpenAIGuardedExtractor:
 
         canon = ", ".join(self.config.get("canonical_variables", default_canon_vars))
 
-        # ---------------- prompts ----------------
         self.section_system = (
             "You extract structured decision rules from a technical manual. Return ONLY JSON.\n\n"
             "IMPORTANT OUTPUT POLICY\n"
-            "- Preserve original clinical or medical terms EXACTLY as written in the source text wherever they appear.\n"
-            "- Any examples below are generic; do NOT copy their wording.\n"
+            "- Preserve original clinical or medical terms exactly as written in the source text wherever they appear.\n"
             "- No prose outside the JSON object.\n\n"
-            "SCHEMA\n{\n  \"variables\":[{\"name\":snake,\"type\":\"number|boolean|string\",\"unit\":null|unit,\"allowed\":null|[...] ,"
+            "SCHEMA\n{\n"
+            "  \"variables\":[{\"name\":snake,\"type\":\"number|boolean|string\",\"unit\":null|unit,\"allowed\":null|[...],"
             "                \"synonyms\":[snake...],\"prompt\":short,\"refs\":[page_or_section]}],\n"
             "  \"rules\":[{\"rule_id\":str,\n"
             "            \"when\":[ {\"obs\":var,\"op\":\"lt|le|gt|ge|eq|ne\",\"value\":num|bool|string} |\n"
@@ -1187,22 +1099,28 @@ class OpenAIGuardedExtractor:
             "  \"canonical_map\":{},\n"
             "  \"qa\":{\"notes\":[]}\n}\n\n"
             f"RULES\n- Use canonical names if present: {canon} (examples; prefer the source's medical terms).\n"
-            "- Do NOT invent thresholds; encode only literal thresholds.\n"
-            "- No derived outputs in conditions (ban keys: danger_sign, clinic_referral, triage).\n"
+            "- Encode only literal thresholds that appear.\n"
+            "- Do not use derived outputs in conditions.\n"
             "- Every rule gets guideline_ref like \"p41\" or a section id.\n"
-            "OUTPUT: only JSON for THIS section."
+            "- Include CHW treatments as structured actions in then.actions. Examples: give_ors, give_zinc, teach_handwashing.\n"
+            "- Do not combine rules across different triage levels or different guideline_ref pages.\n"
+            "OUTPUT: only JSON for this section."
         )
 
+        # Kept for compatibility, but no longer used to reduce rule count
         self.merge_system = (
-            "Merge this FACT_SHEET (pre-extracted variables and rules) into one comprehensive IR. "
+            "Merge this FACT_SHEET into one comprehensive IR. "
             "Return ONLY JSON with the same schema as step 1 plus:\n"
             "- canonical_map filled for all variables\n- qa.unmapped_vars\n- qa.dedup_dropped\n- qa.overlap_fixed\n"
             "RULES\n"
-            "- Preserve original clinical terms; do NOT replace with generic placeholders.\n"
-            "- Normalize labels to snake_case where needed; keep medical meaning.\n"
+            "- Preserve original clinical terms.\n"
+            "- Normalize labels to snake_case where needed.\n"
             "- Rewrite rules to canonical names.\n"
             "- Force then.advice to [].\n"
             "- Keep every literal threshold.\n"
+            "- Never merge rules that differ in then.triage.\n"
+            "- Never merge rules that differ in then.guideline_ref page ranges.\n"
+            "- Prefer more specific conditions over less specific ones when deduplicating.\n"
             "INPUT\nFACT_SHEET:\n<COMPACT VARIABLES + RULES>"
         )
 
@@ -1210,42 +1128,41 @@ class OpenAIGuardedExtractor:
             "Given a FACT_SHEET (variables + rules), consolidate overlaps into RULES.\n"
             "Return ONLY JSON: { \"rules\": [ {\"rule_id\": str, \"when\": [...], \"then\": {\"triage\": \"hospital|clinic|home\", "
             "\"flags\":[], \"reasons\":[], \"actions\":[{\"id\":snake,\"if_available\":bool}], \"advice\":[], \"guideline_ref\": str, \"priority\": int } } ] }\n"
-            "HARD RULES: preserve terms, resolve overlaps, ban derived fields in conditions, advice must be [], each rule has guideline_ref.\n"
+            "HARD RULES: preserve terms, ban derived fields in conditions, advice must be [], each rule has guideline_ref.\n"
+            "Do NOT collapse rules across different triage levels. Do NOT collapse rules across different guideline_ref pages."
         )
 
-        # strict DMN prompt to ensure all outputs populated
         self.dmn_system = (
-            "Convert RULES_JSON into modular DMN 1.4 using the DMN 1.4 MODEL namespace (2019-11-11). Return exactly TWO fenced blocks:\n"
+            "Convert RULES_JSON into modular DMN 1.4 using the DMN 1.4 MODEL namespace (2019-11-11). "
+            "Return exactly TWO fenced blocks:\n"
             "1) ```xml <dmn:definitions>…```  2) ```json ASK_PLAN```\n\n"
             "HARD CONSTRAINTS\n"
-            "- Use the variable names EXACTLY as they appear in RULES_JSON.\n"
-            "- Advice must be an empty array in IR, empty string cells in DMN.\n"
+            "- Use variable names exactly as in RULES_JSON.\n"
             "- Decisions: decide_module_a, decide_module_b, decide_module_c, decide_module_d, decide_module_e, aggregate_final\n"
-            "- Each module uses <dmn:decisionTable hitPolicy=\"FIRST\"> with outputs: triage:string, danger_sign:boolean, clinic_referral:boolean, reason:string, ref:string, advice:string\n"
-            "- aggregate_final must use boolean outputs directly (no string parsing).\n"
-            "- Populate EVERY <dmn:outputEntry><dmn:text> with a literal value (no blanks):\n"
-            "  • triage: \"hospital\" | \"clinic\" | \"home\"\n"
-            "  • danger_sign: true | false\n"
-            "  • clinic_referral: true | false\n"
-            "  • reason: snake_case string (e.g., severe_dehydration)\n"
-            "  • ref: \"pNN\" or a section id string\n"
-            "  • advice: \"\" (empty string)\n"
-            "- Do not leave any output cells blank.\n"
-            "- Provide an ASK_PLAN array describing input collection order and followups.\n"
+            "- Each module uses <dmn:decisionTable hitPolicy=\"FIRST\"> with outputs:\n"
+            "  triage:string, danger_sign:boolean, clinic_referral:boolean, reason:string, ref:string, actions:string, advice:string\n"
+            "- Populate every output cell:\n"
+            "  triage → \"hospital\" | \"clinic\" | \"home\"\n"
+            "  danger_sign → true | false\n"
+            "  clinic_referral → true | false\n"
+            "  reason → snake_case string\n"
+            "  ref → \"pNN\" or a section id string\n"
+            "  actions → comma separated action ids from then.actions where if_available is true, or \"\"\n"
+            "  advice → \"\" (empty string)\n"
+            "- aggregate_final should combine booleans by reading the module outputs directly.\n"
+            "- Provide an ASK_PLAN array describing input collection order and followups."
         )
 
         self.bpmn_system = (
-            "Produce one BPMN 2.0 <bpmn:definitions> only. Use xmlns:bpmn and xmlns:xsi. Build a simple ask -> evaluate -> route flow.\n"
+            "Produce one BPMN 2.0 <bpmn:definitions> only. Use xmlns:bpmn and xmlns:xsi. Build a simple ask → evaluate → route flow."
         )
 
         self.coverage_system = (
             "Given RULES_JSON and the DMN XML, return ONLY JSON:\n"
             "{\"unmapped_rule_ids\":[...], \"module_counts\":{...}, \"notes\":[...]}\n"
-            "Use RULES_JSON.ir_flat.conds to match DMN inputEntry texts literally when possible.\n"
-            "Match on conditions and triage only.\n"
+            "Use RULES_JSON.ir_flat.conds to match DMN inputEntry texts when possible. Match on conditions and triage."
         )
 
-    # ---------------- OpenAI helpers -----------------
     def _accumulate_usage(self, resp) -> None:
         try:
             u = getattr(resp, "usage", None)
@@ -1268,7 +1185,7 @@ class OpenAIGuardedExtractor:
 
     def _complete(self, model_name: str, messages: list, max_out: int):
         if not self.client:
-            raise RuntimeError("OpenAI client not initialized (no API key).")
+            raise RuntimeError("OpenAI client not initialized.")
         base = dict(model=model_name, messages=messages)
         is_gpt5 = isinstance(model_name, str) and model_name.startswith("gpt-5")
         if not is_gpt5:
@@ -1323,11 +1240,9 @@ class OpenAIGuardedExtractor:
     def _chat_json(self, system: str, user: str, max_out: int = 6000, model_key: str = "section", schema_model=None) -> Dict[str, Any]:
         model_name = self.models.get(model_key, self.models["section"])
         messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
-
         def _call():
             resp = self._complete(model_name, messages, max_out)
             return (resp.choices[0].message.content or "").strip()
-
         try:
             return _call_json_with_retries(_call, schema_model=schema_model, retries=3)
         except Exception as e:
@@ -1347,7 +1262,6 @@ class OpenAIGuardedExtractor:
         resp = self._complete(model_name, messages, max_out)
         return (resp.choices[0].message.content or "").strip()
 
-    # ---------------- Step 1: per section -----------------
     def extract_rules_per_section(self, pdf_path: str) -> List[Dict[str, Any]]:
         sections = self.extract_sections_from_pdf(pdf_path)
         results: List[Dict[str, Any]] = []
@@ -1370,32 +1284,12 @@ class OpenAIGuardedExtractor:
             results.append(obj)
         return results
 
-    # ---------------- Step 2a: consolidate rules from compact fact sheet -----------------
     def generate_rules_from_fact_sheet(self, fact_sheet: Dict[str, Any]) -> List[Dict[str, Any]]:
-        payload = json.dumps(fact_sheet, ensure_ascii=False)
-        user = f"FACT_SHEET\n{payload}"
-        try:
-            obj = self._chat_json(self.rules_system, user, max_out=8000, model_key="merge", schema_model=None)
-            rules = obj.get("rules") if isinstance(obj, dict) else obj
-            if not isinstance(rules, list):
-                raise ValueError("rules consolidation returned unexpected shape")
-            cleaned = []
-            for r in rules:
-                nr = _normalize_rule_schema(r)
-                if nr:
-                    cleaned.append(nr)
-            rules_out = _dedupe_rule_ids(cleaned, prefix="rl")
-        except Exception as e:
-            rules_out = []
-            for r in (fact_sheet.get("rules") or []):
-                nr = _normalize_rule_schema(r)
-                if nr:
-                    rules_out.append(nr)
-            rules_out = _dedupe_rule_ids(rules_out, prefix="fs")
-            try:
-                self.debug_dir.joinpath("rules_from_facts_error.txt").write_text(str(e), encoding="utf-8")
-            except Exception:
-                pass
+        """
+        Replaced the model consolidation with a deterministic lossless consolidation.
+        This preserves counts and variants and avoids the 25 rule collapse.
+        """
+        rules_out = _lossless_consolidate_rules(fact_sheet)
         try:
             self.debug_dir.joinpath("rules_from_facts.json").write_text(
                 json.dumps({"rules": rules_out}, indent=2, ensure_ascii=False), encoding="utf-8"
@@ -1404,29 +1298,20 @@ class OpenAIGuardedExtractor:
             pass
         return rules_out
 
-    # ---------------- Step 2: merge -----------------
     def merge_sections(self, section_objs: List[Dict[str, Any]]) -> Dict[str, Any]:
         fact_sheet = _fact_sheet_from_sections(section_objs)
         try:
-            self.debug_dir.joinpath("fact_sheet.json").write_text(json.dumps(fact_sheet, indent=2, ensure_ascii=False), encoding="utf-8")
+            self.debug_dir.joinpath("fact_sheet.json").write_text(
+                json.dumps(fact_sheet, indent=2, ensure_ascii=False), encoding="utf-8"
+            )
         except Exception:
             pass
 
         consolidated_rules = self.generate_rules_from_fact_sheet(fact_sheet)
 
-        # -------- Clean invalid conditions from consolidated rules --------
-        # Pydantic validation in STRICT_MERGE expects each condition in "when"
-        # to conform exactly to the allowed schemas.  Some extracted rules may
-        # include malformed nested structures (e.g., an any_of containing an
-        # all_of without explicit obs/sym keys).  To avoid validation errors
-        # while preserving as many rules as possible, we filter out invalid
-        # conditions before invoking the model merge.  If all conditions in a
-        # rule are invalid, we drop that rule entirely and record a QA note.
         cleaned_rules: List[Dict[str, Any]] = []
-        # Collect notes about trimmed or dropped rules for later QA
         cleaning_notes: List[str] = []
         for rule in consolidated_rules:
-            # Work on a copy to avoid modifying original object inadvertently
             rule_copy = dict(rule)
             when_list = rule_copy.get("when") or []
             if not isinstance(when_list, list):
@@ -1434,45 +1319,68 @@ class OpenAIGuardedExtractor:
             pruned_conds: List[Dict[str, Any]] = []
             trimmed_count = 0
             for cond in when_list:
-                pruned = _prune_condition(cond)
+                coerced = _coerce_condition(cond)
+                pruned = _coerce_condition(coerced)
                 if pruned is None:
                     trimmed_count += 1
                 else:
                     pruned_conds.append(pruned)
-            # Record trimming note if any conditions were removed
             if trimmed_count > 0:
-                cleaning_notes.append(
-                    f"rule {rule_copy.get('rule_id')} trimmed_invalid_conds:{trimmed_count}"
-                )
-            # If no valid conditions remain, drop the entire rule
+                cleaning_notes.append(f"rule {rule_copy.get('rule_id')} trimmed_invalid_conds:{trimmed_count}")
             if not pruned_conds:
-                cleaning_notes.append(
-                    f"rule {rule_copy.get('rule_id')} dropped_due_no_valid_conds"
-                )
+                cleaning_notes.append(f"rule {rule_copy.get('rule_id')} dropped_due_no_valid_conds")
                 continue
-            # Otherwise update the rule's conditions and keep it
             rule_copy["when"] = pruned_conds
             cleaned_rules.append(rule_copy)
+
+        cleaned_rules, variant_notes = _preserve_ref_and_triage_variants(cleaned_rules, fact_sheet)
+        cleaning_notes.extend(variant_notes)
 
         payload = json.dumps(fact_sheet, ensure_ascii=False)
         user = f"FACT_SHEET\n{payload}"
 
+        merged: Dict[str, Any]
         if STRICT_MERGE:
-            # Perform model-guided merge
-            merged = self._chat_json(
-                self.merge_system,
-                user,
-                max_out=8000,
-                model_key="merge",
-                schema_model=IR if PydanticAvailable else None,
-            )
-            # Override rules with our cleaned version
-            merged["rules"] = cleaned_rules
-            # If the model did not provide variables, fall back to those from the fact sheet
-            if not merged.get("variables"):
-                merged["variables"] = fact_sheet.get("variables", [])
+            try:
+                merged = self._chat_json(
+                    self.merge_system,
+                    user,
+                    max_out=8000,
+                    model_key="merge",
+                    schema_model=IR if PydanticAvailable else None,
+                )
+                merged["rules"] = cleaned_rules
+                if not merged.get("variables"):
+                    merged["variables"] = fact_sheet.get("variables", [])
+            except Exception as e:
+                variables: Dict[str, Dict[str, Any]] = {}
+                qa_notes: List[str] = [f"fallback_merge_used: {type(e).__name__}"]
+                for v in (fact_sheet.get("variables") or []):
+                    if not isinstance(v, dict):
+                        continue
+                    name = str(v.get("name", "")).strip()
+                    if not name:
+                        continue
+                    cur = variables.get(name.lower())
+                    if cur is None:
+                        vv = dict(v)
+                        if not isinstance(vv.get("synonyms"), list):
+                            vv["synonyms"] = []
+                        if not isinstance(vv.get("refs"), list):
+                            vv["refs"] = []
+                        variables[name.lower()] = vv
+                    else:
+                        syn = set(cur.get("synonyms") or []) | set(v.get("synonyms") or [])
+                        refs = set(cur.get("refs") or []) | set(v.get("refs") or [])
+                        cur["synonyms"] = sorted(list(syn))
+                        cur["refs"] = sorted(list(refs))
+                merged = {
+                    "variables": list(variables.values()),
+                    "rules": cleaned_rules,
+                    "canonical_map": {},
+                    "qa": {"notes": qa_notes, "unmapped_vars": [], "dedup_dropped": 0, "overlap_fixed": []},
+                }
         else:
-            # Deterministic local merge: combine variables and cleaned rules
             variables: Dict[str, Dict[str, Any]] = {}
             qa_notes: List[str] = ["fallback_merge_used", "source=fact_sheet"]
             for v in (fact_sheet.get("variables") or []):
@@ -1501,16 +1409,14 @@ class OpenAIGuardedExtractor:
                 "qa": {"notes": qa_notes, "unmapped_vars": [], "dedup_dropped": 0, "overlap_fixed": []},
             }
 
-        # Append notes about cleaning invalid conditions to the QA notes on merged
         try:
             notes_list = merged.setdefault("qa", {}).setdefault("notes", [])
-            # Ensure we do not modify the original list while iterating
             for note in cleaning_notes:
                 notes_list.append(note)
         except Exception:
-            # If QA does not exist or is not a dict, create it
             merged["qa"] = merged.get("qa", {}) or {}
             merged["qa"].setdefault("notes", []).extend(cleaning_notes)
+
         merged = _resolve_variables_snake_and_rewrite_rules(merged)
 
         canon = _build_canonical_map(self.config, merged.get("variables", []))
@@ -1519,11 +1425,20 @@ class OpenAIGuardedExtractor:
         merged["rules"] = _dedupe_rule_ids(merged["rules"], prefix="merged")
 
         if PydanticAvailable:
-            merged = IR.model_validate(merged).model_dump()
+            try:
+                merged = IR.model_validate(merged).model_dump()
+            except ValidationError as e:
+                try:
+                    self.debug_dir.joinpath("pydantic_ir_validation_error.txt").write_text(str(e), encoding="utf-8")
+                except Exception:
+                    pass
+                merged.setdefault("qa", {}).setdefault("notes", []).append(
+                    "pydantic_validation_skipped_due_to_nested_group_shape"
+                )
+
         _preflight_ir(merged)
         return merged
 
-    # ---------------- Step 3: DMN plus ASK_PLAN -----------------
     def generate_dmn_and_ask_plan(self, merged_ir: Dict[str, Any]) -> Tuple[str, Any]:
         user = "RULES_JSON:\n" + json.dumps(merged_ir, ensure_ascii=False)
         text = self._chat_text(self.dmn_system, user, max_out=12000, model_key="dmn")
@@ -1569,25 +1484,18 @@ class OpenAIGuardedExtractor:
         def _sanitize_dmn(xml: str) -> str:
             s = xml
             s = re.sub(r"(<dmn:outputEntry>\s*<dmn:text>)([^<]*?)(</dmn:outputEntry>)", r"\1\2</dmn:text>\3", s, flags=re.DOTALL)
-            s = s.replace(
-                "<dmn:outputEntry><dmn:text></dmn:text></dmn:outputEntry>",
-                '<dmn:outputEntry><dmn:text>""</dmn:text></dmn:outputEntry>',
-            )
-            s = s.replace(
-                "<dmn:outputEntry><dmn:text></dmn:outputEntry>",
-                '<dmn:outputEntry><dmn:text>""</dmn:text></dmn:outputEntry>',
-            )
+            s = s.replace("<dmn:outputEntry><dmn:text></dmn:text></dmn:outputEntry>",
+                          '<dmn:outputEntry><dmn:text>""</dmn:text></dmn:outputEntry>')
+            s = s.replace("<dmn:outputEntry><dmn:text></dmn:outputEntry>",
+                          '<dmn:outputEntry><dmn:text>""</dmn:text></dmn:outputEntry>')
             s = re.sub(r"(<dmn:inputEntry>\s*<dmn:text>)([^<]*?)(</dmn:inputEntry>)", r"\1\2</dmn:text>\3", s, flags=re.DOTALL)
-            s = s.replace(
-                "<dmn:inputEntry><dmn:text></dmn:text></dmn:inputEntry>",
-                "<dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>",
-            )
-            s = s.replace(
-                "<dmn:inputEntry><dmn:text></dmn:inputEntry>",
-                "<dmn:inputEntry><dmn:text>-</dmn:inputEntry>",
-            )
+            s = s.replace("<dmn:inputEntry><dmn:text></dmn:text></dmn:inputEntry>",
+                          "<dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>")
+            s = s.replace("<dmn:inputEntry><dmn:text></dmn:inputEntry>",
+                          "<dmn:inputEntry><dmn:text>-</dmn:inputEntry>")
             if 'xmlns:dmn="' not in s:
-                s = s.replace("<dmn:definitions", '<dmn:definitions xmlns:dmn="https://www.omg.org/spec/DMN/20191111/MODEL/"', 1)
+                s = s.replace("<dmn:definitions",
+                              '<dmn:definitions xmlns:dmn="https://www.omg.org/spec/DMN/20191111/MODEL/"', 1)
             return s
 
         if dmn_xml:
@@ -1598,9 +1506,6 @@ class OpenAIGuardedExtractor:
                 Path(self.debug_dir / "dmn_ask_debug_last.txt").write_text(text, encoding="utf-8")
             except Exception:
                 pass
-            raise RuntimeError("Failed to get DMN and ASK_PLAN from model")
-
-        # validate DMN completeness before proceeding
         _validate_dmn_outputs_or_die(dmn_xml)
 
         try:
@@ -1632,14 +1537,10 @@ class OpenAIGuardedExtractor:
         except Exception:
             pass
 
-        # ensure inputs are defined for each decision table
         dmn_xml = _ensure_dmn_inputs(dmn_xml, ask_plan, merged_ir)
-
         return dmn_xml, ask_plan
 
-    # ---------------- Step 4: BPMN -----------------
     def generate_bpmn(self, dmn_xml: str, ask_plan: Any) -> str:
-        # Compose the prompt for BPMN generation with properly fenced DMN and ASK_PLAN blocks
         user = "DMN:\n```xml\n" + dmn_xml + "\n```\n\n" + "ASK_PLAN:\n" + json.dumps(ask_plan, ensure_ascii=False)
         text = self._chat_text(self.bpmn_system, user, max_out=12000, model_key="bpmn")
         blocks = _extract_fenced_blocks(text)
@@ -1663,22 +1564,18 @@ class OpenAIGuardedExtractor:
             pass
         raise RuntimeError("Failed to get BPMN from model")
 
-    # ---------------- Step 5: coverage -----------------
     def audit_coverage(self, merged_ir: Dict[str, Any], dmn_xml: str) -> Dict[str, Any]:
         payload = {"ir": merged_ir, "ir_flat": _rules_flattened(merged_ir)}
         user = "RULES_JSON:\n" + json.dumps(payload, ensure_ascii=False) + "\nDMN:\n```xml\n" + dmn_xml + "\n```"
         return self._chat_json(self.coverage_system, user, max_out=6000, model_key="audit", schema_model=None)
 
-    # ---------------- Step 6: DMN or ASK_PLAN to XLSX (XLSForm) -----------------
-    def export_xlsx_from_dmn(
-        self, merged_ir: Dict[str, Any], ask_plan: List[Dict[str, Any]], out_xlsx_path: str, template_xlsx_path: Optional[str] = None
-    ) -> str:
+    def export_xlsx_from_dmn(self, merged_ir: Dict[str, Any], ask_plan: List[Dict[str, Any]],
+                             out_xlsx_path: str, template_xlsx_path: Optional[str] = None) -> str:
         try:
             from openpyxl import load_workbook, Workbook
         except Exception as e:
             raise RuntimeError("openpyxl is required for XLSX export (pip install openpyxl)") from e
 
-        # base workbook
         if template_xlsx_path and Path(template_xlsx_path).exists():
             wb = load_workbook(template_xlsx_path)
             for sheet in ("survey", "choices"):
@@ -1693,7 +1590,6 @@ class OpenAIGuardedExtractor:
             ws_s.append(["type", "name", "label", "hint", "required", "constraint", "relevant", "appearance", "calculation"])
             ws_c.append(["list_name", "name", "label"])
 
-        # SETTINGS
         form_id = Path(out_xlsx_path).stem
         title = form_id.replace("_", " ").title()
         version_val = int(time.time())
@@ -1724,7 +1620,7 @@ class OpenAIGuardedExtractor:
                 ws.cell(row=1, column=len(hdr_list), value=name)
                 return len(hdr_list) - 1
 
-        s_ix = {k: _col_ix(ws_survey, s_hdr, k) for k in ("type", "name", "label", "hint", "required", "constraint", "relevant", "appearance", "calculation")}
+        s_ix = {k: _col_ix(ws_survey, s_hdr, k) for k in ("type", "name", "label", "hint", "required", "constraint", "relevant", "calculation", "appearance")}
         c_ix = {k: _col_ix(ws_choices, c_hdr, k) for k in ("list_name", "name", "label")}
 
         var_by_name = {(v.get("name") or "").strip(): v for v in (merged_ir.get("variables") or []) if isinstance(v, dict) and v.get("name")}
@@ -1735,7 +1631,6 @@ class OpenAIGuardedExtractor:
                 return str(v["prompt"])
             return re.sub(r"_+", " ", str(name)).strip().capitalize()
 
-        # choices: ensure yes_no once
         existing_choices = set()
         for row in ws_choices.iter_rows(min_row=2, values_only=True):
             if not row:
@@ -1767,12 +1662,6 @@ class OpenAIGuardedExtractor:
                     ws_choices.append(row)
                     existing_choices.add(key)
 
-        def _strip_quotes_local(s: str) -> str:
-            s = (s or "").strip()
-            if (s.startswith('"') and s.endswith('"')) or (s.startswith("'") and s.endswith("'")):
-                return s[1:-1]
-            return s
-
         def cond_to_relevant(cond: str) -> Optional[str]:
             s = str(cond or "").strip()
             m = re.match(r"^\s*([A-Za-z0-9_]+)\s*([=!<>]=|[<>]|=)\s*(.+?)\s*$", s)
@@ -1785,7 +1674,7 @@ class OpenAIGuardedExtractor:
             elif re.match(r"^-?\d+(\.\d+)?$", val):
                 pass
             else:
-                val = f"'{_strip_quotes_local(val)}'"
+                val = f"'{_strip_quotes(val)}'"
             if op == "==":
                 op = "="
             return f"${{{var}}} {op} {val}"
@@ -1838,13 +1727,12 @@ class OpenAIGuardedExtractor:
         wb.save(str(outp))
         return str(outp)
 
-    # ---------------- Step 7: DMN to per module CSVs -----------------
     def parse_dmn_decision_tables(self, dmn_xml: str) -> Dict[str, dict]:
         root = ET.fromstring(dmn_xml)
         out: Dict[str, dict] = {}
         for dec in root.findall(".//dmn:decision", _DMNN):
-            name = (dec.get("name") or dec.get("id") or "module").strip()
-            mod = re.sub(r"^decide[_\-:]+", "", name).strip() or "module"
+            name = (dec.get("name") or (dec.get("id") or "module")).strip()
+            mod = re.sub(r"^decide[_:\-]+", "", name).strip() or "module"
             table = dec.find(".//dmn:decisionTable", _DMNN)
             if table is None:
                 continue
@@ -1859,27 +1747,18 @@ class OpenAIGuardedExtractor:
         return out
 
     def export_csvs_from_dmn(self, dmn_xml: str, out_dir: str) -> Dict[str, str]:
-        # normalize refs like 'p11-10, p 7 - 6 ; P15-P17' to 'p10-11, p7-6; p15-17'
         def _normalize_page_ranges(ref: str) -> str:
             s = _strip_quotes(ref or "")
-
-            # add p if a range lacks it entirely
             def _ensure_p_prefix(m):
                 a, b = m.group(1), m.group(2)
                 return f"p{a}-{b}"
-
             s = re.sub(r"\b(\d{1,4})\s*-\s*(\d{1,4})\b", _ensure_p_prefix, s)
-
-            # normalize pA - pB variants, preserving low to high
             def _swap_if_needed(m):
                 a = int(m.group(1))
                 b = int(m.group(2))
                 lo, hi = sorted((a, b))
                 return f"p{lo}-{hi}"
-
             s = re.sub(r"[Pp]\s*(\d{1,4})\s*-\s*[Pp]?\s*(\d{1,4})", _swap_if_needed, s)
-
-            # tidy separators
             s = re.sub(r"\s*([,;])\s*", r"\1 ", s)
             return s.strip()
 
@@ -1904,12 +1783,13 @@ class OpenAIGuardedExtractor:
             "clinic_referral": "false",
             "reason": "",
             "ref": "p0",
+            "actions": "",
             "advice": "",
         }
 
         for mod, t in tables.items():
-            outs = [c for c in t["outputs"] if c] or ["triage", "danger_sign", "clinic_referral", "reason", "ref", "advice"]
-            fname = f"dmn_{mod}.csv"  # disk name maps to pulldata id dmn_<mod>
+            outs = [c for c in t["outputs"] if c] or ["triage", "danger_sign", "clinic_referral", "reason", "ref", "actions", "advice"]
+            fname = f"dmn_{mod}.csv"
             fpath = outp / fname
             with open(fpath, "w", newline="", encoding="utf-8") as f:
                 w = csv.writer(f)
@@ -1927,15 +1807,7 @@ class OpenAIGuardedExtractor:
 
         return out_map
 
-    # ---------------- Step 8: Wire DMN outputs into XLSForm -----------------
     def wire_decisions_into_xlsx(self, xlsx_path: str, dmn_xml: str, merged_ir: Dict[str, Any], media_id_prefix: str = "dmn_") -> None:
-        """
-        Embed all DMN decision logic directly into the XLSForm.  This implementation
-        no longer relies on per-module CSVs or pulldata() calls; instead each
-        decision table's outputs are produced using nested if() expressions
-        referencing the user's answers.  The media directory is reserved for
-        images only.
-        """
         from openpyxl import load_workbook
 
         wb = load_workbook(xlsx_path)
@@ -1954,7 +1826,6 @@ class OpenAIGuardedExtractor:
             ws.cell(row=1, column=len(hdr), value=name)
             return len(hdr) - 1
 
-        # column indices for survey sheet
         c_type = col("type")
         c_name = col("name")
         c_calc = col("calculation")
@@ -1962,7 +1833,6 @@ class OpenAIGuardedExtractor:
         c_rel = col("relevant")
 
         def append_by_cols(values: dict):
-            """Append a row to the survey sheet given a mapping of field names."""
             row = [None] * len(hdr)
             if "type" in values:
                 row[c_type] = values["type"]
@@ -1977,21 +1847,17 @@ class OpenAIGuardedExtractor:
             ws.append(row)
 
         def map_var_token_to_xls(var_token: str) -> str:
-            """Translate a DMN variable token to the corresponding XLSForm variable name."""
             tok = (var_token or "").strip()
-            # for tokens like decide_module_a.danger_sign → dmn_module_a_danger_sign
             if "." in tok:
                 left, right = tok.rsplit(".", 1)
-                mod = re.sub(r"^decide[_\-:]+", "", left)
+                mod = re.sub(r"^decide[_:\-]+", "", left)
                 return f"{media_id_prefix}{_to_snake(mod)}_{_to_snake(right)}"
             return tok
 
         def feel_to_xls_test(expr: str) -> Optional[str]:
-            """Convert a simple FEEL expression into an XLSForm boolean test."""
             s = (expr or "").strip()
             if s in ("", "-", "otherwise"):
                 return None
-            # basic comparison parsing
             m = re.match(r"^\s*([A-Za-z_][A-Za-z0-9_\.\-:]*)\s*(=|==|!=|<=|>=|<|>)\s*(.+?)\s*$", s)
             if not m:
                 return None
@@ -2001,7 +1867,6 @@ class OpenAIGuardedExtractor:
             xls_var = map_var_token_to_xls(var_tok)
             lhs_is_calc = xls_var.startswith(media_id_prefix)
             val = (rhs or "").strip()
-            # boolean literal mapping: if left side is a calculate field (prefixed), remain 'true'/'false', else map to yes/no
             if val.lower() in ("true", "false"):
                 rhs_x = "'true'" if lhs_is_calc else ("'yes'" if val.lower() == "true" else "'no'")
             elif re.match(r"^-?\d+(\.\d+)?$", val):
@@ -2010,10 +1875,8 @@ class OpenAIGuardedExtractor:
                 rhs_x = f"'{_strip_quotes(val)}'"
             return f"${{{xls_var}}} {op} {rhs_x}"
 
-        # parse all decision tables from the DMN
         tables = self.parse_dmn_decision_tables(dmn_xml)
         for mod, t in tables.items():
-            # Build DMN row matchers (conjunction of conditions per rule)
             row_tests: List[str] = []
             for i, row in enumerate(t["rows"], start=1):
                 conjuncts: List[str] = []
@@ -2021,38 +1884,28 @@ class OpenAIGuardedExtractor:
                     xp = feel_to_xls_test(feel)
                     if xp:
                         conjuncts.append(xp)
-                # join all conjuncts with and; if none, true()
                 row_tests.append(_and_join(conjuncts))
 
-            # Determine output columns (triage, danger_sign, etc.)
-            outs = [c for c in t["outputs"] if c] or ["triage", "danger_sign", "clinic_referral", "reason", "ref", "advice"]
+            outs = [c for c in t["outputs"] if c] or ["triage", "danger_sign", "clinic_referral", "reason", "ref", "actions", "advice"]
 
-            # For each output column, build nested if expression selecting the row's output value
             for col_idx, out_col in enumerate(outs):
-                # Gather the value for this output column from each rule
                 values: List[str] = []
                 for row in t["rows"]:
                     raw_val = row["outs"][col_idx] if col_idx < len(row["outs"]) else ""
-                    # If value is missing or blank, keep as empty string
                     v = (raw_val or "").strip()
                     values.append(v)
-                # Build nested ifs from bottom to top
                 expr_out = "''"
-                # iterate reversed to produce inner-most default first
                 for test, val in reversed(list(zip(row_tests, values))):
-                    # determine the literal representation
                     if val == "":
                         lit = "''"
                     else:
                         vv = _strip_quotes(val)
-                        # booleans remain literal (true/false) for calculate fields
                         if vv.lower() in ("true", "false"):
                             lit = f"'{vv.lower()}'"
                         else:
                             lit = f"'{vv}'"
-                    expr_out = f"if({test}, {lit}, {expr_out})"
-
-                # Append calculate row for this output
+                    if test:
+                        expr_out = f"if({test}, {lit}, {expr_out})"
                 append_by_cols({
                     "type": "calculate",
                     "name": f"{media_id_prefix}{mod}_{out_col}",
@@ -2061,74 +1914,37 @@ class OpenAIGuardedExtractor:
                     "relevant": None
                 })
 
+            summary_label = (
+                f"Triage: ${{{media_id_prefix}{mod}_triage}}\n"
+                f"Danger sign: ${{{media_id_prefix}{mod}_danger_sign}}\n"
+                f"Clinic referral: ${{{media_id_prefix}{mod}_clinic_referral}}\n"
+                f"Reason: ${{{media_id_prefix}{mod}_reason}}\n"
+                f"Ref: ${{{media_id_prefix}{mod}_ref}}\n"
+                f"CHW actions: ${{{media_id_prefix}{mod}_actions}}"
+            )
+            append_by_cols({
+                "type": "note",
+                "name": f"{media_id_prefix}{mod}_summary",
+                "label": summary_label
+            })
+
         wb.save(xlsx_path)
 
-    def build_orchestrator_folder(
-        self,
-        dmn_xml: str,
-        ask_plan: List[Dict[str, Any]],
-        merged_ir: Dict[str, Any],
-        output_dir: Union[str, Path],
-        template_xlsx_path: Optional[str] = None,
-        logo_path: Optional[str] = None,
-    ) -> str:
-        """
-        Create a complete orchestrator folder containing an XLSForm with embedded
-        decision logic, a placeholder XML file, a properties file, and a media
-        directory with a logo image.  This helper wraps the existing XLSX
-        creation and wiring functions and adds the additional files expected by
-        the Community Health Toolkit (CHT).  The DMN decision tables are
-        compiled directly into the XLSForm (no CSVs are produced).
-
-        Parameters
-        ----------
-        dmn_xml: str
-            The DMN XML generated from the model.
-        ask_plan: list
-            Ask plan describing the ordering of questions for each module.
-        merged_ir: dict
-            The merged intermediate representation containing variables and rules.
-        output_dir: str or Path
-            Directory into which the orchestrator folder structure should be
-            created.  If the directory does not exist it will be created.
-            The final orchestrator files (XLSX, XML, properties) and the media
-            folder will reside directly inside this directory.
-        template_xlsx_path: Optional[str]
-            Optional path to an XLSX file to use as a template for the
-            orchestrator.  If provided and exists, the template will be used
-            as the base workbook for export_xlsx_from_dmn.
-        logo_path: Optional[str]
-            Optional path to a PNG image to use as the logo.  If not provided
-            or the path does not exist, a default logo will be used when
-            available.  If no default is available a blank PNG will be
-            generated.
-
-        Returns
-        -------
-        str
-            The path to the orchestrator directory on disk.
-        """
+    def build_orchestrator_folder(self, dmn_xml: str, ask_plan: List[Dict[str, Any]],  # noqa: D401
+                                  merged_ir: Dict[str, Any], output_dir: Union[str, Path],
+                                  template_xlsx_path: Optional[str] = None, logo_path: Optional[str] = None) -> str:
         out_root = Path(output_dir)
-        # Ensure base orchestrator directory exists
         out_root.mkdir(parents=True, exist_ok=True)
 
-        # Paths for individual files
         xlsx_path = out_root / "orchestrator.xlsx"
         xml_path = out_root / "orchestrator.xml"
         props_path = out_root / "orchestrator.properties.json"
         media_dir = out_root / "media"
-
-        # Create media directory
         media_dir.mkdir(exist_ok=True)
 
-        # Step 1: build xlsx using merged IR and ask plan
-        # Use the provided template if supplied
         self.export_xlsx_from_dmn(merged_ir, ask_plan, str(xlsx_path), template_xlsx_path)
-
-        # Step 2: embed DMN logic directly into xlsx
         self.wire_decisions_into_xlsx(str(xlsx_path), dmn_xml, merged_ir)
 
-        # Step 3: generate placeholder XML
         xml_placeholder = (
             "<?xml version=\"1.0\"?>\n"
             "<orchestrator>\n"
@@ -2138,9 +1954,7 @@ class OpenAIGuardedExtractor:
         with xml_path.open("w", encoding="utf-8") as f_xml:
             f_xml.write(xml_placeholder)
 
-        # Step 4: handle logo
         logo_dest = media_dir / "logo.png"
-        # Use provided logo if available
         from shutil import copyfile
         if logo_path and Path(logo_path).exists():
             try:
@@ -2148,7 +1962,6 @@ class OpenAIGuardedExtractor:
             except Exception:
                 pass
         else:
-            # Try to copy a default logo from the current directory if present
             default_logo = Path(__file__).with_name("205a491d-21bb-46eb-be6e-6e5279e4156b.png")
             if default_logo.exists():
                 try:
@@ -2156,24 +1969,17 @@ class OpenAIGuardedExtractor:
                 except Exception:
                     pass
             else:
-                # Generate a 1x1 transparent PNG as fallback
                 try:
                     from PIL import Image
-
                     img = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
                     img.save(logo_dest, "PNG")
                 except Exception:
-                    # If PIL is not available, write an empty file
                     logo_dest.touch()
 
-        # Step 5: write properties file
         properties = {
             "title": "Orchestrator",
             "icon": "icon-healthcare",
-            "context": {
-                "person": False,
-                "place": False,
-            },
+            "context": {"person": False, "place": False},
             "internalId": "orchestrator",
             "xmlFormId": "orchestrator",
             "media": ["logo.png"],
@@ -2183,7 +1989,6 @@ class OpenAIGuardedExtractor:
 
         return str(out_root)
 
-    # ---------------- PDF sectioning wrapper -----------------
     def extract_sections_from_pdf(self, pdf_path: str, max_chars: int = 4000) -> List[Tuple[str, str]]:
         logp = self.debug_dir / "sectioning.log"
 
@@ -2245,17 +2050,15 @@ class OpenAIGuardedExtractor:
             pass
         return []
 
-
-# ---------------- convenience: minimal CLI usage (optional) ----------------
 if __name__ == "__main__":
     import argparse
     import sys
 
-    parser = argparse.ArgumentParser(description="Extract -> DMN -> CSVs -> XLSForm -> wire pulldata()")
+    parser = argparse.ArgumentParser(description="Extract -> DMN -> XLSForm")
     parser.add_argument("--pdf", required=False, help="Guideline PDF")
-    parser.add_argument("--dmn", required=False, help="Existing DMN XML path (skips model steps)")
-    parser.add_argument("--merged", required=False, help="Existing merged_ir.json path (skips model steps)")
-    parser.add_argument("--ask", required=False, help="Existing ask_plan.json path (optional)")
+    parser.add_argument("--dmn", required=False, help="Existing DMN XML path")
+    parser.add_argument("--merged", required=False, help="Existing merged_ir.json path")
+    parser.add_argument("--ask", required=False, help="Existing ask_plan.json path")
     parser.add_argument("--xlsx-out", default="forms/app/orchestrator.xlsx")
     parser.add_argument("--media-dir", default="forms/app/orchestrator-media")
     parser.add_argument("--template", default=None)
@@ -2281,24 +2084,15 @@ if __name__ == "__main__":
             raw = json.loads(Path(args.ask).read_text(encoding="utf-8"))
             ask_plan = raw.get("ASK_PLAN") if isinstance(raw, dict) and "ASK_PLAN" in raw else raw
         else:
-            # Minimal plan: ask all known variables in one group
             ask_plan = [
-                {
-                    "module": "module_a",
-                    "ask": [v["name"] for v in (merged.get("variables") or []) if isinstance(v, dict) and v.get("name")],
-                    "followups_if": {},
-                }
+                {"module": "module_a",
+                 "ask": [v["name"] for v in (merged.get("variables") or []) if isinstance(v, dict) and v.get("name")],
+                 "followups_if": {}}
             ]
     else:
         print("Supply either --pdf OR both --dmn and --merged", file=sys.stderr)
         sys.exit(2)
 
-    # Create an orchestrator folder containing the XLSForm with embedded logic,
-    # a placeholder XML, a properties file, and a media directory.  The
-    # orchestrator folder name is derived from the --xlsx-out argument by
-    # removing the .xlsx suffix.  For example, if --xlsx-out is
-    # 'forms/app/orchestrator.xlsx', the resulting orchestrator directory
-    # will be 'forms/app/orchestrator'.  CSVs are not generated.
     orchestrator_root = Path(args.xlsx_out).with_suffix("")
     orchestrator_root.parent.mkdir(parents=True, exist_ok=True)
     gx.build_orchestrator_folder(

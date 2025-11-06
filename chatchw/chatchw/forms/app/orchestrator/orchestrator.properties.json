@@ -1,0 +1,13 @@
+{
+  "title": "Orchestrator",
+  "icon": "icon-healthcare",
+  "context": {
+    "person": false,
+    "place": false
+  },
+  "internalId": "orchestrator",
+  "xmlFormId": "orchestrator",
+  "media": [
+    "logo.png"
+  ]
+}

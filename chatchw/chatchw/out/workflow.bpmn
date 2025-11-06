@@ -1,31 +1,42 @@
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Defs" targetNamespace="urn:flow">
-  <bpmn:process id="AskEvaluateRoute" name="Ask Evaluate Route" isExecutable="true">
-    <bpmn:startEvent id="Start" name="Start"/>
-    <bpmn:userTask id="AskTask" name="Ask Questions"/>
-    <bpmn:businessRuleTask id="EvaluateDMN" name="Evaluate DMN" implementation="http://www.omg.org/spec/DMN/20191111/MODEL/" />
-    <bpmn:exclusiveGateway id="RouteGateway" name="Route by triage"/>
-    <bpmn:endEvent id="EndHome" name="Home">
-      <bpmn:terminateEventDefinition xsi:nil="true"/>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_ask_evaluate_route">
+  <bpmn:process id="Process_AskEvaluateRoute" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_start_to_ask</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_Ask" name="Ask for inputs">
+      <bpmn:incoming>Flow_start_to_ask</bpmn:incoming>
+      <bpmn:outgoing>Flow_ask_to_eval</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_Evaluate" name="Evaluate DMN" implementation="dmn">
+      <bpmn:incoming>Flow_ask_to_eval</bpmn:incoming>
+      <bpmn:outgoing>Flow_eval_to_gateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_Route" name="Route by triage">
+      <bpmn:incoming>Flow_eval_to_gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_home</bpmn:outgoing>
+      <bpmn:outgoing>Flow_to_clinic</bpmn:outgoing>
+      <bpmn:outgoing>Flow_to_hospital</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="End_Home" name="Home">
+      <bpmn:incoming>Flow_to_home</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:endEvent id="EndClinic" name="Clinic">
-      <bpmn:terminateEventDefinition xsi:nil="true"/>
+    <bpmn:endEvent id="End_Clinic" name="Clinic">
+      <bpmn:incoming>Flow_to_clinic</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:endEvent id="EndHospital" name="Hospital">
-      <bpmn:terminateEventDefinition xsi:nil="true"/>
+    <bpmn:endEvent id="End_Hospital" name="Hospital">
+      <bpmn:incoming>Flow_to_hospital</bpmn:incoming>
     </bpmn:endEvent>
-
-    <bpmn:sequenceFlow id="f1" sourceRef="Start" targetRef="AskTask"/>
-    <bpmn:sequenceFlow id="f2" sourceRef="AskTask" targetRef="EvaluateDMN"/>
-    <bpmn:sequenceFlow id="f3" sourceRef="EvaluateDMN" targetRef="RouteGateway"/>
-
-    <bpmn:sequenceFlow id="toHome" sourceRef="RouteGateway" targetRef="EndHome" name="triage == 'home'">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"><![CDATA[${triage == 'home'}]]></bpmn:conditionExpression>
+    <bpmn:sequenceFlow id="Flow_start_to_ask" sourceRef="StartEvent_1" targetRef="Task_Ask"/>
+    <bpmn:sequenceFlow id="Flow_ask_to_eval" sourceRef="Task_Ask" targetRef="Task_Evaluate"/>
+    <bpmn:sequenceFlow id="Flow_eval_to_gateway" sourceRef="Task_Evaluate" targetRef="Gateway_Route"/>
+    <bpmn:sequenceFlow id="Flow_to_home" sourceRef="Gateway_Route" targetRef="End_Home">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"><![CDATA[${triage == "home"}]]></bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="toClinic" sourceRef="RouteGateway" targetRef="EndClinic" name="triage == 'clinic'">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"><![CDATA[${triage == 'clinic'}]]></bpmn:conditionExpression>
+    <bpmn:sequenceFlow id="Flow_to_clinic" sourceRef="Gateway_Route" targetRef="End_Clinic">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"><![CDATA[${triage == "clinic"}]]></bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="toHospital" sourceRef="RouteGateway" targetRef="EndHospital" name="triage == 'hospital'">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"><![CDATA[${triage == 'hospital'}]]></bpmn:conditionExpression>
+    <bpmn:sequenceFlow id="Flow_to_hospital" sourceRef="Gateway_Route" targetRef="End_Hospital">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"><![CDATA[${triage == "hospital"}]]></bpmn:conditionExpression>
     </bpmn:sequenceFlow>
   </bpmn:process>
 </bpmn:definitions>

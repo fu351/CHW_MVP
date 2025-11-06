@@ -1,377 +1,470 @@
 ```xml
-<dmn:definitions xmlns:dmn="https://www.omg.org/spec/DMN/20191111/MODEL/" id="defs" name="ModularRules" namespace="urn:rules">
+<dmn:definitions xmlns:dmn="https://www.omg.org/spec/DMN/20191111/MODEL/" id="Definitions_modular_rules" name="Modular CCM Rules" namespace="https://example.org/dmn/modular-ccm">
+  <dmn:inputData id="inp_age_months" name="age_months"><dmn:variable id="var_age_months" name="age_months" typeRef="number"/></dmn:inputData>
+  <dmn:inputData id="inp_cough_present" name="cough_present"><dmn:variable id="var_cough_present" name="cough_present" typeRef="boolean"/></dmn:inputData>
+  <dmn:inputData id="inp_cough_duration_days" name="cough_duration_days"><dmn:variable id="var_cough_duration_days" name="cough_duration_days" typeRef="number"/></dmn:inputData>
+  <dmn:inputData id="inp_fast_breathing_present" name="fast_breathing_present"><dmn:variable id="var_fast_breathing_present" name="fast_breathing_present" typeRef="boolean"/></dmn:inputData>
+  <dmn:inputData id="inp_chest_indrawing_present" name="chest_indrawing_present"><dmn:variable id="var_chest_indrawing_present" name="chest_indrawing_present" typeRef="boolean"/></dmn:inputData>
+  <dmn:inputData id="inp_chest_indrawing" name="chest_indrawing"><dmn:variable id="var_chest_indrawing" name="chest_indrawing" typeRef="boolean"/></dmn:inputData>
+  <dmn:inputData id="inp_has_diarrhoea" name="has_diarrhoea"><dmn:variable id="var_has_diarrhoea" name="has_diarrhoea" typeRef="boolean"/></dmn:inputData>
+  <dmn:inputData id="inp_diarrhoea_duration_days" name="diarrhoea_duration_days"><dmn:variable id="var_diarrhoea_duration_days" name="diarrhoea_duration_days" typeRef="number"/></dmn:inputData>
+  <dmn:inputData id="inp_blood_in_stool" name="blood_in_stool"><dmn:variable id="var_blood_in_stool" name="blood_in_stool" typeRef="boolean"/></dmn:inputData>
+  <dmn:inputData id="inp_fever_duration_days" name="fever_duration_days"><dmn:variable id="var_fever_duration_days" name="fever_duration_days" typeRef="number"/></dmn:inputData>
+  <dmn:inputData id="inp_hot_with_fever" name="hot_with_fever"><dmn:variable id="var_hot_with_fever" name="hot_with_fever" typeRef="boolean"/></dmn:inputData>
+  <dmn:inputData id="inp_malaria_area" name="malaria_area"><dmn:variable id="var_malaria_area" name="malaria_area" typeRef="boolean"/></dmn:inputData>
+  <dmn:inputData id="inp_rdt_available" name="rdt_available"><dmn:variable id="var_rdt_available" name="rdt_available" typeRef="boolean"/></dmn:inputData>
+  <dmn:inputData id="inp_rdt_result" name="rdt_result"><dmn:variable id="var_rdt_result" name="rdt_result" typeRef="string"/></dmn:inputData>
+  <dmn:inputData id="inp_muac_result" name="muac_result"><dmn:variable id="var_muac_result" name="muac_result" typeRef="string"/></dmn:inputData>
+  <dmn:inputData id="inp_swelling_of_both_feet" name="swelling_of_both_feet"><dmn:variable id="var_swelling_of_both_feet" name="swelling_of_both_feet" typeRef="boolean"/></dmn:inputData>
+  <dmn:inputData id="inp_convulsions_in_this_illness_episode" name="convulsions_in_this_illness_episode"><dmn:variable id="var_convulsions_in_this_illness_episode" name="convulsions_in_this_illness_episode" typeRef="boolean"/></dmn:inputData>
+  <dmn:inputData id="inp_not_able_to_drink_or_feed_anything" name="not_able_to_drink_or_feed_anything"><dmn:variable id="var_not_able_to_drink_or_feed_anything" name="not_able_to_drink_or_feed_anything" typeRef="boolean"/></dmn:inputData>
+  <dmn:inputData id="inp_vomits_everything" name="vomits_everything"><dmn:variable id="var_vomits_everything" name="vomits_everything" typeRef="boolean"/></dmn:inputData>
+  <dmn:inputData id="inp_unusually_sleepy_or_unconscious" name="unusually_sleepy_or_unconscious"><dmn:variable id="var_unusually_sleepy_or_unconscious" name="unusually_sleepy_or_unconscious" typeRef="boolean"/></dmn:inputData>
+  <dmn:inputData id="inp_cough_with_fast_breathing" name="cough_with_fast_breathing"><dmn:variable id="var_cough_with_fast_breathing" name="cough_with_fast_breathing" typeRef="boolean"/></dmn:inputData>
   <dmn:decision id="decide_module_a" name="decide_module_a">
-    <dmn:decisionTable hitPolicy="FIRST">
+    <dmn:variable id="var_decide_module_a" name="decide_module_a" typeRef="string"/>
+    <dmn:informationRequirement><dmn:requiredInput href="#inp_cough_present"/></dmn:informationRequirement>
+    <dmn:informationRequirement><dmn:requiredInput href="#inp_cough_duration_days"/></dmn:informationRequirement>
+    <dmn:informationRequirement><dmn:requiredInput href="#inp_fast_breathing_present"/></dmn:informationRequirement>
+    <dmn:informationRequirement><dmn:requiredInput href="#inp_chest_indrawing_present"/></dmn:informationRequirement>
+    <dmn:decisionTable id="dt_a" hitPolicy="FIRST">
+      <dmn:input id="in_a1"><dmn:inputExpression typeRef="boolean">cough_present</dmn:inputExpression></dmn:input>
+      <dmn:input id="in_a2"><dmn:inputExpression typeRef="number">cough_duration_days</dmn:inputExpression></dmn:input>
+      <dmn:input id="in_a3"><dmn:inputExpression typeRef="boolean">fast_breathing_present</dmn:inputExpression></dmn:input>
+      <dmn:input id="in_a4"><dmn:inputExpression typeRef="boolean">chest_indrawing_present</dmn:inputExpression></dmn:input>
       <dmn:output id="out_a_triage" name="triage" typeRef="string"/>
       <dmn:output id="out_a_danger" name="danger_sign" typeRef="boolean"/>
-      <dmn:output id="out_a_clinic" name="clinic_referral" typeRef="boolean"/>
+      <dmn:output id="out_a_cliref" name="clinic_referral" typeRef="boolean"/>
       <dmn:output id="out_a_reason" name="reason" typeRef="string"/>
       <dmn:output id="out_a_ref" name="ref" typeRef="string"/>
+      <dmn:output id="out_a_actions" name="actions" typeRef="string"/>
       <dmn:output id="out_a_advice" name="advice" typeRef="string"/>
-      <!-- Any danger sign -->
       <dmn:rule>
-        <dmn:inputEntry id="in_a_1"><dmn:text>true</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="oa1"><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa2"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa3"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa4"><dmn:text>"any_danger_sign"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa5"><dmn:text>"p6-6"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa6"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>&gt;= 14</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"cough_for_14_days_or_more"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p40"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"refer_urgently"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:text></dmn:outputEntry>
       </dmn:rule>
-      <!-- Convulsions -->
       <dmn:rule>
-        <dmn:inputEntry id="in_a_2"><dmn:text>false</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="oa1b"><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa2b"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa3b"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa4b"><dmn:text>"convulsions"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa5b"><dmn:text>"p43"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa6b"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"fast_breathing"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p6-6"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"arrange_follow_up_visit,refer_if_child_becomes_sicker"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:text></dmn:outputEntry>
       </dmn:rule>
-      <!-- Chest indrawing -->
       <dmn:rule>
-        <dmn:inputEntry id="in_a_3"><dmn:text>false</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="oa1c"><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa2c"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa3c"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa4c"><dmn:text>"chest_indrawing"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa5c"><dmn:text>"p24"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa6c"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"chest_indrawing"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p43"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"refer_urgently,prepare_for_oxygen_if_available"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
       </dmn:rule>
-      <!-- Unusually sleepy or unconscious -->
       <dmn:rule>
-        <dmn:inputEntry id="in_a_4"><dmn:text>false</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="oa1d"><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa2d"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa3d"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa4d"><dmn:text>"unusually_sleepy_or_unconscious"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa5d"><dmn:text>"p33"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa6d"><dmn:text>""</dmn:text></dmn:outputEntry>
-      </dmn:rule>
-      <!-- Vomits everything -->
-      <dmn:rule>
-        <dmn:inputEntry id="in_a_5"><dmn:text>false</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="oa1e"><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa2e"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa3e"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa4e"><dmn:text>"vomits_everything"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa5e"><dmn:text>"p41"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa6e"><dmn:text>""</dmn:text></dmn:outputEntry>
-      </dmn:rule>
-      <!-- Not able to drink or feed anything -->
-      <dmn:rule>
-        <dmn:inputEntry id="in_a_6"><dmn:text>false</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="oa1f"><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa2f"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa3f"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa4f"><dmn:text>"not_able_to_drink_or_feed_anything"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa5f"><dmn:text>"p50"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa6f"><dmn:text>""</dmn:text></dmn:outputEntry>
-      </dmn:rule>
-      <!-- MUAC red or swelling of both feet -->
-      <dmn:rule>
-        <dmn:inputEntry id="in_a_7"><dmn:text>false</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="oa1g"><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa2g"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa3g"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa4g"><dmn:text>"severe_malnutrition"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa5g"><dmn:text>"p43"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa6g"><dmn:text>""</dmn:text></dmn:outputEntry>
-      </dmn:rule>
-      <!-- Fallback no danger sign -->
-      <dmn:rule>
-        <dmn:inputEntry id="in_a_8"><dmn:text>false</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="oa1h"><dmn:text>"home"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa2h"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa3h"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa4h"><dmn:text>"no_danger_sign"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa5h"><dmn:text>"p7"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oa6h"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"home"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"no_specific_issue"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p46"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
       </dmn:rule>
     </dmn:decisionTable>
   </dmn:decision>
-
   <dmn:decision id="decide_module_b" name="decide_module_b">
-    <dmn:decisionTable hitPolicy="FIRST">
-      <dmn:output id="out_b_triage" name="triage" typeRef="string"/>
-      <dmn:output id="out_b_danger" name="danger_sign" typeRef="boolean"/>
-      <dmn:output id="out_b_clinic" name="clinic_referral" typeRef="boolean"/>
-      <dmn:output id="out_b_reason" name="reason" typeRef="string"/>
-      <dmn:output id="out_b_ref" name="ref" typeRef="string"/>
-      <dmn:output id="out_b_advice" name="advice" typeRef="string"/>
-      <!-- Cough >=14 days -->
+    <dmn:variable id="var_decide_module_b" name="decide_module_b" typeRef="string"/>
+    <dmn:informationRequirement><dmn:requiredInput href="#inp_has_diarrhoea"/></dmn:informationRequirement>
+    <dmn:informationRequirement><dmn:requiredInput href="#inp_diarrhoea_duration_days"/></dmn:informationRequirement>
+    <dmn:informationRequirement><dmn:requiredInput href="#inp_blood_in_stool"/></dmn:informationRequirement>
+    <dmn:decisionTable id="dt_b" hitPolicy="FIRST">
+      <dmn:input id="in_b1"><dmn:inputExpression typeRef="boolean">has_diarrhoea</dmn:inputExpression></dmn:input>
+      <dmn:input id="in_b2"><dmn:inputExpression typeRef="number">diarrhoea_duration_days</dmn:inputExpression></dmn:input>
+      <dmn:input id="in_b3"><dmn:inputExpression typeRef="boolean">blood_in_stool</dmn:inputExpression></dmn:input>
+      <dmn:output name="triage" typeRef="string"/>
+      <dmn:output name="danger_sign" typeRef="boolean"/>
+      <dmn:output name="clinic_referral" typeRef="boolean"/>
+      <dmn:output name="reason" typeRef="string"/>
+      <dmn:output name="ref" typeRef="string"/>
+      <dmn:output name="actions" typeRef="string"/>
+      <dmn:output name="advice" typeRef="string"/>
       <dmn:rule>
-        <dmn:inputEntry id="in_b_1"><dmn:text>14</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="ob1"><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob2"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob3"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob4"><dmn:text>"cough_14_days_or_more"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob5"><dmn:text>"p48"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob6"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>&lt; 14</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"diarrhoea_less_than_14_days_no_blood"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p6-6"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"give_ors,give_zinc"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:text></dmn:outputEntry>
       </dmn:rule>
-      <!-- Diarrhoea >=14 days -->
       <dmn:rule>
-        <dmn:inputEntry id="in_b_2"><dmn:text>14</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="ob1b"><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob2b"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob3b"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob4b"><dmn:text>"diarrhoea_14_days_or_more"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob5b"><dmn:text>"p48"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob6b"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>&gt;= 14</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"diarrhoea_for_14_days_or_more"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p43"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"refer_urgently"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
       </dmn:rule>
-      <!-- Blood in stool -->
       <dmn:rule>
-        <dmn:inputEntry id="in_b_3"><dmn:text>"blood_in_stool"</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="ob1c"><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob2c"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob3c"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob4c"><dmn:text>"blood_in_stool"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob5c"><dmn:text>"p50"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob6c"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"blood_in_stool"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p93"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"refer_urgently"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
       </dmn:rule>
-      <!-- Fever >=7 days -->
       <dmn:rule>
-        <dmn:inputEntry id="in_b_4"><dmn:text>7</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="ob1d"><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob2d"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob3d"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob4d"><dmn:text>"fever_7_days_or_more"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob5d"><dmn:text>"p48"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob6d"><dmn:text>""</dmn:text></dmn:outputEntry>
-      </dmn:rule>
-      <!-- Diarrhoea <14 and no blood -->
-      <dmn:rule>
-        <dmn:inputEntry id="in_b_5"><dmn:text>13</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="ob1e"><dmn:text>"home"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob2e"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob3e"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob4e"><dmn:text>"diarrhoea_less_than_14_days_no_blood"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob5e"><dmn:text>"p60"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob6e"><dmn:text>""</dmn:text></dmn:outputEntry>
-      </dmn:rule>
-      <!-- Fever <7 in malaria area -->
-      <dmn:rule>
-        <dmn:inputEntry id="in_b_6"><dmn:text>6</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="ob1f"><dmn:text>"home"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob2f"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob3f"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob4f"><dmn:text>"fever_less_than_7_days_in_malaria_area"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob5f"><dmn:text>"p7"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob6f"><dmn:text>""</dmn:text></dmn:outputEntry>
-      </dmn:rule>
-      <!-- Fast breathing -->
-      <dmn:rule>
-        <dmn:inputEntry id="in_b_7"><dmn:text>"fast_breathing"</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="ob1g"><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob2g"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob3g"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob4g"><dmn:text>"fast_breathing"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob5g"><dmn:text>"p50"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob6g"><dmn:text>""</dmn:text></dmn:outputEntry>
-      </dmn:rule>
-      <!-- MUAC yellow -->
-      <dmn:rule>
-        <dmn:inputEntry id="in_b_8"><dmn:text>"Yellow on MUAC strap"</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="ob1h"><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob2h"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob3h"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob4h"><dmn:text>"yellow_on_muac_strap"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob5h"><dmn:text>"p46"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="ob6h"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"home"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"no_specific_issue"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p11"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"teach_how_to_give_ors_solution,give_zinc"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
       </dmn:rule>
     </dmn:decisionTable>
   </dmn:decision>
-
   <dmn:decision id="decide_module_c" name="decide_module_c">
-    <dmn:decisionTable hitPolicy="FIRST">
-      <dmn:output id="out_c_triage" name="triage" typeRef="string"/>
-      <dmn:output id="out_c_danger" name="danger_sign" typeRef="boolean"/>
-      <dmn:output id="out_c_clinic" name="clinic_referral" typeRef="boolean"/>
-      <dmn:output id="out_c_reason" name="reason" typeRef="string"/>
-      <dmn:output id="out_c_ref" name="ref" typeRef="string"/>
-      <dmn:output id="out_c_advice" name="advice" typeRef="string"/>
-      <!-- RDT positive malaria -->
+    <dmn:variable id="var_decide_module_c" name="decide_module_c" typeRef="string"/>
+    <dmn:informationRequirement><dmn:requiredInput href="#inp_hot_with_fever"/></dmn:informationRequirement>
+    <dmn:informationRequirement><dmn:requiredInput href="#inp_fever_duration_days"/></dmn:informationRequirement>
+    <dmn:informationRequirement><dmn:requiredInput href="#inp_malaria_area"/></dmn:informationRequirement>
+    <dmn:informationRequirement><dmn:requiredInput href="#inp_rdt_available"/></dmn:informationRequirement>
+    <dmn:informationRequirement><dmn:requiredInput href="#inp_rdt_result"/></dmn:informationRequirement>
+    <dmn:decisionTable id="dt_c" hitPolicy="FIRST">
+      <dmn:input><dmn:inputExpression typeRef="boolean">hot_with_fever</dmn:inputExpression></dmn:input>
+      <dmn:input><dmn:inputExpression typeRef="number">fever_duration_days</dmn:inputExpression></dmn:input>
+      <dmn:input><dmn:inputExpression typeRef="boolean">malaria_area</dmn:inputExpression></dmn:input>
+      <dmn:input><dmn:inputExpression typeRef="boolean">rdt_available</dmn:inputExpression></dmn:input>
+      <dmn:input><dmn:inputExpression typeRef="string">rdt_result</dmn:inputExpression></dmn:input>
+      <dmn:output name="triage" typeRef="string"/>
+      <dmn:output name="danger_sign" typeRef="boolean"/>
+      <dmn:output name="clinic_referral" typeRef="boolean"/>
+      <dmn:output name="reason" typeRef="string"/>
+      <dmn:output name="ref" typeRef="string"/>
+      <dmn:output name="actions" typeRef="string"/>
+      <dmn:output name="advice" typeRef="string"/>
       <dmn:rule>
-        <dmn:inputEntry id="in_c_1"><dmn:text>"positive"</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="oc1"><dmn:text>"home"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc2"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc3"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc4"><dmn:text>"rdt_positive_malaria"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc5"><dmn:text>"p7"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc6"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>&lt; 7</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>"positive"</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"home"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"rdt_positive_for_malaria"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p45"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"give_antimalarial_per_protocol"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
       </dmn:rule>
-      <!-- Follow-up not improving -->
       <dmn:rule>
-        <dmn:inputEntry id="in_c_2"><dmn:text>"follow_up_not_improving"</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="oc1b"><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc2b"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc3b"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc4b"><dmn:text>"no_improvement"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc5b"><dmn:text>"p45"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc6b"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>&lt; 7</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>"negative"</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"home"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"fever_less_than_7_days_rdt_negative"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p45"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
       </dmn:rule>
-      <!-- Simple cough or cold -->
       <dmn:rule>
-        <dmn:inputEntry id="in_c_3"><dmn:text>"simple_cough_or_cold"</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="oc1c"><dmn:text>"home"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc2c"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc3c"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc4c"><dmn:text>"simple_cough_or_cold"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc5c"><dmn:text>"p45"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc6c"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>&lt; 7</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>"not_done"</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"home"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"fever_in_malaria_area_no_rdt"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p45"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
       </dmn:rule>
-      <!-- Fast breathing with cough (pneumonia) -->
       <dmn:rule>
-        <dmn:inputEntry id="in_c_4"><dmn:text>"cough_with_fast_breathing"</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="oc1d"><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc2d"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc3d"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc4d"><dmn:text>"sign_of_pneumonia"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc5d"><dmn:text>"p45"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc6d"><dmn:text>""</dmn:text></dmn:outputEntry>
-      </dmn:rule>
-      <!-- Fever in no malaria area follow-up -->
-      <dmn:rule>
-        <dmn:inputEntry id="in_c_5"><dmn:text>"fever_nomalarial_area_followup"</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="oc1e"><dmn:text>"home"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc2e"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc3e"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc4e"><dmn:text>"follow_up_in_3_days"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc5e"><dmn:text>"p45"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oc6e"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>&gt;= 7</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"fever_for_last_7_days_or_more"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p43"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"refer_urgently"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
       </dmn:rule>
     </dmn:decisionTable>
   </dmn:decision>
-
   <dmn:decision id="decide_module_d" name="decide_module_d">
-    <dmn:decisionTable hitPolicy="FIRST">
-      <dmn:output id="out_d_triage" name="triage" typeRef="string"/>
-      <dmn:output id="out_d_danger" name="danger_sign" typeRef="boolean"/>
-      <dmn:output id="out_d_clinic" name="clinic_referral" typeRef="boolean"/>
-      <dmn:output id="out_d_reason" name="reason" typeRef="string"/>
-      <dmn:output id="out_d_ref" name="ref" typeRef="string"/>
-      <dmn:output id="out_d_advice" name="advice" typeRef="string"/>
-      <!-- Age scope 2-60 months -->
+    <dmn:variable id="var_decide_module_d" name="decide_module_d" typeRef="string"/>
+    <dmn:informationRequirement><dmn:requiredInput href="#inp_muac_result"/></dmn:informationRequirement>
+    <dmn:informationRequirement><dmn:requiredInput href="#inp_swelling_of_both_feet"/></dmn:informationRequirement>
+    <dmn:decisionTable id="dt_d" hitPolicy="FIRST">
+      <dmn:input><dmn:inputExpression typeRef="string">muac_result</dmn:inputExpression></dmn:input>
+      <dmn:input><dmn:inputExpression typeRef="boolean">swelling_of_both_feet</dmn:inputExpression></dmn:input>
+      <dmn:output name="triage" typeRef="string"/>
+      <dmn:output name="danger_sign" typeRef="boolean"/>
+      <dmn:output name="clinic_referral" typeRef="boolean"/>
+      <dmn:output name="reason" typeRef="string"/>
+      <dmn:output name="ref" typeRef="string"/>
+      <dmn:output name="actions" typeRef="string"/>
+      <dmn:output name="advice" typeRef="string"/>
       <dmn:rule>
-        <dmn:inputEntry id="in_d_1"><dmn:text>"age_2_to_60_months"</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="od1"><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="od2"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="od3"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="od4"><dmn:text>"age_2_months_up_to_5_years"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="od5"><dmn:text>"p11-10"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="od6"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>"red"</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"red_on_muac_strap"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p43"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"refer"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
       </dmn:rule>
-      <!-- Very sick child -->
       <dmn:rule>
-        <dmn:inputEntry id="in_d_2"><dmn:text>"very_sick_child"</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="od1b"><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="od2b"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="od3b"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="od4b"><dmn:text>"too_sick_to_be_treated_at_home"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="od5b"><dmn:text>"p11-10"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="od6b"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>"yellow"</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"yellow_on_muac_strap"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p46"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"counsel_on_feeding,refer_for_supplemental_feeding,refer_to_community_based_feeding_programme"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
       </dmn:rule>
-      <!-- Home treatment support eligibility -->
       <dmn:rule>
-        <dmn:inputEntry id="in_d_3"><dmn:text>"home_treatment_support"</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="od1c"><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="od2c"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="od3c"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="od4c"><dmn:text>"eligible_for_home_treatment_support"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="od5c"><dmn:text>"p11-10"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="od6c"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"hospital"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"swelling_of_both_feet"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p38"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"urgent_refer"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
+      </dmn:rule>
+      <dmn:rule>
+        <dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"home"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"no_specific_issue"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p6-6"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
       </dmn:rule>
     </dmn:decisionTable>
   </dmn:decision>
-
   <dmn:decision id="decide_module_e" name="decide_module_e">
-    <dmn:decisionTable hitPolicy="FIRST">
-      <dmn:output id="out_e_triage" name="triage" typeRef="string"/>
-      <dmn:output id="out_e_danger" name="danger_sign" typeRef="boolean"/>
-      <dmn:output id="out_e_clinic" name="clinic_referral" typeRef="boolean"/>
-      <dmn:output id="out_e_reason" name="reason" typeRef="string"/>
-      <dmn:output id="out_e_ref" name="ref" typeRef="string"/>
-      <dmn:output id="out_e_advice" name="advice" typeRef="string"/>
-      <!-- Diarrhoea treat at home (ORS+Zinc) -->
+    <dmn:variable id="var_decide_module_e" name="decide_module_e" typeRef="string"/>
+    <dmn:informationRequirement><dmn:requiredInput href="#inp_cough_with_fast_breathing"/></dmn:informationRequirement>
+    <dmn:informationRequirement><dmn:requiredInput href="#inp_chest_indrawing"/></dmn:informationRequirement>
+    <dmn:decisionTable id="dt_e" hitPolicy="FIRST">
+      <dmn:input><dmn:inputExpression typeRef="boolean">cough_with_fast_breathing</dmn:inputExpression></dmn:input>
+      <dmn:input><dmn:inputExpression typeRef="boolean">chest_indrawing</dmn:inputExpression></dmn:input>
+      <dmn:output name="triage" typeRef="string"/>
+      <dmn:output name="danger_sign" typeRef="boolean"/>
+      <dmn:output name="clinic_referral" typeRef="boolean"/>
+      <dmn:output name="reason" typeRef="string"/>
+      <dmn:output name="ref" typeRef="string"/>
+      <dmn:output name="actions" typeRef="string"/>
+      <dmn:output name="advice" typeRef="string"/>
       <dmn:rule>
-        <dmn:inputEntry id="in_e_1"><dmn:text>"diarrhoea_less_than_14_days_no_blood"</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="oe1"><dmn:text>"home"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oe2"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oe3"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oe4"><dmn:text>"uncomplicated_diarrhoea"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oe5"><dmn:text>"p68"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oe6"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"fast_breathing"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p6-6"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"arrange_follow_up_visit,refer_if_child_becomes_sicker"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
       </dmn:rule>
-      <!-- RDT negative follow-up -->
       <dmn:rule>
-        <dmn:inputEntry id="in_e_2"><dmn:text>"rdt_negative"</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="oe1b"><dmn:text>"home"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oe2b"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oe3b"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oe4b"><dmn:text>"malaria_test_negative"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oe5b"><dmn:text>"p60"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oe6b"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"hospital"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"chest_indrawing"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p43"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"refer_urgently,prepare_for_oxygen_if_available"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
       </dmn:rule>
-      <!-- Fast breathing age thresholds (clinic) -->
       <dmn:rule>
-        <dmn:inputEntry id="in_e_3"><dmn:text>"fast_breathing_threshold"</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="oe1c"><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oe2c"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oe3c"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oe4c"><dmn:text>"fast_breathing"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oe5c"><dmn:text>"p120"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oe6c"><dmn:text>""</dmn:text></dmn:outputEntry>
-      </dmn:rule>
-      <!-- Sick but no danger sign -->
-      <dmn:rule>
-        <dmn:inputEntry id="in_e_4"><dmn:text>"sick_but_no_danger_sign"</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="oe1d"><dmn:text>"home"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oe2d"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oe3d"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oe4d"><dmn:text>"no_danger_sign"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oe5d"><dmn:text>"p50"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="oe6d"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"home"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"no_specific_issue"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p46"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
       </dmn:rule>
     </dmn:decisionTable>
   </dmn:decision>
-
   <dmn:decision id="aggregate_final" name="aggregate_final">
-    <dmn:decisionTable hitPolicy="FIRST">
-      <dmn:output id="out_f_triage" name="triage" typeRef="string"/>
-      <dmn:output id="out_f_danger" name="danger_sign" typeRef="boolean"/>
-      <dmn:output id="out_f_clinic" name="clinic_referral" typeRef="boolean"/>
-      <dmn:output id="out_f_reason" name="reason" typeRef="string"/>
-      <dmn:output id="out_f_ref" name="ref" typeRef="string"/>
-      <dmn:output id="out_f_advice" name="advice" typeRef="string"/>
-      <!-- Prefer any hospital decision -->
+    <dmn:variable id="var_aggregate_final" name="aggregate_final" typeRef="string"/>
+    <dmn:informationRequirement><dmn:requiredDecision href="#decide_module_a"/></dmn:informationRequirement>
+    <dmn:informationRequirement><dmn:requiredDecision href="#decide_module_b"/></dmn:informationRequirement>
+    <dmn:informationRequirement><dmn:requiredDecision href="#decide_module_c"/></dmn:informationRequirement>
+    <dmn:informationRequirement><dmn:requiredDecision href="#decide_module_d"/></dmn:informationRequirement>
+    <dmn:informationRequirement><dmn:requiredDecision href="#decide_module_e"/></dmn:informationRequirement>
+    <dmn:decisionTable id="dt_final" hitPolicy="FIRST">
+      <dmn:input><dmn:inputExpression typeRef="string">decide_module_a.triage</dmn:inputExpression></dmn:input>
+      <dmn:input><dmn:inputExpression typeRef="boolean">decide_module_a.danger_sign</dmn:inputExpression></dmn:input>
+      <dmn:input><dmn:inputExpression typeRef="string">decide_module_b.triage</dmn:inputExpression></dmn:input>
+      <dmn:input><dmn:inputExpression typeRef="boolean">decide_module_b.danger_sign</dmn:inputExpression></dmn:input>
+      <dmn:input><dmn:inputExpression typeRef="string">decide_module_c.triage</dmn:inputExpression></dmn:input>
+      <dmn:input><dmn:inputExpression typeRef="boolean">decide_module_c.danger_sign</dmn:inputExpression></dmn:input>
+      <dmn:input><dmn:inputExpression typeRef="string">decide_module_d.triage</dmn:inputExpression></dmn:input>
+      <dmn:input><dmn:inputExpression typeRef="boolean">decide_module_d.danger_sign</dmn:inputExpression></dmn:input>
+      <dmn:input><dmn:inputExpression typeRef="string">decide_module_e.triage</dmn:inputExpression></dmn:input>
+      <dmn:input><dmn:inputExpression typeRef="boolean">decide_module_e.danger_sign</dmn:inputExpression></dmn:input>
+      <dmn:output name="triage" typeRef="string"/>
+      <dmn:output name="danger_sign" typeRef="boolean"/>
+      <dmn:output name="clinic_referral" typeRef="boolean"/>
+      <dmn:output name="reason" typeRef="string"/>
+      <dmn:output name="ref" typeRef="string"/>
+      <dmn:output name="actions" typeRef="string"/>
+      <dmn:output name="advice" typeRef="string"/>
       <dmn:rule>
-        <dmn:inputEntry id="in_f_1"><dmn:text>"hospital"</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="of1"><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="of2"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="of3"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="of4"><dmn:text>"danger_sign_priority"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="of5"><dmn:text>"p6-6"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="of6"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>"hospital"</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"aggregated_danger_sign"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p6-6"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
       </dmn:rule>
-      <!-- Otherwise clinic -->
       <dmn:rule>
-        <dmn:inputEntry id="in_f_2"><dmn:text>"clinic"</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="of1b"><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="of2b"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="of3b"><dmn:text>true</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="of4b"><dmn:text>"clinic_referral"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="of5b"><dmn:text>"p48"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="of6b"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>"hospital"</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"aggregated_danger_sign"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p6-6"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
       </dmn:rule>
-      <!-- Otherwise home -->
       <dmn:rule>
-        <dmn:inputEntry id="in_f_3"><dmn:text>"home"</dmn:text></dmn:inputEntry>
-        <dmn:outputEntry id="of1c"><dmn:text>"home"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="of2c"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="of3c"><dmn:text>false</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="of4c"><dmn:text>"treat_at_home"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="of5c"><dmn:text>"p7"</dmn:text></dmn:outputEntry>
-        <dmn:outputEntry id="of6c"><dmn:text>""</dmn:text></dmn:outputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>true</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"hospital"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"aggregated_danger_sign"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p43"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
+      </dmn:rule>
+      <dmn:rule>
+        <dmn:inputEntry><dmn:text>"clinic"</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>"clinic"</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>"clinic"</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>"clinic"</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"clinic"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>true</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"aggregate_clinic_referral"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p6-6"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
+      </dmn:rule>
+      <dmn:rule>
+        <dmn:inputEntry><dmn:text>-</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>-</dmn:inputEntry>
+        <dmn:inputEntry><dmn:text>false</dmn:inputEntry>
+        <dmn:outputEntry><dmn:text>"home"</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>false</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"no_danger_signs"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>"p50-50"</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
+        <dmn:outputEntry><dmn:text>""</dmn:outputEntry>
       </dmn:rule>
     </dmn:decisionTable>
   </dmn:decision>
@@ -381,28 +474,29 @@
 ```json
 {
   "ASK_PLAN": [
-    {"var": "age_months", "why": "age thresholds"},
-    {"var": "danger_sign_present", "why": "immediate triage"},
-    {"var": "convulsions_present", "why": "danger sign"},
-    {"var": "unusually_sleepy_or_unconscious", "why": "danger sign"},
-    {"var": "not_able_to_drink_or_feed_anything", "why": "danger sign"},
-    {"var": "vomits_everything", "why": "danger sign"},
-    {"var": "chest_indrawing", "why": "danger sign"},
-    {"var": "swelling_of_both_feet", "why": "danger sign"},
-    {"var": "muac_color", "why": "malnutrition"},
-    {"var": "cough_present", "why": "respiratory"},
-    {"var": "breaths_per_minute", "why": "fast breathing thresholds"},
-    {"var": "cough_duration_days", "why": "chronic cough referral"},
-    {"var": "diarrhoea_present", "why": "diarrhoea pathway"},
-    {"var": "diarrhoea_duration_days", "why": "duration rules"},
-    {"var": "blood_in_stool", "why": "dysentery referral"},
-    {"var": "fever_present", "why": "fever pathway"},
-    {"var": "fever_duration_days", "why": ">=7 referral"},
-    {"var": "malaria_area", "why": "RDT decision"},
-    {"var": "rdt_result_for_malaria", "why": "antimalarial"},
-    {"var": "area_with_no_malaria", "why": "non-malaria follow-up"},
-    {"var": "follow_up_visit_completed", "why": "follow-up status"},
-    {"var": "child_improving", "why": "refer if not improving"}
+    {"var": "age_months", "ask": "Age in months?"},
+    {"var": "cough_present", "ask": "Cough?"},
+    {"var": "cough_duration_days", "ask": "If cough, for how many days?"},
+    {"var": "fast_breathing_present", "ask": "Fast breathing present?"},
+    {"var": "chest_indrawing_present", "ask": "Chest indrawing visible?"},
+    {"var": "chest_indrawing", "ask": "Chest indrawing (any time)?"},
+    {"var": "has_diarrhoea", "ask": "Diarrhoea (3 or more loose stools in 24h)?"},
+    {"var": "diarrhoea_duration_days", "ask": "If diarrhoea, for how many days?"},
+    {"var": "blood_in_stool", "ask": "Blood in stool?"},
+    {"var": "hot_with_fever", "ask": "Fever now or reported?"},
+    {"var": "fever_duration_days", "ask": "Fever duration (days)?"},
+    {"var": "malaria_area", "ask": "In a malaria area?"},
+    {"var": "rdt_available", "ask": "Malaria RDT available?"},
+    {"var": "rdt_result", "ask": "RDT result (positive/negative/not_done)?", "when": {"rdt_available": true}},
+    {"var": "muac_result", "ask": "MUAC result (Green/Yellow/Red)?"},
+    {"var": "swelling_of_both_feet", "ask": "Swelling (oedema) of both feet?"},
+    {"var": "convulsions_in_this_illness_episode", "ask": "Convulsions in this illness episode?"},
+    {"var": "not_able_to_drink_or_feed_anything", "ask": "Not able to drink or feed anything?"},
+    {"var": "vomits_everything", "ask": "Vomits everything?"},
+    {"var": "unusually_sleepy_or_unconscious", "ask": "Unusually sleepy or unconscious?"},
+    {"var": "cough_with_fast_breathing", "ask": "Cough with fast breathing?", "followup": [
+      {"var": "chest_indrawing", "ask": "Any chest indrawing?"}
+    ]}
   ]
 }
 ```

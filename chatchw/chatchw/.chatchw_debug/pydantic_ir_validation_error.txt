@@ -1,0 +1,109 @@
+36 validation errors for IR
+rules.16.when.0.ObsCond.obs
+  Field required [type=missing, input_value={'any_of': [{'all_of': [{...onscious', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.ObsCond.op
+  Field required [type=missing, input_value={'any_of': [{'all_of': [{...onscious', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.ObsCond.value
+  Field required [type=missing, input_value={'any_of': [{'all_of': [{...onscious', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.SymCond.sym
+  Field required [type=missing, input_value={'any_of': [{'all_of': [{...onscious', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.SymCond.eq
+  Field required [type=missing, input_value={'any_of': [{'all_of': [{...onscious', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AllOf.all_of
+  Field required [type=missing, input_value={'any_of': [{'all_of': [{...onscious', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.0.ObsCond.obs
+  Field required [type=missing, input_value={'all_of': [{'sym': 'coug...p': 'ge', 'value': 14}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.0.ObsCond.op
+  Field required [type=missing, input_value={'all_of': [{'sym': 'coug...p': 'ge', 'value': 14}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.0.ObsCond.value
+  Field required [type=missing, input_value={'all_of': [{'sym': 'coug...p': 'ge', 'value': 14}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.0.SymCond.sym
+  Field required [type=missing, input_value={'all_of': [{'sym': 'coug...p': 'ge', 'value': 14}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.0.SymCond.eq
+  Field required [type=missing, input_value={'all_of': [{'sym': 'coug...p': 'ge', 'value': 14}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.1.ObsCond.obs
+  Field required [type=missing, input_value={'all_of': [{'sym': 'diar...p': 'ge', 'value': 14}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.1.ObsCond.op
+  Field required [type=missing, input_value={'all_of': [{'sym': 'diar...p': 'ge', 'value': 14}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.1.ObsCond.value
+  Field required [type=missing, input_value={'all_of': [{'sym': 'diar...p': 'ge', 'value': 14}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.1.SymCond.sym
+  Field required [type=missing, input_value={'all_of': [{'sym': 'diar...p': 'ge', 'value': 14}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.1.SymCond.eq
+  Field required [type=missing, input_value={'all_of': [{'sym': 'diar...p': 'ge', 'value': 14}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.2.ObsCond.obs
+  Field required [type=missing, input_value={'all_of': [{'sym': 'diar...in_stool', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.2.ObsCond.op
+  Field required [type=missing, input_value={'all_of': [{'sym': 'diar...in_stool', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.2.ObsCond.value
+  Field required [type=missing, input_value={'all_of': [{'sym': 'diar...in_stool', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.2.SymCond.sym
+  Field required [type=missing, input_value={'all_of': [{'sym': 'diar...in_stool', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.2.SymCond.eq
+  Field required [type=missing, input_value={'all_of': [{'sym': 'diar...in_stool', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.3.ObsCond.obs
+  Field required [type=missing, input_value={'all_of': [{'sym': 'feve...op': 'ge', 'value': 7}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.3.ObsCond.op
+  Field required [type=missing, input_value={'all_of': [{'sym': 'feve...op': 'ge', 'value': 7}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.3.ObsCond.value
+  Field required [type=missing, input_value={'all_of': [{'sym': 'feve...op': 'ge', 'value': 7}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.3.SymCond.sym
+  Field required [type=missing, input_value={'all_of': [{'sym': 'feve...op': 'ge', 'value': 7}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.3.SymCond.eq
+  Field required [type=missing, input_value={'all_of': [{'sym': 'feve...op': 'ge', 'value': 7}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.5.ObsCond.obs
+  Field required [type=missing, input_value={'all_of': [{'sym': 'diff...anything', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.5.ObsCond.op
+  Field required [type=missing, input_value={'all_of': [{'sym': 'diff...anything', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.5.ObsCond.value
+  Field required [type=missing, input_value={'all_of': [{'sym': 'diff...anything', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.5.SymCond.sym
+  Field required [type=missing, input_value={'all_of': [{'sym': 'diff...anything', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.5.SymCond.eq
+  Field required [type=missing, input_value={'all_of': [{'sym': 'diff...anything', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.6.ObsCond.obs
+  Field required [type=missing, input_value={'all_of': [{'sym': 'vomi...erything', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.6.ObsCond.op
+  Field required [type=missing, input_value={'all_of': [{'sym': 'vomi...erything', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.6.ObsCond.value
+  Field required [type=missing, input_value={'all_of': [{'sym': 'vomi...erything', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.6.SymCond.sym
+  Field required [type=missing, input_value={'all_of': [{'sym': 'vomi...erything', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing
+rules.16.when.0.AnyOf.any_of.6.SymCond.eq
+  Field required [type=missing, input_value={'all_of': [{'sym': 'vomi...erything', 'eq': True}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.7/v/missing

@@ -103,10 +103,5 @@
     "module": null,
     "ask": [],
     "followups_if": {}
-  },
-  {
-    "module": null,
-    "ask": [],
-    "followups_if": {}
   }
 ]
