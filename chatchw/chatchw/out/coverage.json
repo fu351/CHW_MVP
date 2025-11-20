@@ -1,28 +1,9 @@
 {
-  "unmapped_rule_ids": [
-    "fast_breathing_thresholds_by_age",
-    "kit_preparedness_check"
-  ],
-  "module_counts": {
-    "decide_module_a": 1,
-    "decide_module_b": 5,
-    "decide_module_c": 2,
-    "decide_module_d": 0,
-    "decide_module_e": 2,
-    "aggregate_final": 0
-  },
   "notes": [
-    "Mapped danger_sign_any_refer_hospital to decide_module_a: matches multiple danger signs including chest_indrawing, unusually_sleepy_or_unconscious, vomits_everything, not_able_to_drink_or_feed_anything, MUAC red/swelling; DMN consolidates as hospital for any danger sign",
-    "Mapped diarrhoea_uncomplicated_ors_zinc to decide_module_e in_e_1: inputEntry text 'diarrhoea_less_than_14_days_no_blood' aligns with IR all_of: has_diarrhoea==true && diarrhoea_duration_days lt 14 && blood_in_stool==false",
-    "Mapped fever_lt7_in_malaria_area_do_rdt to decide_module_b in_b_6: 'fever_less_than_7_days_in_malaria_area' though DMN triage home vs IR clinic/do_rdt; triage discrepancy noted",
-    "Mapped malaria_rdt_positive_give_al to decide_module_c in_c_1: 'positive' RDT; DMN triage home vs IR clinic; action mismatch noted",
-    "Mapped cough_with_fast_breathing_amoxicillin to decide_module_c in_c_4: 'cough_with_fast_breathing' pneumonia; triage clinic matches",
-    "Mapped muac_yellow_mam_support to decide_module_b in_b_8: 'Yellow on MUAC strap' -> clinic; matches IR 'muac_result eq \"yellow\"'",
-    "Mapped cough_duration>=14 to decide_module_b in_b_1: aligns with IR danger_sign_any (cough_duration_days ge 14) though IR triages hospital via danger_sign_any; DMN sends clinic; overlap acknowledged",
-    "Mapped diarrhoea_duration>=14 to decide_module_b in_b_2: aligns with IR danger_sign_any (diarrhoea_duration_days ge 14); DMN clinic vs IR hospital via danger_sign_any",
-    "Mapped blood_in_stool to decide_module_b in_b_3: aligns with IR danger_sign_any blood_in_stool true; DMN clinic vs IR hospital",
-    "Mapped fever_duration>=7 to decide_module_b in_b_4: aligns with IR danger_sign_any fever_duration_days ge 7; DMN clinic vs IR hospital",
-    "No clear DMN input for kit preparedness supplies; operational rule not represented",
-    "Fast breathing thresholds by age lacks a concrete inputEntry token in DMN beyond generic 'fast_breathing_threshold' in decide_module_e; IR_flat.conds empty placeholder prevented precise match; left unmapped or partially covered by decide_module_e in_e_3 generically"
-  ]
+    "audit_coverage double-fallback: DMN parse also failed",
+    "first_exception: AttributeError: 'OpenAIGuardedExtractor' object has no attribute 'coverage_system_prompt'",
+    "second_exception: NameError: name 'parse_dmn_decision_tables' is not defined"
+  ],
+  "module_counts": {},
+  "unmapped_rule_ids": []
 }
